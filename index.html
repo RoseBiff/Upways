@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upways - Calculateur d'amélioration</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>Upways</h1>
+        </div>
+
+        <!-- Sélecteur d'objet -->
+        <div class="object-selector">
+            <label for="objectSearch">Sélectionnez un objet :</label>
+            <div style="position: relative;">
+                <input type="text" id="objectSearch" placeholder="Rechercher un objet...">
+                <div class="suggestions" id="suggestions"></div>
+            </div>
+        </div>
+
+        <!-- Table des améliorations -->
+        <div class="upgrade-table" id="upgradeTable" style="display: none;">
+            <div id="upgradeRows"></div>
+            <div class="summary">
+                <span class="summary-item" id="totalTrials">Total essais : 0</span>
+                <span class="summary-item" id="totalCost">Coût total moyen : 0M</span>
+            </div>
+        </div>
+
+        <!-- Chemin optimal -->
+        <div class="optimal-path" id="optimalPath" style="display: none;">
+            <h2>Chemin d'amélioration optimal</h2>
+            <div class="path-cards" id="pathCards"></div>
+            <div class="summary">
+                <span class="summary-item" id="optimalCost">Coût total optimal : 0M</span>
+            </div>
+        </div>
+
+        <!-- Boutons -->
+        <div class="buttons">
+            <button class="btn" id="setPricesBtn">Veuillez définir les prix (M)</button>
+            <button class="btn" id="calculateOptimalBtn">Calculer l'amélioration optimale</button>
+        </div>
+    </div>
+
+    <!-- Modal des coûts -->
+    <div class="modal" id="costModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Définir les coûts unitaires</h2>
+            </div>
+            <div id="costInputs"></div>
+            <div class="modal-buttons">
+                <button class="btn" id="cancelCostBtn">Annuler</button>
+                <button class="btn" id="saveCostBtn">Valider</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tooltip -->
+    <div class="tooltip" id="tooltip"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>
