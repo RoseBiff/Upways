@@ -4,12 +4,41 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Upways - Calculateur d'amélioration</title>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="favicon.png">
+
     <link rel="stylesheet" href="styles.css">
+
+    <!-- Tweaks pour logo & centrage -->
+    <style>
+        .header {
+            display: flex;
+            align-items: center;      /* centrage vertical */
+            justify-content: center;  /* centrage horizontal */
+            gap: 0.5rem;              /* espace logo ↔ titre */
+            text-align: center;       /* fallback si flex désactivé */
+        }
+        .header h1 {
+            margin: 0;               /* supprime le margin par défaut */
+        }
+        .logo {
+            height: 48px;            /* ajustez si besoin */
+            width: auto;
+        }
+        footer.credits {
+            font-size: 0.75rem;
+            color: #777;
+            text-align: center;
+            margin-top: 2rem;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
         <!-- Header -->
         <div class="header">
+            <img src="logo.png" alt="Logo Upways" class="logo">
             <h1>Upways</h1>
         </div>
 
@@ -42,10 +71,15 @@
 
         <!-- Boutons -->
         <div class="buttons">
-            <button class="btn" id="setPricesBtn">Veuillez définir les prix (M)</button>
+            <button class="btn" id="setPricesBtn">Définir les prix unitaires</button>
             <button class="btn" id="calculateOptimalBtn">Calculer l'amélioration optimale</button>
         </div>
     </div>
+
+    <!-- Crédits discrets -->
+    <footer class="credits">
+        Développé par RoseBiff — Merci à ArcMeurtrier et EasyL pour leur précieuse aide.
+    </footer>
 
     <!-- Modal des coûts -->
     <div class="modal" id="costModal">

@@ -618,7 +618,7 @@ class UpwaysApp {
         // Section des objets d'amélioration
         const upgradeSection = document.createElement('div');
         upgradeSection.className = 'cost-section';
-        upgradeSection.innerHTML = '<h3>Coûts des objets d\'amélioration :</h3>';
+        upgradeSection.innerHTML = '<h3>Coûts des objets d\'amélioration en Milion de yang (M) :</h3>';
         
         this.upgradeOptions.forEach(option => {
             const row = this.createCostInputRow(option, this.upgradeCosts[option] || 0, 'upgrade');
@@ -630,7 +630,7 @@ class UpwaysApp {
         if (materials.size > 0) {
             const materialSection = document.createElement('div');
             materialSection.className = 'cost-section';
-            materialSection.innerHTML = '<h3>Coûts des matériaux :</h3>';
+            materialSection.innerHTML = '<h3>Coûts des matériaux en Milion de yang (M) :</h3>';
             
             Array.from(materials).sort().forEach(material => {
                 const row = this.createCostInputRow(material, this.materialCosts[material] || 0, 'material');
