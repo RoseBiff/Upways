@@ -3,100 +3,278 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Upways - Calculateur d'amélioration</title>
-
-    <!-- Favicon -->
-    <link rel="icon" type="image/png" href="favicon.png">
-
+    <title>Upways</title>
+    
+    <!-- Chart.js pour les graphiques -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- html2canvas pour l'export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    
     <link rel="stylesheet" href="styles.css">
-
-    <!-- Tweaks pour logo & centrage -->
-    <style>
-        .header {
-            display: flex;
-            align-items: center;      /* centrage vertical */
-            justify-content: center;  /* centrage horizontal */
-            gap: 0.5rem;              /* espace logo ↔ titre */
-            text-align: center;       /* fallback si flex désactivé */
-        }
-        .header h1 {
-            margin: 0;               /* supprime le margin par défaut */
-        }
-        .logo {
-            height: 48px;            /* ajustez si besoin */
-            width: auto;
-        }
-        footer.credits {
-            font-size: 0.75rem;
-            color: #777;
-            text-align: center;
-            margin-top: 2rem;
-        }
-    </style>
 </head>
 <body>
-    <div class="container">
-        <!-- Header -->
-        <div class="header">
-            <img src="logo.png" alt="Logo Upways" class="logo">
-            <h1>Upways</h1>
-        </div>
-
-        <!-- Sélecteur d'objet -->
-        <div class="object-selector">
-            <label for="objectSearch">Sélectionnez un objet :</label>
-            <div style="position: relative;">
-                <input type="text" id="objectSearch" placeholder="Rechercher un objet...">
-                <div class="suggestions" id="suggestions"></div>
+    <!-- Header élégant -->
+    <header class="header">
+        <div class="header-container">
+            <div class="brand">
+                <div class="logo-wrapper">
+                    <img src="logo.png" alt="Upways" class="logo" onerror="this.style.display='none'">
+                </div>
+                <h1 class="brand-name">Upways</h1>
+                <span class="brand-subtitle">Optimisateur d'amélioration Metin2</span>
+            </div>
+            
+            <div class="header-controls">
+                <select id="languageSelect" class="language-select">
+                    <option value="fr">🇫🇷 Français</option>
+                    <option value="en">🇬🇧 English</option>
+                    <option value="ro">🇷🇴 Română</option>
+                    <option value="tr">🇹🇷 Türkçe</option>
+                    <option value="de">🇩🇪 Deutsch</option>
+                </select>
+                <button class="icon-btn" id="resetBtn" title="Réinitialiser">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                        <path d="M3 3v5h5"/>
+                    </svg>
+                </button>
             </div>
         </div>
+    </header>
 
-        <!-- Table des améliorations -->
-        <div class="upgrade-table" id="upgradeTable" style="display: none;">
-            <div id="upgradeRows"></div>
-            <div class="summary">
-                <span class="summary-item" id="totalTrials">Total essais : 0</span>
-                <span class="summary-item" id="totalCost">Coût total moyen : 0M</span>
+    <main class="main-container">
+        <!-- Navigation moderne -->
+        <nav class="main-nav">
+            <button class="nav-btn active" data-tab="config">
+                <span class="nav-icon">⚙️</span>
+                <span data-i18n="configTab">Configuration</span>
+            </button>
+            <button class="nav-btn" data-tab="analysis">
+                <span class="nav-icon">📊</span>
+                <span data-i18n="analysisTab">Analyse</span>
+            </button>
+        </nav>
+
+        <!-- Onglet Configuration -->
+        <section class="tab-content active" id="configTab">
+            <div class="config-grid">
+                <!-- Sélection d'objet -->
+                <div class="config-section">
+                    <div class="section-card">
+                        <h2 class="section-title" data-i18n="selectItem">Sélection de l'objet</h2>
+                        
+                        <div class="search-container">
+                            <input type="text" id="objectSearch" class="search-input" 
+                                   placeholder="Rechercher un objet..." 
+                                   data-i18n-placeholder="searchPlaceholder">
+                            <div class="search-results" id="searchResults"></div>
+                        </div>
+
+                        <!-- Historique des objets récents -->
+                        <div class="recent-items" id="recentItems" style="display: none;">
+                            <h3 class="subsection-title" data-i18n="recentItems">Objets récents</h3>
+                            <div class="recent-items-list" id="recentItemsList"></div>
+                        </div>
+
+                        <div class="selected-item" id="selectedItem" style="display: none;">
+                            <img id="itemImage" class="item-image" src="" alt="">
+                            <div class="item-info">
+                                <h3 id="itemName" class="item-name"></h3>
+                                <span class="item-badge" data-i18n="selected">Sélectionné</span>
+                            </div>
+                        </div>
+
+                        <!-- Sélection des niveaux -->
+                        <div class="level-selection" id="levelSelection">
+                            <h3 class="subsection-title" data-i18n="upgradeLevels">Niveaux d'amélioration</h3>
+                            <div class="level-selectors">
+                                <div class="level-selector">
+                                    <label data-i18n="fromLevel">De</label>
+                                    <select id="startLevel" class="level-select">
+                                        <option value="0">+0</option>
+                                        <option value="1">+1</option>
+                                        <option value="2">+2</option>
+                                        <option value="3">+3</option>
+                                        <option value="4">+4</option>
+                                        <option value="5">+5</option>
+                                        <option value="6">+6</option>
+                                        <option value="7">+7</option>
+                                        <option value="8">+8</option>
+                                    </select>
+                                </div>
+                                <div class="level-arrow">→</div>
+                                <div class="level-selector">
+                                    <label data-i18n="toLevel">À</label>
+                                    <select id="endLevel" class="level-select">
+                                        <option value="1">+1</option>
+                                        <option value="2">+2</option>
+                                        <option value="3">+3</option>
+                                        <option value="4">+4</option>
+                                        <option value="5">+5</option>
+                                        <option value="6">+6</option>
+                                        <option value="7">+7</option>
+                                        <option value="8">+8</option>
+                                        <option value="9" selected>+9</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Configuration des prix -->
+                <div class="config-section">
+                    <div class="section-card">
+                        <h2 class="section-title" data-i18n="priceConfig">Configuration des prix</h2>
+                        
+                        <!-- Prix des objets d'amélioration -->
+                        <div class="price-section">
+                            <h3 class="subsection-title" data-i18n="upgradeItems">Objets d'amélioration</h3>
+                            <div class="price-grid" id="upgradeItemPrices">
+                                <!-- Généré dynamiquement -->
+                            </div>
+                        </div>
+
+                        <!-- Prix des matériaux -->
+                        <div class="price-section" id="materialSection" style="display: none;">
+                            <h3 class="subsection-title" data-i18n="materials">Matériaux</h3>
+                            <div class="price-grid" id="materialPrices">
+                                <!-- Généré dynamiquement -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </div>
 
-        <!-- Chemin optimal -->
-        <div class="optimal-path" id="optimalPath" style="display: none;">
-            <h2>Chemin d'amélioration optimal</h2>
-            <div class="path-cards" id="pathCards"></div>
-            <div class="summary">
-                <span class="summary-item" id="optimalCost">Coût total optimal : 0M</span>
+            <!-- Bouton d'analyse -->
+            <div class="config-actions">
+                <button class="btn btn-primary btn-large" id="analyzeBtn" disabled>
+                    <span class="btn-icon">🚀</span>
+                    <span data-i18n="runAnalysis">Lancer l'analyse</span>
+                </button>
             </div>
-        </div>
+        </section>
 
-        <!-- Boutons -->
-        <div class="buttons">
-            <button class="btn" id="setPricesBtn">Définir les prix unitaires</button>
-            <button class="btn" id="calculateOptimalBtn">Calculer l'amélioration optimale</button>
-        </div>
-    </div>
+        <!-- Onglet Analyse -->
+        <section class="tab-content" id="analysisTab">
+            <!-- En-tête avec export -->
+            <div class="analysis-header">
+                <h2 class="analysis-title">
+                    <span data-i18n="analysisResults">Résultats de l'analyse</span>
+                    <span class="analysis-levels" id="analysisLevels"></span>
+                </h2>
+                <button class="export-btn" id="exportBtn" title="Exporter">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="7 10 12 15 17 10"/>
+                        <line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                </button>
+            </div>
 
-    <!-- Crédits discrets -->
-    <footer class="credits">
-        Développé par RoseBiff — Merci à ArcMeurtrier et EasyL pour leur précieuse aide.
+            <!-- Résumé des stratégies -->
+            <div class="strategies-summary">
+                <div class="strategy-card optimal" data-strategy="optimal">
+                    <div class="strategy-header">
+                        <span class="strategy-icon">⭐</span>
+                        <h3 data-i18n="optimal">Optimale</h3>
+                    </div>
+                    <div class="strategy-stats">
+                        <div class="stat">
+                            <span class="stat-label" data-i18n="avgCost">Coût moyen</span>
+                            <span class="stat-value" id="optimalCost">-</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label" data-i18n="interval95">Intervalle 95%</span>
+                            <span class="stat-value" id="optimalRange">-</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="strategy-card" data-strategy="custom">
+                    <div class="strategy-header">
+                        <span class="strategy-icon">🎨</span>
+                        <h3 data-i18n="custom">Personnalisée</h3>
+                    </div>
+                    <div class="strategy-stats">
+                        <div class="stat">
+                            <span class="stat-label" data-i18n="avgCost">Coût moyen</span>
+                            <span class="stat-value" id="customCost">-</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label" data-i18n="interval95">Intervalle 95%</span>
+                            <span class="stat-value" id="customRange">-</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Détails de la stratégie sélectionnée -->
+            <div class="strategy-details" id="strategyDetails">
+                <!-- Chemin d'amélioration -->
+                <div class="detail-section">
+                    <h3 class="detail-title" data-i18n="upgradePath">Chemin d'amélioration</h3>
+                    <div id="upgradePath">
+                        <!-- Généré dynamiquement -->
+                    </div>
+                </div>
+
+                <!-- Détails en grille -->
+                <div class="detail-grid">
+                    <!-- Objets requis -->
+                    <div class="detail-card">
+                        <h4 data-i18n="requiredItems">Objets requis</h4>
+                        <div class="items-list" id="requiredItems">
+                            <!-- Généré dynamiquement -->
+                        </div>
+                    </div>
+
+                    <!-- Matériaux requis -->
+                    <div class="detail-card">
+                        <h4 data-i18n="requiredMaterials">Matériaux requis</h4>
+                        <div class="items-list" id="requiredMaterials">
+                            <!-- Généré dynamiquement -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Graphique Tentatives vs Probabilité -->
+                <div class="chart-section">
+                    <h3 class="chart-title" data-i18n="trialsProbability">Tentatives vs Probabilité de succès</h3>
+                    <p class="chart-subtitle" data-i18n="trialsProbabilityDesc">
+                        Ce graphique montre la probabilité de réussir l'amélioration en fonction du nombre de tentatives
+                    </p>
+                    <div class="chart-container">
+                        <canvas id="probabilityChart"></canvas>
+                    </div>
+                    <div class="chart-legend" id="chartLegend">
+                        <!-- Généré dynamiquement -->
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer minimaliste -->
+    <footer class="footer">
+        <p>Développé par RoseBiff • Merci à ArcMeurtrier et EasyL</p>
+        <p><a href="https://metin2upways.com" target="_blank">metin2upways.com</a></p>
     </footer>
 
-    <!-- Modal des coûts -->
-    <div class="modal" id="costModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Définir les coûts unitaires</h2>
-            </div>
-            <div id="costInputs"></div>
-            <div class="modal-buttons">
-                <button class="btn" id="cancelCostBtn">Annuler</button>
-                <button class="btn" id="saveCostBtn">Valider</button>
-            </div>
-        </div>
+    <!-- Tooltip global -->
+    <div class="tooltip" id="tooltip" style="display: none;">
+        <div class="tooltip-content" id="tooltipContent"></div>
     </div>
 
-    <!-- Tooltip -->
-    <div class="tooltip" id="tooltip"></div>
+    <!-- Notifications -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Loading -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+        <p data-i18n="calculating">Calcul en cours...</p>
+    </div>
 
     <script src="app.js"></script>
 </body>
