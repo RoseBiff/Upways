@@ -1776,7 +1776,7 @@ class UpwaysApp {
                 }
                 
                 const levelInterval = strategy.markov.intervals.byLevel[level - 1];
-                items[upgradeType].quantity += Math.ceil(waypointValue);
+                items[upgradeType].quantity += Math.round(waypointValue);
                 items[upgradeType].quantityLower += Math.ceil(levelInterval.ci95.lower);
                 items[upgradeType].quantityUpper += Math.ceil(levelInterval.ci95.upper);
             }
