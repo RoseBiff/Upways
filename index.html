@@ -9,6 +9,7 @@
     
     <!-- Chart.js pour les graphiques -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
     
     <!-- html2canvas pour l'export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -182,32 +183,12 @@
                         <span class="strategy-icon">⭐</span>
                         <h3 data-i18n="optimal">Optimale</h3>
                     </div>
-                    <div class="strategy-stats">
-                        <div class="stat">
-                            <span class="stat-label" data-i18n="avgCost">Coût moyen</span>
-                            <span class="stat-value" id="optimalCost">-</span>
-                        </div>
-                        <div class="stat">
-                            <span class="stat-label" data-i18n="interval95">Intervalle 95%</span>
-                            <span class="stat-value" id="optimalRange">-</span>
-                        </div>
-                    </div>
                 </div>
 
                 <div class="strategy-card" data-strategy="custom">
                     <div class="strategy-header">
                         <span class="strategy-icon">🎨</span>
                         <h3 data-i18n="custom">Personnalisée</h3>
-                    </div>
-                    <div class="strategy-stats">
-                        <div class="stat">
-                            <span class="stat-label" data-i18n="avgCost">Coût moyen</span>
-                            <span class="stat-value" id="customCost">-</span>
-                        </div>
-                        <div class="stat">
-                            <span class="stat-label" data-i18n="interval95">Intervalle 95%</span>
-                            <span class="stat-value" id="customRange">-</span>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -243,9 +224,9 @@
 
                 <!-- Graphique Tentatives vs Probabilité -->
                 <div class="chart-section">
-                    <h3 class="chart-title" data-i18n="trialsProbability">Tentatives vs Probabilité de succès</h3>
-                    <p class="chart-subtitle" data-i18n="trialsProbabilityDesc">
-                        Ce graphique montre la probabilité de réussir l'amélioration en fonction du nombre de tentatives
+                    <h3 class="chart-title" data-i18n="chartTitle">Analyse de probabilité d'amélioration</h3>
+                    <p class="chart-subtitle" data-i18n="chartSubtitle">
+                        Evolution de la probabilité de succès selon le nombre de tentatives
                     </p>
                     <div class="chart-container">
                         <canvas id="probabilityChart"></canvas>
@@ -260,7 +241,7 @@
 
     <!-- Footer minimaliste -->
     <footer class="footer">
-        <p>Développé par RoseBiff • Merci à ArcMeurtrier et EasyL</p>
+        <p>Made by RoseBiff • EasyL • ArcMeurtrier</p>
         <p><a href="https://metin2upways.com" target="_blank">metin2upways.com</a></p>
     </footer>
 
@@ -278,6 +259,7 @@
         <p data-i18n="calculating">Calcul en cours...</p>
     </div>
 
-    <script src="app.js"></script>
+    <!-- Chargement du module principal avec type="module" -->
+    <script type="module" src="js/app.js"></script>
 </body>
 </html>

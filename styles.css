@@ -100,8 +100,6 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    /*background: var(--primary);
-    border-radius: var(--radius-lg);*/
     overflow: hidden;
 }
 
@@ -180,7 +178,7 @@ body {
 
 /* Container principal */
 .main-container {
-    max-width: 1600px;
+    max-width: 1800px;
     margin: 0 auto;
     padding: 2rem;
     flex: 1;
@@ -614,12 +612,12 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 2rem;
+    margin-bottom: 1.5rem;
 }
 
 .analysis-title {
-    font-size: 2rem;
-    font-weight: 700;
+    font-size: 1.5rem;
+    font-weight: 600;
     background: linear-gradient(135deg, var(--text-primary), var(--text-secondary));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -627,7 +625,7 @@ body {
 }
 
 .analysis-levels {
-    font-size: 1.5rem;
+    font-size: 1.125rem;
     font-weight: 400;
     color: var(--primary);
 }
@@ -653,74 +651,226 @@ body {
     transform: translateY(-2px);
 }
 
-/* Strategies summary */
+/* Strategies summary - REFONTE COMPLÈTE */
 .strategies-summary {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
     gap: 1.5rem;
-    margin-bottom: 3rem;
+    margin-bottom: 2.5rem;
 }
 
 .strategy-card {
-    background: var(--bg-card);
-    border: 2px solid var(--border-color);
-    border-radius: var(--radius-xl);
-    padding: 1.5rem;
+    background: linear-gradient(135deg, var(--bg-card), rgba(30, 41, 59, 0.7));
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--radius-lg);
     cursor: pointer;
     transition: all var(--transition-base);
+    position: relative;
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+}
+
+.strategy-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, transparent, rgba(var(--primary-rgb), 0.03));
+    opacity: 0;
+    transition: opacity var(--transition-base);
 }
 
 .strategy-card:hover {
     transform: translateY(-4px);
     box-shadow: var(--shadow-xl);
-    border-color: var(--bg-hover);
+    border-color: rgba(var(--primary-rgb), 0.3);
 }
 
-.strategy-card.optimal {
+.strategy-card:hover::before {
+    opacity: 1;
+}
+
+.strategy-card.active {
     background: linear-gradient(135deg, var(--primary), var(--primary-dark));
     border-color: transparent;
     color: white;
+    box-shadow: 0 10px 30px -5px rgba(var(--primary-rgb), 0.5);
 }
 
+.strategy-card.active::before {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), transparent);
+    opacity: 1;
+}
+
+/* Header de la carte */
 .strategy-header {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    margin-bottom: 1rem;
+    gap: 0.5rem;
+    padding: 1.25rem 1.25rem 0.5rem;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.strategy-card.active .strategy-header {
+    border-bottom-color: rgba(255, 255, 255, 0.1);
 }
 
 .strategy-icon {
-    font-size: 1.5rem;
+    font-size: 1.25rem;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
 }
 
 .strategy-header h3 {
     font-size: 1.125rem;
     font-weight: 600;
+    letter-spacing: -0.025em;
 }
 
-.strategy-stats {
+/* Corps de la carte */
+.strategy-body {
+    padding: 1.25rem;
+}
+
+/* Statistiques principales */
+.strategy-main-stats {
+    margin-bottom: 1.25rem;
+}
+
+.main-stat {
+    text-align: center;
+}
+
+.main-stat-label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 500;
+    margin-bottom: 0.35rem;
+    opacity: 0.8;
+}
+
+.strategy-card:not(.active) .main-stat-label {
+    color: var(--text-muted);
+}
+
+.main-stat-value {
+    display: block;
+    font-size: 1.875rem;
+    font-weight: 700;
+    letter-spacing: -0.05em;
+    line-height: 1;
+}
+
+.strategy-card:not(.active) .main-stat-value {
+    background: linear-gradient(135deg, var(--primary), var(--primary-light));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* Détails de la stratégie */
+.strategy-details {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
 }
 
-.stat {
+.detail-item {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    padding: 0.4rem 0;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.05);
 }
 
-.stat-label {
+.strategy-card.active .detail-item {
+    border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
+.detail-item:last-of-type {
+    border-bottom: none;
+}
+
+.detail-label {
+    font-size: 0.8rem;
+    font-weight: 500;
+    opacity: 0.9;
+}
+
+.strategy-card:not(.active) .detail-label {
+    color: var(--text-secondary);
+}
+
+.detail-value {
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.detail-value.highlight {
     font-size: 0.875rem;
+    color: var(--secondary);
+}
+
+.strategy-card.active .detail-value.highlight {
+    color: var(--secondary-light);
+}
+
+/* Indicateur de probabilité */
+.probability-indicator {
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.strategy-card.active .probability-indicator {
+    border-top-color: rgba(255, 255, 255, 0.1);
+}
+
+.probability-bar {
+    position: relative;
+    height: 6px;
+    background: rgba(148, 163, 184, 0.1);
+    border-radius: 999px;
+    overflow: hidden;
+    margin-bottom: 0.5rem;
+}
+
+.strategy-card.active .probability-bar {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.probability-fill {
+    position: absolute;
+    top: 0;
+    left: 5%;
+    height: 100%;
+    background: linear-gradient(90deg, var(--success), var(--primary));
+    border-radius: 999px;
+    transition: width var(--transition-slow);
+}
+
+.probability-label {
+    position: absolute;
+    top: -18px;
+    font-size: 0.6rem;
+    font-weight: 600;
+    opacity: 0.7;
+}
+
+.probability-label:first-of-type {
+    left: 5%;
+}
+
+.probability-range {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.7rem;
+    font-weight: 600;
     opacity: 0.8;
 }
 
-.stat-value {
-    font-size: 1rem;
-    font-weight: 700;
-}
-
-/* Strategy details */
+/* Strategy details section */
 .strategy-details {
     display: grid;
     gap: 2rem;
@@ -740,40 +890,6 @@ body {
     color: var(--text-primary);
 }
 
-/* Trials summary */
-.trials-summary {
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-lg);
-    padding: 1.5rem;
-    margin-bottom: 2rem;
-}
-
-.trials-summary h4 {
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--text-secondary);
-    margin-bottom: 1rem;
-}
-
-.trials-stats {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
-}
-
-.stat-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.5rem 0;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.stat-item:last-child {
-    border-bottom: none;
-}
-
 /* Upgrade path amélioré */
 .upgrade-path {
     display: flex;
@@ -784,8 +900,8 @@ body {
 }
 
 .path-step {
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-color);
+    background: linear-gradient(135deg, var(--bg-secondary), var(--bg-tertiary));
+    border: 1.5px solid var(--border-color);
     border-radius: var(--radius-lg);
     padding: 1rem;
     text-align: center;
@@ -797,13 +913,14 @@ body {
     cursor: pointer;
     position: relative;
     margin: 0 auto 0 auto;
+    box-shadow: var(--shadow-sm);
 }
 
 /* Style pour les niveaux en dessous du niveau de départ */
 .path-step.below-start {
-    background: var(--bg-tertiary);
+    background: linear-gradient(135deg, #3f2b1a, #2d1f14);
     border-color: var(--warning);
-    opacity: 0.8;
+    opacity: 0.85;
 }
 
 .path-step.below-start .step-level {
@@ -825,23 +942,24 @@ body {
     justify-content: center;
     font-size: 0.75rem;
     font-weight: bold;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 /* Style pour les niveaux cibles (dans le chemin principal) */
 .path-step.target-level {
     border-color: var(--primary);
-    box-shadow: 0 0 0 1px rgba(var(--primary-rgb), 0.2);
+    box-shadow: 0 0 0 1.5px rgba(var(--primary-rgb), 0.2), var(--shadow-sm);
 }
 
 .path-step:hover {
-    background: var(--bg-hover);
+    background: linear-gradient(135deg, var(--bg-hover), var(--bg-secondary));
     transform: translateY(-2px);
     box-shadow: var(--shadow-md);
     border-color: var(--primary);
 }
 
 .path-step.editable {
-    background: var(--bg-tertiary);
+    background: linear-gradient(135deg, #2a2d5e, #1e2147);
     border-color: var(--primary);
 }
 
@@ -854,24 +972,34 @@ body {
 }
 
 .step-level {
-    background: var(--primary);
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
     color: white;
-    padding: 0.25rem 0.75rem;
+    padding: 0.25rem 0.65rem;
     border-radius: 999px;
-    font-size: 0.875rem;
+    font-size: 0.8rem;
     font-weight: 600;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .step-icon {
-    width: 40px;
-    height: 40px;
+    width: 36px;
+    height: 36px;
     object-fit: contain;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
+}
+
+.step-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+    width: 100%;
 }
 
 .step-name {
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     color: var(--text-secondary);
-    margin-bottom: 0.5rem;
+    font-weight: 500;
     word-break: break-word;
     line-height: 1.2;
     max-width: 100px;
@@ -879,36 +1007,116 @@ body {
 
 .step-select {
     width: 100%;
-    padding: 0.375rem 0.5rem;
+    padding: 0.4rem 0.6rem;
     background: var(--bg-primary);
     border: 1px solid var(--border-color);
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-md);
     color: var(--text-primary);
-    font-size: 0.75rem;
-    margin-bottom: 0.5rem;
+    font-size: 0.8rem;
+    margin-bottom: 0.25rem;
+    transition: all var(--transition-fast);
+}
+
+.step-select:hover {
+    border-color: var(--primary);
+    background: var(--bg-secondary);
 }
 
 .step-select:focus {
     outline: none;
     border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(var(--primary-rgb), 0.2);
 }
 
 .step-stats {
     display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
+    gap: 0.75rem;
+    align-items: center;
+    justify-content: center;
+    padding: 0.4rem 0;
+    border-radius: var(--radius-sm);
+    background: rgba(0, 0, 0, 0.15);
+    width: 100%;
 }
 
 .step-rate {
     color: var(--success);
     font-weight: 600;
-    font-size: 0.875rem;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 0.2rem;
+}
+
+.step-rate::before {
+    content: '⚡';
+    font-size: 0.7rem;
 }
 
 .step-trials {
-    color: var(--primary);
+    color: var(--primary-light);
     font-weight: 600;
-    font-size: 0.875rem;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 0.2rem;
+}
+
+.step-trials::before {
+    content: '🎯';
+    font-size: 0.7rem;
+}
+
+.step-cost {
+    color: var(--secondary);
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-top: 0.25rem;
+    text-align: center;
+    background: rgba(var(--primary-rgb), 0.08);
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--radius-sm);
+    width: 100%;
+}
+
+/* Matériaux sous les paliers */
+.step-materials {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--border-color);
+    justify-content: center;
+}
+
+.material-item {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: 0.25rem 0.5rem;
+    cursor: help;
+    transition: all var(--transition-fast);
+}
+
+.material-item:hover {
+    border-color: var(--primary);
+    transform: translateY(-1px);
+}
+
+.material-icon {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+}
+
+.material-qty {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--text-primary);
 }
 
 /* Detail grid */
@@ -1015,7 +1223,7 @@ body {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 1.5rem;
-    max-width: 600px;
+    max-width: 800px;
     margin: 0 auto;
 }
 
@@ -1039,6 +1247,12 @@ body {
 
 .legend-prob {
     color: var(--text-primary);
+    font-weight: 600;
+}
+
+.legend-label {
+    color: var(--text-muted);
+    font-size: 0.75rem;
 }
 
 /* Tooltip system */
@@ -1051,7 +1265,7 @@ body {
     box-shadow: var(--shadow-xl);
     z-index: 2000;
     pointer-events: none;
-    max-width: 250px;
+    max-width: 300px;
 }
 
 .tooltip::before {
@@ -1102,6 +1316,19 @@ body {
     padding: 0.25rem 0;
     margin-bottom: 0.5rem;
     border-bottom: 1px solid var(--border-color);
+}
+
+.tooltip-section {
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.tooltip-subtitle {
+    font-weight: 600;
+    color: var(--primary);
+    margin-bottom: 0.5rem;
+    font-size: 0.8rem;
 }
 
 /* Toast notifications */
@@ -1325,7 +1552,7 @@ body {
     
     .path-step {
         padding: 0.75rem;
-        flex: 0 0 110px;
+        flex: 0 0 120px;
     }
     
     .path-step.below-start::before {
@@ -1339,6 +1566,19 @@ body {
     .step-icon {
         width: 32px;
         height: 32px;
+    }
+    
+    .step-materials {
+        gap: 0.2rem;
+    }
+    
+    .material-item {
+        padding: 0.2rem 0.4rem;
+    }
+    
+    .material-icon {
+        width: 16px;
+        height: 16px;
     }
     
     .legend-grid {
@@ -1370,7 +1610,7 @@ body {
     }
     
     .tooltip {
-        max-width: 200px;
+        max-width: 250px;
     }
     
     .level-selectors {
@@ -1381,8 +1621,17 @@ body {
         display: none;
     }
     
-    .trials-stats {
-        grid-template-columns: 1fr;
+    /* Ajustements des cartes de stratégie pour mobile */
+    .main-stat-value {
+        font-size: 1.75rem;
+    }
+    
+    .strategy-header {
+        padding: 1rem 1rem 0.5rem;
+    }
+    
+    .strategy-body {
+        padding: 1rem;
     }
 }
 
@@ -1402,7 +1651,7 @@ body {
     
     .path-step {
         padding: 0.5rem;
-        flex: 0 0 95px;
+        flex: 0 0 100px;
     }
     
     .step-name,
@@ -1418,6 +1667,28 @@ body {
     .step-rate,
     .step-trials {
         font-size: 0.75rem;
+    }
+    
+    .step-cost {
+        font-size: 0.7rem;
+    }
+    
+    .step-materials {
+        margin-top: 0.25rem;
+        padding-top: 0.25rem;
+    }
+    
+    .material-item {
+        padding: 0.15rem 0.3rem;
+    }
+    
+    .material-icon {
+        width: 14px;
+        height: 14px;
+    }
+    
+    .material-qty {
+        font-size: 0.65rem;
     }
     
     .price-input {
@@ -1456,6 +1727,20 @@ body {
     .item-image {
         width: 80px;
         height: 80px;
+    }
+    
+    /* Cartes de stratégie sur très petits écrans */
+    .strategies-summary {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .main-stat-value {
+        font-size: 1.5rem;
+    }
+    
+    .probability-indicator {
+        display: none;
     }
 }
 
@@ -1547,9 +1832,9 @@ select:focus-visible {
 
 /* Amélioration pour les exports d'images */
 @media screen and (min-width: 1600px) {
-    .main-container {
+    /*.main-container {
         max-width: 1400px;
-    }
+    }*/
     
     .upgrade-path {
         justify-content: center;
@@ -1570,24 +1855,4 @@ select:focus-visible {
     background: var(--bg-secondary);
     padding: 1rem;
     border-radius: var(--radius-lg);
-}
-
-.btn-primary {
-    background: linear-gradient(135deg, #6366f1, #4f46e5);
-    color: white;
-    border: none;
-    padding: 12px 24px;
-    border-radius: 8px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(99, 102, 241, 0.4);
-}
-
-.btn-primary i {
-    margin-right: 8px;
 }
