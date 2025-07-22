@@ -6,10 +6,10 @@ from src.open_files import GameNames, ItemProto
 OUTPUT_JSON_PATH = os.path.join("public", "data", "locale", "{lang}", "item_names.json")
 
 
-def convert_localized_items_to_json(item_proto: ItemProto):
+def convert_localized_items_to_json(equipment_vnums: list[int]):
     item_names = GameNames().data
 
-    filtered = item_names.loc[item_names.index.intersection(item_proto.equipment_vnums)]
+    filtered = item_names.loc[item_names.index.intersection(equipment_vnums)]
 
     for lang, col in filtered.items():
         output_path = OUTPUT_JSON_PATH.format(lang=lang)

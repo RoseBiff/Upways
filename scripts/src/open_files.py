@@ -17,29 +17,26 @@ LANGS_DATA = {
 
 class ItemProto:
     VNUM = "Vnum"
+    REFINED_VNUM = "RefinedVnum"
     REFINE_SET = "RefineSet"
     SEP = "\t"
 
     def __init__(self):
         self.data = self._read_file()
-        self.equipment_vnums = self._get_equipment_vnums()
 
     def _read_file(self):
         data = pd.read_csv(
             ITEM_PROTO_PATH,
             encoding_errors="ignore",
             sep=self.SEP,
-            usecols=[self.VNUM, self.REFINE_SET],
+            usecols=[self.VNUM, self.REFINED_VNUM, self.REFINE_SET],
         )
+
+        data = data[data[self.VNUM].str.isdigit()]
+        data[self.VNUM] = data[self.VNUM].astype(int)
+        data = data.set_index(self.VNUM)
 
         return data
-
-    def _get_equipment_vnums(self):
-        return (
-            self.data.loc[self.data[self.REFINE_SET] > 0, self.VNUM]
-            .astype(int)
-            .tolist()
-        )
 
 
 class GameNames:
@@ -76,9 +73,8 @@ class ImagePaths:
     VNUM = "Vnum"
     PATH = "Path"
 
-    def __init__(self, vnums: list[int]):
+    def __init__(self):
         self.data = self._read_csv()
-        self._filter_data(vnums)
         self._convert_data()
 
     def _read_csv(self):
@@ -92,8 +88,5 @@ class ImagePaths:
 
         return data[self.PATH]
 
-    def _filter_data(self, vnums: list[int]):
-        self.data = self.data.loc[self.data.index.isin(vnums)]
-
     def _convert_data(self):
-        self.data = self.data.str.extract(r"([^/]+\.tga)$").squeeze()
+        self.data: pd.Series = self.data.str.extract(r"([^/]+\.tga)$").squeeze()
