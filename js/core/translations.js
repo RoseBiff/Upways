@@ -1,6 +1,3 @@
-/**
- * Système de traduction multilingue
- */
 export const translations = {
     fr: {
         // Header
@@ -26,6 +23,15 @@ export const translations = {
         upgradeLevels: "Niveaux d'amélioration",
         fromLevel: "De",
         toLevel: "À",
+        notAvailable: "Non disponible",
+        
+        // Import/Export config
+        exportConfig: "Exporter config",
+        importConfig: "Importer config",
+        configExported: "Configuration exportée avec succès",
+        configImported: "Configuration importée avec succès",
+        exportConfigError: "Erreur lors de l'export de la configuration",
+        importConfigError: "Erreur lors de l'import de la configuration",
         
         // Analyse
         analysisResults: "Résultats de l'analyse",
@@ -59,6 +65,8 @@ export const translations = {
         avgRequired: "Moyenne",
         itemsRequired: "Objets requis pour ce niveau",
         avgItemsRequired: "Nombre moyen d'objets nécessaires",
+        belowStartLevel: "Niveau en dessous du départ",
+        magicStoneRecommended: "Pierre magique recommandée au-delà de +9",
         
         // Statistiques
         totalTrials: "Essais moyens",
@@ -85,14 +93,38 @@ export const translations = {
         exportSuccess: "Export réussi",
         errorAnalysis: "Erreur lors de l'analyse",
         invalidLevelRange: "Le niveau de fin doit être supérieur au niveau de départ",
+        noStrategySelected: "Aucune stratégie sélectionnée",
+        exportFailed: "Échec de l'export",
+        customStrategyError: "Erreur lors du calcul de la stratégie personnalisée",
         
         // Objets d'amélioration
         "Parchemin de bénédiction": "Parchemin de bénédiction",
         "Manuel de Forgeron": "Manuel de Forgeron",
         "Parchemin du Dieu Dragon": "Parchemin du Dieu Dragon",
         "Parchemin de Guerre": "Parchemin de Guerre",
-        "Pierre magique": "Pierre magique"
+        "Pierre magique": "Pierre magique",
+        
+        // Modale de partage
+        shareResultTitle: "Résultat de l'analyse",
+        downloadImage: "Télécharger l'image",
+        copyImage: "Copier l'image",
+        shareTip: "Astuce :",
+        shareRightClick: "Vous pouvez faire un clic droit sur l'image pour la copier ou la sauvegarder.",
+        imageCopied: "Image copiée dans le presse-papiers !",
+        copyError: "Utilisez le clic droit pour copier l'image",
+        
+        // Export
+        priceConfiguration: "Configuration des prix utilisés",
+        forcedMagicStone: "Pierre magique recommandée au-delà de +9",
+        noMaterialsRequired: "Aucun matériau requis",
+        
+        // Reset
+        resetConfirm: "Réinitialiser tous les paramètres ?",
+        resetConfirmTitle: "Réinitialisation",
+        resetConfirmButton: "Réinitialiser",
+        cancelButton: "Annuler"
     },
+    
     en: {
         // Header
         brandSubtitle: "Metin2 Upgrade Optimizer",
@@ -114,6 +146,16 @@ export const translations = {
         upgradeLevels: "Upgrade levels",
         fromLevel: "From",
         toLevel: "To",
+        notAvailable: "Not available",
+        
+        // Import/Export config
+        exportConfig: "Export config",
+        importConfig: "Import config",
+        configExported: "Configuration exported successfully",
+        configImported: "Configuration imported successfully",
+        exportConfigError: "Error exporting configuration",
+        importConfigError: "Error importing configuration",
+        
         analysisResults: "Analysis Results",
         optimal: "Optimal",
         custom: "Custom",
@@ -145,6 +187,8 @@ export const translations = {
         avgRequired: "Average required",
         itemsRequired: "Items required for this level",
         avgItemsRequired: "Average number of items needed",
+        belowStartLevel: "Level below start",
+        magicStoneRecommended: "Magic stone recommended beyond +9",
         
         totalTrials: "Average Trials",
         costRange95: "95% Interval",
@@ -164,14 +208,38 @@ export const translations = {
         exportSuccess: "Export successful",
         errorAnalysis: "Analysis error",
         invalidLevelRange: "End level must be greater than start level",
+        noStrategySelected: "No strategy selected",
+        exportFailed: "Export failed",
+        customStrategyError: "Error calculating custom strategy",
         
         // Upgrade items
         "Parchemin de bénédiction": "Blessing Scroll",
         "Manuel de Forgeron": "Blacksmith Handbook",
         "Parchemin du Dieu Dragon": "Dragon God Scroll",
         "Parchemin de Guerre": "War Scroll",
-        "Pierre magique": "Magic Stone"
+        "Pierre magique": "Magic Stone",
+        
+        // Share modal
+        shareResultTitle: "Analysis Result",
+        downloadImage: "Download image",
+        copyImage: "Copy image",
+        shareTip: "Tip:",
+        shareRightClick: "You can right-click on the image to copy or save it.",
+        imageCopied: "Image copied to clipboard!",
+        copyError: "Use right-click to copy the image",
+        
+        // Export
+        priceConfiguration: "Price configuration used",
+        forcedMagicStone: "Magic stone recommended beyond +9",
+        noMaterialsRequired: "No materials required",
+        
+        // Reset
+        resetConfirm: "Reset all settings?",
+        resetConfirmTitle: "Reset",
+        resetConfirmButton: "Reset",
+        cancelButton: "Cancel"
     },
+    
     ro: {
         // Header
         brandSubtitle: "Optimizator de îmbunătățire Metin2",
@@ -193,6 +261,16 @@ export const translations = {
         upgradeLevels: "Niveluri de upgrade",
         fromLevel: "De la",
         toLevel: "La",
+        notAvailable: "Indisponibil",
+        
+        // Import/Export config
+        exportConfig: "Exportă config",
+        importConfig: "Importă config",
+        configExported: "Configurație exportată cu succes",
+        configImported: "Configurație importată cu succes",
+        exportConfigError: "Eroare la exportul configurației",
+        importConfigError: "Eroare la importul configurației",
+        
         analysisResults: "Rezultatele analizei",
         optimal: "Optimă",
         custom: "Personalizată",
@@ -224,6 +302,8 @@ export const translations = {
         avgRequired: "Medie necesară",
         itemsRequired: "Obiecte necesare pentru acest nivel",
         avgItemsRequired: "Număr mediu de obiecte necesare",
+        belowStartLevel: "Nivel sub start",
+        magicStoneRecommended: "Piatră magică recomandată peste +9",
         
         totalTrials: "Încercări medii",
         costRange95: "Interval 95%",
@@ -243,14 +323,38 @@ export const translations = {
         exportSuccess: "Export reușit",
         errorAnalysis: "Eroare la analiză",
         invalidLevelRange: "Nivelul final trebuie să fie mai mare decât nivelul de start",
+        noStrategySelected: "Nicio strategie selectată",
+        exportFailed: "Export eșuat",
+        customStrategyError: "Eroare la calcularea strategiei personalizate",
         
         // Obiecte de upgrade
         "Parchemin de bénédiction": "Pergament de Binecuvântare",
         "Manuel de Forgeron": "Manual de Fierar",
         "Parchemin du Dieu Dragon": "Pergament al Zeului Dragon",
         "Parchemin de Guerre": "Pergament de Război",
-        "Pierre magique": "Piatră Magică"
+        "Pierre magique": "Piatră Magică",
+        
+        // Modal partajare
+        shareResultTitle: "Rezultatul analizei",
+        downloadImage: "Descarcă imaginea",
+        copyImage: "Copiază imaginea",
+        shareTip: "Sfat:",
+        shareRightClick: "Puteți face clic dreapta pe imagine pentru a o copia sau salva.",
+        imageCopied: "Imagine copiată în clipboard!",
+        copyError: "Folosiți clic dreapta pentru a copia imaginea",
+        
+        // Export
+        priceConfiguration: "Configurația prețurilor utilizate",
+        forcedMagicStone: "Piatră magică recomandată peste +9",
+        noMaterialsRequired: "Nu sunt necesare materiale",
+        
+        // Reset
+        resetConfirm: "Resetați toate setările?",
+        resetConfirmTitle: "Resetare",
+        resetConfirmButton: "Resetează",
+        cancelButton: "Anulează"
     },
+    
     tr: {
         // Header
         brandSubtitle: "Metin2 Yükseltme Optimizasyonu",
@@ -272,6 +376,16 @@ export const translations = {
         upgradeLevels: "Yükseltme seviyeleri",
         fromLevel: "Başlangıç",
         toLevel: "Bitiş",
+        notAvailable: "Mevcut değil",
+        
+        // Import/Export config
+        exportConfig: "Ayarları dışa aktar",
+        importConfig: "Ayarları içe aktar",
+        configExported: "Yapılandırma başarıyla dışa aktarıldı",
+        configImported: "Yapılandırma başarıyla içe aktarıldı",
+        exportConfigError: "Yapılandırma dışa aktarılırken hata",
+        importConfigError: "Yapılandırma içe aktarılırken hata",
+        
         analysisResults: "Analiz Sonuçları",
         optimal: "Optimal",
         custom: "Özel",
@@ -303,6 +417,8 @@ export const translations = {
         avgRequired: "Ortalama gerekli",
         itemsRequired: "Bu seviye için gerekli eşyalar",
         avgItemsRequired: "Ortalama gerekli eşya sayısı",
+        belowStartLevel: "Başlangıç altı seviye",
+        magicStoneRecommended: "+9'dan sonra sihirli taş önerilir",
         
         totalTrials: "Ortalama Deneme",
         costRange95: "%95 Aralık",
@@ -322,14 +438,38 @@ export const translations = {
         exportSuccess: "Dışa aktarma başarılı",
         errorAnalysis: "Analiz hatası",
         invalidLevelRange: "Bitiş seviyesi başlangıç seviyesinden büyük olmalıdır",
+        noStrategySelected: "Strateji seçilmedi",
+        exportFailed: "Dışa aktarma başarısız",
+        customStrategyError: "Özel strateji hesaplama hatası",
         
         // Yükseltme eşyaları
         "Parchemin de bénédiction": "Kutsama Kağıdı",
         "Manuel de Forgeron": "Demirci El Kitabı",
         "Parchemin du Dieu Dragon": "Ejderha Tanrı Kağıdı",
         "Parchemin de Guerre": "Savaş Kağıdı",
-        "Pierre magique": "Sihirli Taş"
+        "Pierre magique": "Sihirli Taş",
+        
+        // Paylaşım modali
+        shareResultTitle: "Analiz Sonucu",
+        downloadImage: "Resmi indir",
+        copyImage: "Resmi kopyala",
+        shareTip: "İpucu:",
+        shareRightClick: "Resmi kopyalamak veya kaydetmek için sağ tıklayabilirsiniz.",
+        imageCopied: "Resim panoya kopyalandı!",
+        copyError: "Resmi kopyalamak için sağ tık kullanın",
+        
+        // Dışa aktarma
+        priceConfiguration: "Kullanılan fiyat yapılandırması",
+        forcedMagicStone: "+9'dan sonra sihirli taş önerilir",
+        noMaterialsRequired: "Malzeme gerekmiyor",
+        
+        // Sıfırlama
+        resetConfirm: "Tüm ayarlar sıfırlansın mı?",
+        resetConfirmTitle: "Sıfırlama",
+        resetConfirmButton: "Sıfırla",
+        cancelButton: "İptal"
     },
+    
     de: {
         // Header
         brandSubtitle: "Metin2 Verbesserungs-Optimierer",
@@ -351,6 +491,16 @@ export const translations = {
         upgradeLevels: "Verbesserungsstufen",
         fromLevel: "Von",
         toLevel: "Bis",
+        notAvailable: "Nicht verfügbar",
+        
+        // Import/Export config
+        exportConfig: "Konfig exportieren",
+        importConfig: "Konfig importieren",
+        configExported: "Konfiguration erfolgreich exportiert",
+        configImported: "Konfiguration erfolgreich importiert",
+        exportConfigError: "Fehler beim Export der Konfiguration",
+        importConfigError: "Fehler beim Import der Konfiguration",
+        
         analysisResults: "Analyseergebnisse",
         optimal: "Optimal",
         custom: "Benutzerdefiniert",
@@ -382,6 +532,8 @@ export const translations = {
         avgRequired: "Durchschnittlich erforderlich",
         itemsRequired: "Für diese Stufe erforderliche Gegenstände",
         avgItemsRequired: "Durchschnittliche Anzahl benötigter Gegenstände",
+        belowStartLevel: "Stufe unter Start",
+        magicStoneRecommended: "Magischer Stein empfohlen über +9",
         
         totalTrials: "Durchschn. Versuche",
         costRange95: "95% Intervall",
@@ -401,12 +553,35 @@ export const translations = {
         exportSuccess: "Export erfolgreich",
         errorAnalysis: "Analysefehler",
         invalidLevelRange: "Endstufe muss größer als Startstufe sein",
+        noStrategySelected: "Keine Strategie ausgewählt",
+        exportFailed: "Export fehlgeschlagen",
+        customStrategyError: "Fehler bei der Berechnung der benutzerdefinierten Strategie",
         
         // Verbesserungsgegenstände
         "Parchemin de bénédiction": "Segensrolle",
         "Manuel de Forgeron": "Schmiedehandbuch",
         "Parchemin du Dieu Dragon": "Drachengott-Rolle",
         "Parchemin de Guerre": "Kriegsrolle",
-        "Pierre magique": "Magischer Stein"
+        "Pierre magique": "Magischer Stein",
+        
+        // Teilen-Modal
+        shareResultTitle: "Analyseergebnis",
+        downloadImage: "Bild herunterladen",
+        copyImage: "Bild kopieren",
+        shareTip: "Tipp:",
+        shareRightClick: "Sie können mit der rechten Maustaste auf das Bild klicken, um es zu kopieren oder zu speichern.",
+        imageCopied: "Bild in die Zwischenablage kopiert!",
+        copyError: "Verwenden Sie Rechtsklick, um das Bild zu kopieren",
+        
+        // Export
+        priceConfiguration: "Verwendete Preiskonfiguration",
+        forcedMagicStone: "Magischer Stein empfohlen über +9",
+        noMaterialsRequired: "Keine Materialien erforderlich",
+        
+        // Zurücksetzen
+        resetConfirm: "Alle Einstellungen zurücksetzen?",
+        resetConfirmTitle: "Zurücksetzen",
+        resetConfirmButton: "Zurücksetzen",
+        cancelButton: "Abbrechen"
     }
 };

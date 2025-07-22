@@ -303,6 +303,18 @@ body {
     box-shadow: 0 10px 20px -5px rgba(var(--primary-rgb), 0.3);
 }
 
+.nav-btn.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+    background: var(--bg-secondary);
+}
+
+.nav-btn.disabled:hover {
+    transform: none;
+    background: var(--bg-secondary);
+}
+
 /* Tab content */
 .tab-content {
     display: none;
@@ -707,24 +719,27 @@ body {
 }
 
 .export-btn {
-    width: 44px;
-    height: 44px;
+    width: 48px;
+    height: 48px;
     border-radius: var(--radius-md);
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
-    color: var(--text-secondary);
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    border: 1px solid var(--primary);
+    color: white;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     transition: all var(--transition-base);
+    box-shadow: 0 4px 12px -2px rgba(var(--primary-rgb), 0.3);
 }
 
 .export-btn:hover {
-    background: var(--primary);
-    border-color: var(--primary);
-    color: white;
-    transform: translateY(-2px);
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 8px 20px -2px rgba(var(--primary-rgb), 0.4);
+}
+
+.export-btn:active {
+    transform: translateY(0) scale(1);
 }
 
 /* Strategies summary - REFONTE COMPLÈTE */
@@ -969,10 +984,13 @@ body {
 /* Upgrade path amélioré */
 .upgrade-path {
     display: flex;
-    gap: 0.75rem;
+    gap: 0.5rem;
     padding: 1rem 0;
     flex-wrap: wrap;
-    justify-content: center;
+    justify-content: flex-start;
+    align-items: flex-start;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 .path-step {
@@ -981,14 +999,14 @@ body {
     border-radius: var(--radius-lg);
     padding: 1rem;
     text-align: center;
-    flex: 0 1 120px;
+    flex: 0 0 140px;
+    width: 140px;
     transition: all var(--transition-base);
     display: flex;
     flex-direction: column;
     align-items: center;
     cursor: pointer;
     position: relative;
-    margin: 0 auto 0 auto;
     box-shadow: var(--shadow-sm);
 }
 
@@ -1619,16 +1637,15 @@ body {
     }
     
     .upgrade-path {
-        gap: 0.5rem;
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
+        gap: 0.4rem;
         justify-content: flex-start;
         padding-bottom: 0.5rem;
     }
     
     .path-step {
         padding: 0.75rem;
-        flex: 0 0 120px;
+        flex: 0 0 110px;
+        width: 110px;
     }
     
     .path-step.below-start::before {
@@ -1728,6 +1745,7 @@ body {
     .path-step {
         padding: 0.5rem;
         flex: 0 0 100px;
+        width: 100px;
     }
     
     .step-name,
@@ -1931,4 +1949,528 @@ select:focus-visible {
     background: var(--bg-secondary);
     padding: 1rem;
     border-radius: var(--radius-lg);
+}
+
+/* Modale de partage */
+.share-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 3000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity var(--transition-base);
+}
+
+.share-modal.open {
+    opacity: 1;
+}
+
+.share-modal.closing {
+    opacity: 0;
+}
+
+.share-modal .modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+}
+
+.share-modal .modal-content {
+    position: relative;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-xl);
+    max-width: 90%;
+    width: 1400px;
+    max-height: 90vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.share-modal .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.share-modal .modal-header h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.share-modal .modal-close {
+    width: 40px;
+    height: 40px;
+    border: none;
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+    border-radius: var(--radius-md);
+    font-size: 1.5rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition-base);
+}
+
+.share-modal .modal-close:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+    transform: rotate(90deg);
+}
+
+.share-modal .modal-body {
+    padding: 1.5rem;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+/* Prévisualisation de l'image */
+.image-preview {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 1rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: auto;
+    max-height: 60vh;
+}
+
+.preview-image {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+}
+
+/* Actions de partage */
+.share-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.share-actions .btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.875rem 1.5rem;
+}
+
+.share-actions .btn span {
+    font-size: 1.25rem;
+}
+
+/* Info */
+.share-info {
+    color: var(--text-secondary);
+    padding: 1rem;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+    text-align: center;
+    font-size: 0.875rem;
+}
+
+.share-info strong {
+    color: var(--primary);
+}
+
+/* Section externe (services d'hébergement) */
+.share-external {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+}
+
+.share-external summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--text-primary);
+    padding: 0.5rem;
+    user-select: none;
+    transition: color var(--transition-base);
+}
+
+.share-external summary:hover {
+    color: var(--primary);
+}
+
+.share-external[open] summary {
+    margin-bottom: 1rem;
+    color: var(--primary);
+}
+
+.share-note {
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    margin: 1rem 0 0.75rem;
+}
+
+.share-external ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.share-external li {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.share-external li::before {
+    content: '→';
+    color: var(--primary);
+    font-weight: bold;
+}
+
+.share-external a {
+    color: var(--primary);
+    text-decoration: none;
+    font-weight: 500;
+    transition: all var(--transition-base);
+}
+
+.share-external a:hover {
+    color: var(--primary-light);
+    text-decoration: underline;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+    .share-modal .modal-content {
+        width: 95%;
+    }
+}
+
+@media (max-width: 768px) {
+    .share-modal .modal-content {
+        max-height: 95vh;
+    }
+    
+    .share-modal .modal-header {
+        padding: 1rem;
+    }
+    
+    .share-modal .modal-body {
+        padding: 1rem;
+    }
+    
+    .image-preview {
+        padding: 0.5rem;
+        max-height: 50vh;
+    }
+    
+    .share-actions {
+        flex-direction: column;
+    }
+    
+    .share-actions .btn {
+        width: 100%;
+    }
+}
+
+/* Boutons d'import/export de configuration */
+.config-import-export {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.btn-small {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+}
+
+.btn-small .btn-icon {
+    font-size: 1rem;
+}
+
+/* Support des niveaux élevés */
+.level-select {
+    min-width: 120px; /* Augmenté pour supporter +21 */
+}
+
+/* Styles pour les niveaux au-delà de +9 avec pierre magique obligatoire */
+.path-step.magic-stone-only {
+    background: linear-gradient(135deg, #4a3c5a, #362847);
+    border-color: #9333ea;
+    position: relative;
+}
+
+.path-step.magic-stone-only::after {
+    content: '✨';
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: linear-gradient(135deg, #9333ea, #7c3aed);
+    color: white;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    animation: sparkle 2s ease-in-out infinite;
+}
+
+.path-step.magic-stone-only .step-level {
+    background: linear-gradient(135deg, #9333ea, #7c3aed);
+}
+
+/* Responsive pour les sélecteurs de niveau */
+@media (max-width: 768px) {
+    .level-selectors {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .level-arrow {
+        display: none;
+    }
+    
+    .level-selector {
+        width: 100%;
+    }
+    
+    .level-select {
+        width: 100%;
+    }
+    
+    .config-import-export {
+        flex-direction: column;
+    }
+    
+    .config-import-export .btn {
+        width: 100%;
+    }
+}
+
+/* Amélioration de l'affichage des chemins longs */
+.upgrade-path {
+    max-width: 100%;
+    overflow-x: auto;
+    padding-bottom: 1rem;
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary) var(--bg-secondary);
+}
+
+.upgrade-path::-webkit-scrollbar {
+    height: 8px;
+}
+
+.upgrade-path::-webkit-scrollbar-track {
+    background: var(--bg-secondary);
+    border-radius: 4px;
+}
+
+.upgrade-path::-webkit-scrollbar-thumb {
+    background: var(--primary);
+    border-radius: 4px;
+}
+
+.upgrade-path::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-light);
+}
+
+/* Indicateur de défilement pour les chemins longs */
+.upgrade-path.scrollable::after {
+    content: '→';
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    background: linear-gradient(90deg, transparent, var(--bg-card));
+    padding: 1rem 1rem 1rem 3rem;
+    font-size: 1.5rem;
+    color: var(--primary);
+    pointer-events: none;
+}
+
+/* Animation pour les niveaux élevés */
+@keyframes sparkle {
+    0% {
+        opacity: 0.3;
+        transform: scale(0.8);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.1);
+    }
+    100% {
+        opacity: 0.3;
+        transform: scale(0.8);
+    }
+}
+
+.path-step.magic-stone-only::after {
+    animation: sparkle 2s ease-in-out infinite;
+}
+
+/* Toast pour les imports/exports */
+.toast.info {
+    border-left: 4px solid var(--info);
+}
+
+.toast.info .toast-icon {
+    color: var(--info);
+}
+
+/* Connexion visuelle entre stratégie et chemin */
+.strategy-connection {
+    position: absolute;
+    width: 2px;
+    background: var(--primary);
+    opacity: 0;
+    transition: opacity var(--transition-base);
+    pointer-events: none;
+    z-index: 10;
+}
+
+.strategy-connection.active {
+    opacity: 1;
+}
+
+.strategy-connection::before,
+.strategy-connection::after {
+    content: '';
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background: var(--primary);
+    border-radius: 50%;
+}
+
+.strategy-connection::before {
+    top: -5px;
+    left: -4px;
+}
+
+.strategy-connection::after {
+    bottom: -5px;
+    left: -4px;
+}
+
+/* Position relative pour les conteneurs */
+.strategies-summary {
+    position: relative;
+}
+
+.strategy-details {
+    position: relative;
+}
+
+/* Indicateur visuel sur la stratégie active */
+.strategy-card.active::after {
+    content: '';
+    position: absolute;
+    bottom: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 10px solid transparent;
+    border-right: 10px solid transparent;
+    border-top: 10px solid var(--primary);
+    opacity: 0;
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+}
+
+/* Séparateur visuel pour les niveaux > 9 */
+.upgrade-path-separator {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    margin: 0 1rem;
+    height: 100%;
+}
+
+.upgrade-path-separator::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: -10px;
+    bottom: -10px;
+    width: 2px;
+    background: var(--warning);
+    transform: translateX(-50%);
+}
+
+.separator-text {
+    background: var(--bg-card);
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--warning);
+    border-radius: var(--radius-md);
+    font-size: 0.75rem;
+    color: var(--warning);
+    font-weight: 600;
+    white-space: nowrap;
+    z-index: 1;
+    position: relative;
+}
+
+/* Amélioration de la répartition des étapes sur plusieurs lignes */
+.upgrade-path {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    padding: 1rem 0;
+    justify-content: center;
+    align-items: stretch;
+}
+
+.upgrade-path-row {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+    width: 100%;
+    margin-bottom: 1rem;
+}
+
+.upgrade-path-row:last-child {
+    margin-bottom: 0;
+}
+
+/* Pour l'export - meilleure gestion des chemins longs */
+.export-mode .upgrade-path {
+    display: grid;
+    grid-template-columns: repeat(auto-track, minmax(100px, 1fr));
+    gap: 10px;
+    width: 100%;
+    max-width: 100%;
+}
+
+.export-mode .path-step {
+    margin: 0;
+    flex: none;
+    width: 100%;
 }

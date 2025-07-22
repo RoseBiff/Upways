@@ -375,6 +375,15 @@ class UpwaysApp {
             // Calculer toutes les stratégies
             await this.calculateAllStrategies();
             
+            // Débloquer l'onglet analyse AVANT de changer d'onglet
+            const analysisTabBtn = document.getElementById('analysisTabBtn');
+            if (analysisTabBtn) {
+                analysisTabBtn.classList.remove('disabled');
+                console.log('Analysis tab unlocked');
+            } else {
+                console.error('Analysis tab button not found!');
+            }
+            
             // Passer à l'onglet analyse
             this.switchTab('analysis');
             
@@ -395,7 +404,6 @@ class UpwaysApp {
             this.uiState.hideLoading();
         }
     }
-
     /**
      * Calcule toutes les stratégies
      */
@@ -429,7 +437,7 @@ class UpwaysApp {
         const endLevel = this.configComponent.getEndLevel();
         const customScenario = this.analysisComponent.getCustomScenario();
         
-        this.uiState.showLoading();
+        this.uiState.showLoading(this.translator.t('calculating'));
         
         try {
             const custom = await this.strategyService.calculateCustomStrategy(
@@ -451,7 +459,7 @@ class UpwaysApp {
             }
         } catch (error) {
             console.error('Custom strategy calculation error:', error);
-            this.uiState.showToast('error', 'Erreur lors du calcul de la stratégie personnalisée');
+            this.uiState.showToast('error', this.translator.t('customStrategyError'));
         } finally {
             this.uiState.hideLoading();
         }
@@ -466,25 +474,30 @@ class UpwaysApp {
             const strategy = this.strategies[currentStrategy];
             
             if (!strategy) {
-                this.uiState.showToast('error', 'Aucune stratégie sélectionnée');
+                this.uiState.showToast('error', this.translator.t('noStrategySelected'));
                 return;
             }
 
-            this.uiState.showLoading(this.translator.t('exportSuccess'));
+            this.uiState.showLoading(this.translator.t('calculating'));
+
+            // Récupérer le nom traduit de l'objet
+            const itemData = this.dataService.getItemById(this.currentItemId);
+            const translatedItemName = this.translator.getLocalizedName(itemData);
 
             await this.exportService.exportResults(
                 strategy,
-                this.currentItemName,
+                translatedItemName, // Passer le nom déjà traduit
                 this.currentItemId,
                 this.configComponent.getStartLevel(),
                 this.configComponent.getEndLevel(),
-                this.dataService
+                this.dataService,
+                { mode: 'share' }
             );
 
             this.uiState.showToast('success', this.translator.t('exportSuccess'));
         } catch (error) {
             console.error('Export error:', error);
-            this.uiState.showToast('error', 'Export failed');
+            this.uiState.showToast('error', this.translator.t('exportFailed'));
         } finally {
             this.uiState.hideLoading();
         }
@@ -495,16 +508,18 @@ class UpwaysApp {
      */
     async resetAll() {
         const confirmed = await this.uiState.confirm(
-            'Réinitialiser tous les paramètres ?',
+            this.translator.t('resetConfirm'),
             {
-                title: 'Réinitialisation',
-                confirmText: 'Réinitialiser',
-                cancelText: 'Annuler'
+                title: this.translator.t('resetConfirmTitle'),
+                confirmText: this.translator.t('resetConfirmButton'),
+                cancelText: this.translator.t('cancelButton')
             }
         );
 
         if (confirmed) {
             this.dataService.resetAll();
+            // Réactiver le blocage de l'onglet Analyse
+            document.getElementById('analysisTabBtn').classList.add('disabled');
             location.reload();
         }
     }

@@ -93,8 +93,15 @@ export class AnalysisComponent {
     initCustomScenario() {
         this.customScenario = [];
         for (let i = this.startLevel + 1; i <= this.endLevel; i++) {
-            const defaultOption = i <= 4 ? "Parchemin de Guerre" : "Parchemin du Dieu Dragon";
-            this.customScenario[i - this.startLevel - 1] = defaultOption;
+            if (i <= 4) {
+                this.customScenario[i - this.startLevel - 1] = "Parchemin de Guerre";
+            } else if (i > 9) {
+                // Forcer pierre magique pour les niveaux > 9
+                this.customScenario[i - this.startLevel - 1] = "Pierre magique";
+            } else {
+                // Par défaut, utiliser Parchemin du Dieu Dragon pour les niveaux 5-9
+                this.customScenario[i - this.startLevel - 1] = "Parchemin du Dieu Dragon";
+            }
         }
     }
 
@@ -235,41 +242,48 @@ export class AnalysisComponent {
             console.error('Strategy markov data missing');
             return;
         }
-        
+
         const fullWaypoints = strategy.markov.waypoints;
         const fullIntervals = strategy.markov.intervals.byLevel;
-        
+
         // Construire le chemin complet
         const pathSteps = [];
-        
+
         for (let level = 1; level <= this.endLevel; level++) {
             const waypointValue = fullWaypoints[level - 1];
-            
+        
             if (waypointValue > 0.01) {
                 const levelData = itemData[level.toString()] || { materials: {}, success_rate: 0 };
-                
+            
                 let upgradeType;
                 let isEditable = false;
                 let customIndex = -1;
-                
+
                 if (level > this.startLevel && level <= this.endLevel) {
                     const pathIndex = level - this.startLevel - 1;
                     upgradeType = strategy.path[pathIndex].name;
-                    isEditable = isCustom && level > 4;
+                    // Éditable seulement si personnalisé ET niveau 5-9
+                    isEditable = isCustom && level > 4 && level <= 9;
                     customIndex = pathIndex;
                 } else {
-                    upgradeType = level <= 4 ? "Parchemin de Guerre" : "Parchemin de bénédiction";
+                    if (level <= 4) {
+                        upgradeType = "Parchemin de Guerre";
+                    } else if (level <= 9) {
+                        upgradeType = "Parchemin de bénédiction";
+                    } else {
+                        upgradeType = "Pierre magique";
+                    }
                 }
-                
+
                 const rate = this.calculateSuccessRate(level, upgradeType, levelData.success_rate);
                 const levelInterval = fullIntervals[level - 1];
-                
+
                 // Calculer le coût moyen pour ce niveau
                 const materialCost = this.calculateMaterialCost(levelData.materials || {});
                 const upgradeCost = this.dataService.getUpgradeCost(upgradeType);
                 const levelCost = materialCost + upgradeCost;
                 const avgCost = levelCost * waypointValue;
-                
+
                 const itemInterval = {
                     lower: Math.ceil(levelInterval.ci95.lower),
                     upper: Math.ceil(levelInterval.ci95.upper)
@@ -278,13 +292,14 @@ export class AnalysisComponent {
                     lower: levelCost * levelInterval.ci95.lower,
                     upper: levelCost * levelInterval.ci95.upper
                 };
-                
+
                 const isBelowStart = level <= this.startLevel;
                 const isTarget = level > this.startLevel && level <= this.endLevel;
-                
+                const isMagicStoneOnly = level > 9;
+
                 // Récupérer les matériaux requis pour ce niveau
                 const materials = this.getMaterialsForLevel(levelData.materials || {}, waypointValue);
-                
+
                 pathSteps.push({
                     level,
                     upgradeType,
@@ -294,6 +309,7 @@ export class AnalysisComponent {
                     customIndex,
                     isBelowStart,
                     isTarget,
+                    isMagicStoneOnly,
                     levelInterval,
                     itemInterval,
                     costInterval,
@@ -303,13 +319,19 @@ export class AnalysisComponent {
                 });
             }
         }
-        
-        // Générer le HTML du chemin SANS les statistiques de tentatives
-        const pathHtml = pathSteps.map(step => this.createPathStepHtml(step, isCustom)).join('');
-        
-        this.elements.upgradePath.innerHTML = '<div class="upgrade-path">' + pathHtml + '</div>';
 
-        // Attacher les événements pour la modification en direct
+        // Générer le HTML sans séparation
+        let pathHtml = '<div class="upgrade-path">';
+        
+        pathSteps.forEach(step => {
+            pathHtml += this.createPathStepHtml(step, isCustom);
+        });
+        
+        pathHtml += '</div>';
+
+        this.elements.upgradePath.innerHTML = pathHtml;
+
+        // Attacher les événements pour la modification en direct SI on est en custom
         if (isCustom) {
             this.elements.upgradePath.querySelectorAll('.step-select').forEach(select => {
                 select.addEventListener('change', () => this.updateCustomPath());
@@ -318,23 +340,9 @@ export class AnalysisComponent {
 
         // Attacher les tooltips
         this.attachPathTooltips(pathSteps);
-    }
 
-    /**
-     * Récupère les matériaux formatés pour un niveau
-     */
-    getMaterialsForLevel(materials, waypoint) {
-        const result = [];
-        Object.entries(materials).forEach(([id, info]) => {
-            result.push({
-                id,
-                name: this.translator.getLocalizedName(info),
-                imgName: info.img_name,
-                qty: info.qty,
-                avgQty: Math.ceil(info.qty * waypoint)
-            });
-        });
-        return result;
+        // Mettre à jour la connexion visuelle
+        setTimeout(() => this.updateStrategyConnection(), 100);
     }
 
     /**
@@ -342,12 +350,14 @@ export class AnalysisComponent {
      */
     createPathStepHtml(step, isCustom) {
         const options = step.level <= 4 ? ["Parchemin de Guerre"] : 
+            step.level > 9 ? ["Pierre magique"] : 
             ["Parchemin de bénédiction", "Manuel de Forgeron", "Parchemin du Dieu Dragon", "Pierre magique"];
         
         let stepClass = 'path-step';
         if (step.isBelowStart) stepClass += ' below-start';
         if (step.isTarget) stepClass += ' target-level';
         if (step.isEditable) stepClass += ' editable';
+        if (step.isMagicStoneOnly) stepClass += ' magic-stone-only';
         
         // Créer la liste des matériaux requis
         const materialsHtml = step.materials.length > 0 ? `
@@ -416,11 +426,59 @@ export class AnalysisComponent {
     }
 
     /**
+     * Met à jour le chemin personnalisé
+     */
+    updateCustomPath() {
+        // Récupérer les nouvelles valeurs
+        this.elements.upgradePath.querySelectorAll('.step-select').forEach(select => {
+            const index = parseInt(select.dataset.level);
+            if (index >= 0) {
+                const level = this.startLevel + index + 1;
+                // Permettre la modification seulement pour les niveaux 5-9
+                if (level >= 5 && level <= 9) {
+                    this.customScenario[index] = select.value;
+                } else if (level > 9) {
+                    // Forcer pierre magique pour > 9
+                    this.customScenario[index] = "Pierre magique";
+                    select.value = "Pierre magique";
+                }
+            }
+        });
+
+        // Notifier le changement
+        if (this.onStrategyChanged) {
+            this.onStrategyChanged({
+                type: 'custom',
+                scenario: this.customScenario
+            });
+        }
+    }
+
+    /**
+     * Récupère les matériaux formatés pour un niveau
+     */
+    getMaterialsForLevel(materials, waypoint) {
+        const result = [];
+        Object.entries(materials).forEach(([id, info]) => {
+            result.push({
+                id,
+                name: this.translator.getLocalizedName(info),
+                imgName: info.img_name,
+                qty: info.qty,
+                avgQty: Math.ceil(info.qty * waypoint)
+            });
+        });
+        return result;
+    }
+
+    /**
      * Attache les tooltips aux étapes du chemin
      */
     attachPathTooltips(pathSteps) {
-        this.elements.upgradePath.querySelectorAll('.path-step').forEach((stepElem, i) => {
+        const pathElements = this.elements.upgradePath.querySelectorAll('.path-step');
+        pathElements.forEach((stepElem, i) => {
             const step = pathSteps[i];
+            if (!step) return;
             
             // Créer le contenu du tooltip avec les matériaux
             let materialsTooltip = '';
@@ -440,7 +498,8 @@ export class AnalysisComponent {
             
             const tooltipContent = `
                 <div class="tooltip-title">${this.translator.t('level')} +${step.level}</div>
-                ${step.isBelowStart ? '<div class="tooltip-warning">⚠️ Niveau en dessous du départ</div>' : ''}
+                ${step.isBelowStart ? `<div class="tooltip-warning">⚠️ ${this.translator.t('belowStartLevel')}</div>` : ''}
+                ${step.isMagicStoneOnly ? `<div class="tooltip-warning">✨ ${this.translator.t('magicStoneRecommended')}</div>` : ''}
                 <div class="tooltip-row">
                     <span>${this.translator.t('avgTrials')}:</span>
                     <span>${step.waypoint.toFixed(1)}</span>
@@ -449,12 +508,6 @@ export class AnalysisComponent {
                     <span>${this.translator.t('avgCost')}:</span>
                     <span>${this.formatters.formatCost(step.avgCost)}</span>
                 </div>
-                <!--${this.showIntervals ? `-->
-                <!--<div class="tooltip-row">-->
-                <!--    <span>${this.translator.t('interval95')}:</span>-->
-                <!--    <span>${step.itemInterval.upper} ${this.translator.t('trials')}</span>-->
-                <!--</div>-->
-                <!--` : ''}-->
                 ${materialsTooltip}
             `;
             
@@ -463,25 +516,94 @@ export class AnalysisComponent {
         });
     }
 
-    /**
-     * Met à jour le chemin personnalisé
-     */
-    updateCustomPath() {
-        // Récupérer les nouvelles valeurs
-        this.elements.upgradePath.querySelectorAll('.step-select').forEach(select => {
-            const index = parseInt(select.dataset.level);
-            if (index >= 0) {
-                this.customScenario[index] = select.value;
-            }
-        });
+    updateStrategyConnection() {
+        // Supprimer l'ancienne connexion si elle existe
+        const existingConnection = document.querySelector('.strategy-connection');
+        if (existingConnection) {
+            existingConnection.remove();
+        }
 
-        // Notifier le changement
-        if (this.onStrategyChanged) {
-            this.onStrategyChanged({
-                type: 'custom',
-                scenario: this.customScenario
+        // Créer la nouvelle connexion
+        const activeCard = document.querySelector(`.strategy-card[data-strategy="${this.currentStrategy}"]`);
+        const pathSection = document.querySelector('.detail-section');
+
+        if (activeCard && pathSection) {
+            const connection = document.createElement('div');
+            connection.className = 'strategy-connection';
+
+            // Obtenir le conteneur parent
+            const container = document.getElementById('analysisTab');
+
+            // Calculer les positions
+            const cardRect = activeCard.getBoundingClientRect();
+            const pathRect = pathSection.getBoundingClientRect();
+            const containerRect = container.getBoundingClientRect();
+
+            // Position relative au conteneur
+            const cardBottom = cardRect.bottom - containerRect.top;
+            const pathTop = pathRect.top - containerRect.top;
+            const centerX = cardRect.left + cardRect.width / 2 - containerRect.left;
+
+            // Ajuster la hauteur pour partir du bas de la carte jusqu'au haut de la section
+            const height = pathTop - cardBottom - 10; // 10px de marge
+
+            connection.style.left = centerX + 'px';
+            connection.style.top = cardBottom + 'px';
+            connection.style.height = height + 'px';
+
+            container.appendChild(connection);
+
+            // Animer l'apparition
+            requestAnimationFrame(() => {
+                connection.classList.add('active');
             });
         }
+    }
+
+    /**
+     * Helpers
+     */
+    calculateSuccessRate(level, upgradeType, baseRate) {
+        switch (upgradeType) {
+            case "Parchemin de bénédiction":
+            case "Pierre magique":
+                return baseRate || 0;
+            case "Manuel de Forgeron":
+                // Taux fixes jusqu'au niveau 9
+                if (level <= 9) {
+                    return [100, 100, 90, 80, 70, 60, 50, 30, 20][level - 1] || 0;
+                }
+                return baseRate || 0;
+            case "Parchemin du Dieu Dragon":
+                // Taux fixes jusqu'au niveau 9
+                if (level <= 9) {
+                    return [100, 75, 65, 55, 45, 40, 35, 25, 20][level - 1] || 0;
+                }
+                return baseRate || 0;
+            case "Parchemin de Guerre":
+                return 100;
+            default:
+                return 0;
+        }
+    }
+
+    calculateMaterialCost(materials) {
+        let cost = 0;
+        Object.entries(materials).forEach(([id, info]) => {
+            cost += this.dataService.getMaterialCost(id) * (info.qty || 0);
+        });
+        return cost;
+    }
+
+    getUpgradeIcon(upgradeType) {
+        const iconMap = {
+            "Parchemin de bénédiction": "Parchemin_de_bénédiction.png",
+            "Manuel de Forgeron": "Manuel_de_Forgeron.png",
+            "Parchemin du Dieu Dragon": "Parchemin_du_Dieu_Dragon.png",
+            "Parchemin de Guerre": "Parchemin_de_Guerre.png",
+            "Pierre magique": "Pierre_magique.png"
+        };
+        return iconMap[upgradeType] || "default.png";
     }
 
     /**
@@ -503,7 +625,13 @@ export class AnalysisComponent {
                     const pathIndex = level - this.startLevel - 1;
                     upgradeType = strategy.path[pathIndex].name;
                 } else {
-                    upgradeType = level <= 4 ? "Parchemin de Guerre" : "Parchemin de bénédiction";
+                    if (level <= 4) {
+                        upgradeType = "Parchemin de Guerre";
+                    } else if (level <= 9) {
+                        upgradeType = "Parchemin de bénédiction";
+                    } else {
+                        upgradeType = "Pierre magique";
+                    }
                 }
                 
                 if (!items[upgradeType]) {
@@ -571,44 +699,6 @@ export class AnalysisComponent {
                 <span class="item-cost">${this.formatters.formatCost(mat.quantity * mat.unitCost)}</span>
             </div>
         `).join('');
-    }
-
-    /**
-     * Helpers
-     */
-    calculateSuccessRate(level, upgradeType, baseRate) {
-        switch (upgradeType) {
-            case "Parchemin de bénédiction":
-            case "Pierre magique":
-                return baseRate || 0;
-            case "Manuel de Forgeron":
-                return [100, 100, 90, 80, 70, 60, 50, 30, 20][level - 1] || 0;
-            case "Parchemin du Dieu Dragon":
-                return [100, 75, 65, 55, 45, 40, 35, 25, 20][level - 1] || 0;
-            case "Parchemin de Guerre":
-                return 100;
-            default:
-                return 0;
-        }
-    }
-
-    calculateMaterialCost(materials) {
-        let cost = 0;
-        Object.entries(materials).forEach(([id, info]) => {
-            cost += this.dataService.getMaterialCost(id) * (info.qty || 0);
-        });
-        return cost;
-    }
-
-    getUpgradeIcon(upgradeType) {
-        const iconMap = {
-            "Parchemin de bénédiction": "Parchemin_de_bénédiction.png",
-            "Manuel de Forgeron": "Manuel_de_Forgeron.png",
-            "Parchemin du Dieu Dragon": "Parchemin_du_Dieu_Dragon.png",
-            "Parchemin de Guerre": "Parchemin_de_Guerre.png",
-            "Pierre magique": "Pierre_magique.png"
-        };
-        return iconMap[upgradeType] || "default.png";
     }
 
     showTooltip(element, content) {

@@ -41,6 +41,53 @@ export class ConfigComponent {
     }
 
     /**
+     * Met à jour les limites de niveau selon l'objet sélectionné
+     */
+    updateLevelLimits() {
+        if (!this.currentItemId) return;
+        
+        const itemData = this.dataService.getItemById(this.currentItemId);
+        if (!itemData) return;
+        
+        // Trouver le niveau maximum de l'objet
+        let maxLevel = 0;
+        for (let level = 1; level <= 21; level++) {
+            if (itemData[level.toString()]) {
+                maxLevel = level;
+            }
+        }
+        
+        // Mettre à jour les options du sélecteur de fin
+        const endOptions = this.elements.endLevel.options;
+        for (let i = 0; i < endOptions.length; i++) {
+            const value = parseInt(endOptions[i].value);
+            endOptions[i].disabled = value > maxLevel;
+            
+            // Ajouter une indication visuelle
+            if (value > maxLevel) {
+                endOptions[i].text = `+${value} (Non disponible)`;
+            } else {
+                endOptions[i].text = `+${value}`;
+            }
+        }
+        
+        // Si le niveau de fin actuel est trop élevé, le réduire
+        if (parseInt(this.elements.endLevel.value) > maxLevel) {
+            this.elements.endLevel.value = maxLevel;
+            this.endLevel = maxLevel;
+        }
+        
+        // Notifier le changement
+        if (this.onConfigChanged) {
+            this.onConfigChanged({
+                type: 'levels',
+                startLevel: this.startLevel,
+                endLevel: this.endLevel
+            });
+        }
+    }
+
+    /**
      * Met à jour la plage de niveaux
      */
     updateLevelRange() {
@@ -199,6 +246,9 @@ export class ConfigComponent {
         this.currentItemId = itemId;
         this.displayMaterialPrices();
         this.elements.analyzeBtn.disabled = false;
+        
+        // Mettre à jour les limites de niveau selon l'objet
+        this.updateLevelLimits();
     }
 
     /**

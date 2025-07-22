@@ -3,24 +3,27 @@
  */
 
 /**
- * Formate une valeur de coût
+ * Formate une valeur de coût avec séparateur approprié selon la langue
  */
-export function formatCost(value) {
+export function formatCost(value, lang = 'fr') {
     if (!value || value === 0) return '0M';
+    
+    // Déterminer le séparateur décimal selon la langue
+    const decimalSeparator = lang === 'en' ? '.' : ',';
     
     if (value >= 100) {
         const wons = Math.floor(value / 100);
         const millions = Math.floor(value % 100);
-        return `${wons.toLocaleString()}.${millions.toString().padStart(2, '0')}w`;
+        return `${wons.toLocaleString(lang)}${decimalSeparator}${millions.toString().padStart(2, '0')}w`;
     }
     return `${Math.floor(value)}M`;
 }
 
 /**
- * Formate un nombre avec des séparateurs de milliers
+ * Formate un nombre avec des séparateurs de milliers selon la langue
  */
-export function formatNumber(value) {
-    return value.toLocaleString();
+export function formatNumber(value, lang = 'fr') {
+    return value.toLocaleString(lang);
 }
 
 /**
@@ -33,8 +36,8 @@ export function formatPercentage(value, decimals = 0) {
 /**
  * Formate une plage de valeurs
  */
-export function formatRange(min, max, formatter = formatNumber) {
-    return `${formatter(min)} - ${formatter(max)}`;
+export function formatRange(min, max, formatter = formatNumber, lang = 'fr') {
+    return `${formatter(min, lang)} - ${formatter(max, lang)}`;
 }
 
 /**
@@ -57,20 +60,20 @@ export function formatDuration(seconds) {
 /**
  * Formate une date
  */
-export function formatDate(date, options = {}) {
+export function formatDate(date, lang = 'fr', options = {}) {
     const defaultOptions = {
         year: 'numeric',
         month: '2-digit',
         day: '2-digit',
         ...options
     };
-    return new Date(date).toLocaleDateString(undefined, defaultOptions);
+    return new Date(date).toLocaleDateString(lang, defaultOptions);
 }
 
 /**
  * Formate une date et heure
  */
-export function formatDateTime(date, options = {}) {
+export function formatDateTime(date, lang = 'fr', options = {}) {
     const defaultOptions = {
         year: 'numeric',
         month: '2-digit',
@@ -79,7 +82,7 @@ export function formatDateTime(date, options = {}) {
         minute: '2-digit',
         ...options
     };
-    return new Date(date).toLocaleString(undefined, defaultOptions);
+    return new Date(date).toLocaleString(lang, defaultOptions);
 }
 
 /**
@@ -101,11 +104,11 @@ export function capitalize(text) {
 /**
  * Convertit un nombre en notation compacte (K, M, B)
  */
-export function formatCompactNumber(value) {
+export function formatCompactNumber(value, lang = 'fr') {
     if (value < 1000) return value.toString();
-    if (value < 1000000) return `${(value / 1000).toFixed(1)}K`;
-    if (value < 1000000000) return `${(value / 1000000).toFixed(1)}M`;
-    return `${(value / 1000000000).toFixed(1)}B`;
+    if (value < 1000000) return `${(value / 1000).toFixed(1).replace('.', lang === 'fr' ? ',' : '.')}K`;
+    if (value < 1000000000) return `${(value / 1000000).toFixed(1).replace('.', lang === 'fr' ? ',' : '.')}M`;
+    return `${(value / 1000000000).toFixed(1).replace('.', lang === 'fr' ? ',' : '.')}B`;
 }
 
 /**
@@ -125,9 +128,9 @@ export function formatLevel(level) {
 /**
  * Formate une quantité d'objets
  */
-export function formatQuantity(qty) {
+export function formatQuantity(qty, lang = 'fr') {
     if (qty < 1000) return qty.toString();
-    return formatCompactNumber(qty);
+    return formatCompactNumber(qty, lang);
 }
 
 /**
@@ -154,11 +157,13 @@ export class Formatters {
     }
 
     formatCost(value) {
-        return formatCost(value);
+        const lang = this.translator.getLanguage();
+        return formatCost(value, lang);
     }
 
     formatNumber(value) {
-        return formatNumber(value);
+        const lang = this.translator.getLanguage();
+        return formatNumber(value, lang);
     }
 
     formatPercentage(value, decimals = 0) {
@@ -166,7 +171,8 @@ export class Formatters {
     }
 
     formatRange(min, max, formatter = formatNumber) {
-        return formatRange(min, max, formatter);
+        const lang = this.translator.getLanguage();
+        return formatRange(min, max, formatter, lang);
     }
 
     formatLevel(level) {
@@ -174,7 +180,8 @@ export class Formatters {
     }
 
     formatQuantity(qty) {
-        return formatQuantity(qty);
+        const lang = this.translator.getLanguage();
+        return formatQuantity(qty, lang);
     }
 
     formatSuccessRate(rate) {
@@ -182,11 +189,13 @@ export class Formatters {
     }
 
     formatTrials(trials) {
-        return `${formatNumber(trials)} ${this.translator.t('trials')}`;
+        const lang = this.translator.getLanguage();
+        return `${formatNumber(trials, lang)} ${this.translator.t('trials')}`;
     }
 
     formatInterval(lower, upper, unit = '') {
-        const range = formatRange(Math.ceil(lower), Math.ceil(upper));
+        const lang = this.translator.getLanguage();
+        const range = formatRange(Math.ceil(lower), Math.ceil(upper), formatNumber, lang);
         return unit ? `${range} ${unit}` : range;
     }
 }

@@ -10,6 +10,7 @@ export class StrategyService {
 
     /**
      * Calcule la stratégie optimale avec une exploration exhaustive déterministe
+     * IMPORTANT: Pour les niveaux > 9, on force l'utilisation de pierres magiques uniquement
      */
     async calculateOptimalStrategy(itemId, startLevel, endLevel) {
         const itemData = this.dataService.getItemById(itemId);
@@ -38,11 +39,14 @@ export class StrategyService {
             }
         ];
 
+        // Déterminer le niveau max pour l'optimisation (max 9)
+        const optimizationEndLevel = Math.min(endLevel, 9);
+        
         let bestStrategy = null;
         let bestCost = Infinity;
 
-        // Générer toutes les combinaisons possibles pour la plage de niveaux sélectionnée
-        const combinations = this.generateAllCombinations(methods, startLevel, endLevel);
+        // Générer toutes les combinaisons possibles pour la plage de niveaux jusqu'à +9
+        const combinations = this.generateAllCombinations(methods, startLevel, optimizationEndLevel);
 
         // Évaluer chaque combinaison
         for (const combination of combinations) {
@@ -68,8 +72,14 @@ export class StrategyService {
             // Initialiser avec un scénario par défaut
             customScenario = [];
             for (let i = startLevel + 1; i <= endLevel; i++) {
-                const defaultOption = i <= 4 ? "Parchemin de Guerre" : "Parchemin de bénédiction";
-                customScenario.push(defaultOption);
+                if (i <= 4) {
+                    customScenario.push("Parchemin de Guerre");
+                } else if (i > 9) {
+                    customScenario.push("Pierre magique");
+                } else {
+                    // Par défaut, utiliser Parchemin du Dieu Dragon pour les niveaux 5-9
+                    customScenario.push("Parchemin du Dieu Dragon");
+                }
             }
         }
         
@@ -97,7 +107,7 @@ export class StrategyService {
                 currentCombo.push("Parchemin de Guerre");
                 generateCombos(currentCombo, levelIndex + 1);
                 currentCombo.pop();
-            } else {
+            } else if (currentLevel <= 9) {
                 // Pour les niveaux 5-9, tester tous les objets d'amélioration
                 const availableMethods = methods.filter(method => 
                     method.name !== "Parchemin de Guerre"
@@ -108,6 +118,11 @@ export class StrategyService {
                     generateCombos(currentCombo, levelIndex + 1);
                     currentCombo.pop();
                 }
+            } else {
+                // Pour les niveaux > 9, uniquement Pierre magique
+                currentCombo.push("Pierre magique");
+                generateCombos(currentCombo, levelIndex + 1);
+                currentCombo.pop();
             }
         }
 
@@ -142,10 +157,16 @@ export class StrategyService {
             fullCosts.push(materialCost + upgradeCost);
         }
 
-        // Ajouter les taux pour le chemin spécifié (startLevel+1 à endLevel)
+        // Ajouter les taux pour le chemin spécifié
         for (let i = 0; i < upgradePath.length; i++) {
             const level = startLevel + i + 1;
-            const upgradeType = upgradePath[i];
+            let upgradeType = upgradePath[i];
+            
+            // Forcer pierre magique pour les niveaux > 9
+            if (level > 9) {
+                upgradeType = "Pierre magique";
+            }
+            
             const levelData = itemData[level.toString()] || { materials: {}, success_rate: 0 };
             const rate = this.calculateSuccessRate(level, upgradeType, levelData.success_rate);
 
@@ -158,6 +179,26 @@ export class StrategyService {
             fullRates.push(rate);
             fullFlags.push(upgradeType === "Pierre magique");
 
+            const materialCost = this.calculateMaterialCost(levelData.materials || {});
+            const upgradeCost = this.dataService.getUpgradeCost(upgradeType);
+            fullCosts.push(materialCost + upgradeCost);
+        }
+        
+        // Pour les niveaux au-delà du chemin fourni (si endLevel > upgradePath.length)
+        for (let level = startLevel + upgradePath.length + 1; level <= endLevel; level++) {
+            const upgradeType = "Pierre magique"; // Toujours pierre magique pour > 9
+            const levelData = itemData[level.toString()] || { materials: {}, success_rate: 0 };
+            const rate = this.calculateSuccessRate(level, upgradeType, levelData.success_rate);
+            
+            path.push({ 
+                name: upgradeType, 
+                rate, 
+                noDowngrade: true 
+            });
+            
+            fullRates.push(rate);
+            fullFlags.push(true);
+            
             const materialCost = this.calculateMaterialCost(levelData.materials || {});
             const upgradeCost = this.dataService.getUpgradeCost(upgradeType);
             fullCosts.push(materialCost + upgradeCost);
@@ -221,7 +262,14 @@ export class StrategyService {
         // Ajouter les taux pour le chemin réel (startLevel+1 à endLevel)
         for (let i = 0; i < upgradePath.length; i++) {
             const level = startLevel + i + 1;
-            const upgradeType = upgradePath[i];
+            let upgradeType = upgradePath[i];
+            
+            // Forcer pierre magique pour les niveaux > 9
+            if (level > 9 && upgradeType !== "Pierre magique") {
+                console.warn(`Niveau ${level}: forcé à Pierre magique`);
+                upgradeType = "Pierre magique";
+            }
+            
             const levelData = itemData[level.toString()] || { materials: {}, success_rate: 0 };
             const rate = this.calculateSuccessRate(level, upgradeType, levelData.success_rate);
             
@@ -276,9 +324,19 @@ export class StrategyService {
             case "Pierre magique":
                 return baseRate || 0;
             case "Manuel de Forgeron":
-                return [100, 100, 90, 80, 70, 60, 50, 30, 20][level - 1] || 0;
+                // Taux fixes jusqu'au niveau 9
+                if (level <= 9) {
+                    return [100, 100, 90, 80, 70, 60, 50, 30, 20][level - 1] || 0;
+                }
+                // Au-delà, utiliser le taux de base
+                return baseRate || 0;
             case "Parchemin du Dieu Dragon":
-                return [100, 75, 65, 55, 45, 40, 35, 25, 20][level - 1] || 0;
+                // Taux fixes jusqu'au niveau 9
+                if (level <= 9) {
+                    return [100, 75, 65, 55, 45, 40, 35, 25, 20][level - 1] || 0;
+                }
+                // Au-delà, utiliser le taux de base
+                return baseRate || 0;
             case "Parchemin de Guerre":
                 return 100;
             default:

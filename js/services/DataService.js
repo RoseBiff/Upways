@@ -15,13 +15,44 @@ export class DataService {
      */
     async loadData() {
         try {
+            console.log('Loading data_full.json...');
             const response = await fetch('data_full.json');
-            this.data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const jsonText = await response.text();
+            console.log('JSON loaded, size:', jsonText.length);
+            
+            this.data = JSON.parse(jsonText);
             console.log(`${Object.keys(this.data).length} items loaded`);
+            
+            // Vérifier que les données sont valides
+            if (Object.keys(this.data).length === 0) {
+                throw new Error('No items found in data file');
+            }
+            
             return this.data;
         } catch (error) {
             console.error('Error loading data:', error);
-            throw error;
+            
+            // Essayer de charger depuis un chemin alternatif
+            try {
+                console.log('Trying alternative path: ./data_full.json');
+                const response = await fetch('./data_full.json');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                this.data = await response.json();
+                console.log(`${Object.keys(this.data).length} items loaded from alternative path`);
+                return this.data;
+            } catch (altError) {
+                console.error('Alternative path also failed:', altError);
+                throw altError;
+            }
         }
     }
 
@@ -35,6 +66,7 @@ export class DataService {
                 const settings = JSON.parse(saved);
                 this.upgradeCosts = settings.upgradeCosts || {};
                 this.materialCosts = settings.materialCosts || {};
+                console.log('Settings loaded:', settings);
             } catch (e) {
                 console.error('Error loading settings:', e);
             }
@@ -54,6 +86,8 @@ export class DataService {
                 this.upgradeCosts[option] = 0;
             }
         });
+
+        console.log('Upgrade costs initialized:', this.upgradeCosts);
 
         return {
             upgradeCosts: this.upgradeCosts,
@@ -163,5 +197,12 @@ export class DataService {
         this.upgradeCosts = {};
         this.materialCosts = {};
         this.recentItems = [];
+    }
+    
+    /**
+     * Vérifie si les données sont chargées
+     */
+    isDataLoaded() {
+        return Object.keys(this.data).length > 0;
     }
 }
