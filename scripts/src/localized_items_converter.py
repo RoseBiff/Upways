@@ -1,15 +1,23 @@
 import os
 import json
+import re
+from src.open_files import GameNames
 
-from src.open_files import GameNames, ItemProto
 
 OUTPUT_JSON_PATH = os.path.join("public", "data", "locale", "{lang}", "item_names.json")
 
 
-def convert_localized_items_to_json(equipment_vnums: list[int]):
+def convert_localized_items_to_json(
+    equipment_vnums: list[int], up_item_vnums: list[int]
+):
     item_names = GameNames().data
 
-    filtered = item_names.loc[item_names.index.intersection(equipment_vnums)]
+    filtered = item_names.loc[
+        item_names.index.intersection(equipment_vnums + up_item_vnums)
+    ]
+
+    for col in filtered.columns:
+        filtered[col] = filtered[col].map(lambda x: re.sub(r"\s?\+\d+$", "", x))
 
     for lang, col in filtered.items():
         output_path = OUTPUT_JSON_PATH.format(lang=lang)

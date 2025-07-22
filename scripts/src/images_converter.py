@@ -8,14 +8,14 @@ OUTPUT_IMAGE_PATH = os.path.join("public", "data", "item")
 OUTPUT_ITEM_ICONS_PATH = os.path.join("public", "data", "item_icons.json")
 
 
-def convert_images_to_png(equipment_vnums: list[int]):
+def convert_images_to_png(equipment_vnums: list[int], up_item_vnums: list[int]):
     image_paths = ImagePaths().data
     vnum_to_image = {}
 
     os.makedirs(OUTPUT_IMAGE_PATH, exist_ok=True)
     count = 0
 
-    for vnum in equipment_vnums:
+    for vnum in equipment_vnums + up_item_vnums:
         image_filename = image_paths.get(vnum, None)
 
         if image_filename is None:
