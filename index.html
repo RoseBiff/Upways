@@ -3,9 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- SEO Meta Tags - Les valeurs seront mises à jour dynamiquement par JavaScript -->
+    <title>Upways - Calculateur amélioration Metin2 | Optimiser vos upgrades</title>
+    <meta name="description" content="Calculez la meilleure stratégie pour améliorer vos objets dans Metin2. Économisez temps et yang avec Upways, l'optimiseur d'amélioration gratuit.">
+    <meta name="keywords" content="metin2, upways, amélioration, upgrade, calculateur, optimiseur">
+    <link rel="canonical" href="https://metin2upways.com">
+    
+    <!-- Alternate languages -->
+    <link rel="alternate" hreflang="fr" href="https://metin2upways.com/?lang=fr">
+    <link rel="alternate" hreflang="en" href="https://metin2upways.com/?lang=en">
+    <link rel="alternate" hreflang="ro" href="https://metin2upways.com/?lang=ro">
+    <link rel="alternate" hreflang="tr" href="https://metin2upways.com/?lang=tr">
+    <link rel="alternate" hreflang="de" href="https://metin2upways.com/?lang=de">
+    <link rel="alternate" hreflang="x-default" href="https://metin2upways.com">
+    
     <!-- favicon SVG (navigateurs modernes) -->
     <link rel="icon" href="/logo.svg" type="image/svg+xml" sizes="any">
-    <title>Upways</title>
     
     <!-- Chart.js pour les graphiques -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -25,18 +39,71 @@
                 <img src="logo.svg" alt="Upways" class="logo" onerror="this.style.display='none'">
                 </div>
                 <h1 class="brand-name">Upways</h1>
-                <span class="brand-subtitle">Optimisateur d'amélioration Metin2</span>
+                <span class="brand-subtitle" data-i18n="brandSubtitle">Optimisateur d'amélioration Metin2</span>
             </div>
             
             <div class="header-controls">
-                <select id="languageSelect" class="language-select">
-                    <option value="fr">🇫🇷 Français</option>
-                    <option value="en">🇬🇧 English</option>
-                    <option value="ro">🇷🇴 Română</option>
-                    <option value="tr">🇹🇷 Türkçe</option>
-                    <option value="de">🇩🇪 Deutsch</option>
-                </select>
-                <button class="icon-btn" id="resetBtn" title="Réinitialiser">
+                <!-- Sélecteur de langue personnalisé -->
+                <div class="language-selector" id="languageSelector">
+                    <button class="language-selector-button" id="languageSelectorButton">
+                        <svg class="language-flag" viewBox="0 0 3 2" width="20" height="15">
+                            <rect width="1" height="2" fill="#002654"/>
+                            <rect x="1" width="1" height="2" fill="white"/>
+                            <rect x="2" width="1" height="2" fill="#ED2939"/>
+                        </svg>
+                        <span class="language-name">Français</span>
+                        <svg class="language-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="6 9 12 15 18 9"/>
+                        </svg>
+                    </button>
+                    <div class="language-dropdown" id="languageDropdown">
+                        <div class="language-option" data-lang="fr">
+                            <svg class="language-flag" viewBox="0 0 3 2" width="20" height="15">
+                                <rect width="1" height="2" fill="#002654"/>
+                                <rect x="1" width="1" height="2" fill="white"/>
+                                <rect x="2" width="1" height="2" fill="#ED2939"/>
+                            </svg>
+                            <span>Français</span>
+                        </div>
+                        <div class="language-option" data-lang="en">
+                            <svg class="language-flag" viewBox="0 0 60 30" width="20" height="15">
+                                <rect width="60" height="30" fill="#012169"/>
+                                <path d="M0,0 L60,30 M60,0 L0,30" stroke="white" stroke-width="6"/>
+                                <path d="M0,0 L60,30 M60,0 L0,30" stroke="#C8102E" stroke-width="4"/>
+                                <path d="M30,0 v30 M0,15 h60" stroke="white" stroke-width="10"/>
+                                <path d="M30,0 v30 M0,15 h60" stroke="#C8102E" stroke-width="6"/>
+                            </svg>
+                            <span>English</span>
+                        </div>
+                        <div class="language-option" data-lang="ro">
+                            <svg class="language-flag" viewBox="0 0 3 2" width="20" height="15">
+                                <rect width="1" height="2" fill="#002B7F"/>
+                                <rect x="1" width="1" height="2" fill="#FCD116"/>
+                                <rect x="2" width="1" height="2" fill="#CE1126"/>
+                            </svg>
+                            <span>Română</span>
+                        </div>
+                        <div class="language-option" data-lang="tr">
+                            <svg class="language-flag" viewBox="0 0 360 240" width="20" height="15">
+                                <rect width="360" height="240" fill="#E30A17"/>
+                                <circle cx="120" cy="120" r="60" fill="white"/>
+                                <circle cx="135" cy="120" r="48" fill="#E30A17"/>
+                                <path d="M165,85 l15,35 -40,-12 h50 l-40,12 z" fill="white"/>
+                            </svg>
+                            <span>Türkçe</span>
+                        </div>
+                        <div class="language-option" data-lang="de">
+                            <svg class="language-flag" viewBox="0 0 5 3" width="20" height="15">
+                                <rect width="5" height="1" fill="black"/>
+                                <rect y="1" width="5" height="1" fill="#DD0000"/>
+                                <rect y="2" width="5" height="1" fill="#FFCE00"/>
+                            </svg>
+                            <span>Deutsch</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <button class="icon-btn" id="resetBtn" title="Réinitialiser" data-i18n-title="resetTitle">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
                         <path d="M3 3v5h5"/>
@@ -167,7 +234,7 @@
                     <span data-i18n="analysisResults">Résultats de l'analyse</span>
                     <span class="analysis-levels" id="analysisLevels"></span>
                 </h2>
-                <button class="export-btn" id="exportBtn" title="Exporter">
+                <button class="export-btn" id="exportBtn" title="Exporter" data-i18n-title="exportTitle">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                         <polyline points="7 10 12 15 17 10"/>

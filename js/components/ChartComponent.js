@@ -5,6 +5,7 @@ export class ChartComponent {
     constructor(translator) {
         this.translator = translator;
         this.chart = null;
+        this.currentStrategy = null;
         
         this.initElements();
     }
@@ -24,6 +25,9 @@ export class ChartComponent {
             console.error('Strategy data missing for chart');
             return;
         }
+        
+        // Sauvegarder la stratégie actuelle
+        this.currentStrategy = strategy;
         
         // Détruire le graphique existant
         if (this.chart) {
@@ -267,6 +271,16 @@ export class ChartComponent {
             return;
         }
         this.drawTrialsProbabilityChart(strategy);
+    }
+
+    /**
+     * Met à jour l'affichage lors d'un changement de langue
+     */
+    updateLanguage() {
+        // Si on a une stratégie actuelle, redessiner le graphique avec les nouvelles traductions
+        if (this.currentStrategy) {
+            this.drawTrialsProbabilityChart(this.currentStrategy);
+        }
     }
 
     /**

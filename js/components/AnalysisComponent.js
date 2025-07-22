@@ -108,27 +108,46 @@ export class AnalysisComponent {
             const card = document.querySelector(`.strategy-card[data-strategy="${key}"]`);
             if (!card) return;
             
-            // Mettre à jour toute la structure de la carte
+            // Données principales
             const totalTrials = Math.round(strategy.markov.totalTrials);
             const totalCost = this.formatters.formatCost(strategy.totalCost);
             
-            // Calculer les intervalles basés sur le graphique
-            const meanTrials = strategy.markov.totalTrials;
+            // Récupérer les points du graphique (qui sont corrects)
             const points = strategy.markov.calculateTrialsProbabilities();
             
-            // Trouver les essais pour 5% et 95% de probabilité
-            let trials5 = meanTrials * 0.5;
-            let trials95 = meanTrials * 2;
+            // Trouver les essais correspondant à 5% et 95% de probabilité
+            let trials5 = null;
+            let trials95 = null;
             
-            for (const point of points) {
-                if (point.y >= 5 && point.x < trials5) {
+            // Parcourir les points pour trouver où on atteint 5% et 95%
+            for (let i = 0; i < points.length; i++) {
+                const point = points[i];
+                
+                // Trouver le premier point où on dépasse 5%
+                if (trials5 === null && point.y >= 5) {
                     trials5 = point.x;
                 }
-                if (point.y >= 95 && point.x < trials95) {
+                
+                // Trouver le premier point où on dépasse 95%
+                if (trials95 === null && point.y >= 95) {
                     trials95 = point.x;
-                    break;
+                    break; // On peut arrêter ici
                 }
             }
+            
+            // Si on n'a pas trouvé 95%, prendre le dernier point
+            if (trials95 === null && points.length > 0) {
+                trials95 = points[points.length - 1].x;
+            }
+            
+            // Si on n'a pas trouvé 5%, prendre le premier point
+            if (trials5 === null && points.length > 0) {
+                trials5 = points[0].x;
+            }
+            
+            // Arrondir les valeurs
+            trials5 = Math.round(trials5 || totalTrials * 0.5);
+            trials95 = Math.round(trials95 || totalTrials * 2);
             
             // Reconstruire le contenu de la carte
             card.innerHTML = `
@@ -147,14 +166,14 @@ export class AnalysisComponent {
                     
                     <div class="strategy-details">
                         <div class="detail-item">
-                            <span class="detail-label">${this.translator.t('avgTrials')}:</span>
+                            <span class="detail-label">${this.translator.t('avgTrialsTotal')}:</span>
                             <span class="detail-value highlight">${totalTrials}</span>
                         </div>
                         
                         ${this.showIntervals ? `
                         <div class="detail-item">
                             <span class="detail-label">${this.translator.t('interval95')}:</span>
-                            <span class="detail-value">${Math.round(trials5)} - ${Math.round(trials95)} ${this.translator.t('trials')}</span>
+                            <span class="detail-value">${trials5} - ${trials95} ${this.translator.t('trials')}</span>
                         </div>
                         ` : ''}
                     </div>
@@ -420,7 +439,7 @@ export class AnalysisComponent {
             }
             
             const tooltipContent = `
-                <div class="tooltip-title">Niveau +${step.level}</div>
+                <div class="tooltip-title">${this.translator.t('level')} +${step.level}</div>
                 ${step.isBelowStart ? '<div class="tooltip-warning">⚠️ Niveau en dessous du départ</div>' : ''}
                 <div class="tooltip-row">
                     <span>${this.translator.t('avgTrials')}:</span>
@@ -430,12 +449,12 @@ export class AnalysisComponent {
                     <span>${this.translator.t('avgCost')}:</span>
                     <span>${this.formatters.formatCost(step.avgCost)}</span>
                 </div>
-                ${this.showIntervals ? `
-                <div class="tooltip-row">
-                    <span>${this.translator.t('interval95')}:</span>
-                    <span>${step.itemInterval.upper} ${this.translator.t('trials')}</span>
-                </div>
-                ` : ''}
+                <!--${this.showIntervals ? `-->
+                <!--<div class="tooltip-row">-->
+                <!--    <span>${this.translator.t('interval95')}:</span>-->
+                <!--    <span>${step.itemInterval.upper} ${this.translator.t('trials')}</span>-->
+                <!--</div>-->
+                <!--` : ''}-->
                 ${materialsTooltip}
             `;
             
@@ -624,5 +643,20 @@ export class AnalysisComponent {
 
     getCustomScenario() {
         return this.customScenario;
+    }
+
+    /**
+     * Met à jour l'affichage lors d'un changement de langue
+     */
+    updateLanguage() {
+        // Mettre à jour les cartes de stratégies si elles existent
+        if (this.strategies.optimal) {
+            this.updateStrategyCards();
+        }
+        
+        // Mettre à jour les détails affichés si une stratégie est sélectionnée
+        if (this.strategies[this.currentStrategy]) {
+            this.displayStrategyDetails();
+        }
     }
 }

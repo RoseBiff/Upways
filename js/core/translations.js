@@ -3,6 +3,13 @@
  */
 export const translations = {
     fr: {
+        // Header
+        brandSubtitle: "Optimisateur d'amélioration Metin2",
+        
+        // Titles
+        resetTitle: "Réinitialiser",
+        exportTitle: "Exporter",
+        
         // Onglets
         configTab: "Configuration",
         analysisTab: "Analyse",
@@ -26,6 +33,8 @@ export const translations = {
         custom: "Personnalisée",
         avgCost: "Coût moyen",
         avgTrials: "Tentatives moyennes",
+        avgTrialsTotal: "Tentatives totales moyennes",
+        level: "Niveau",
         trialsPerLevel: "Tentatives par niveau",
         successProb: "P(succès)",
         interval95: "Intervalle 5% - 95%",
@@ -64,7 +73,6 @@ export const translations = {
         riskHigh: "Élevé",
         
         // Général
-        level: "Niveau",
         quantity: "Quantité",
         unitCost: "Coût unitaire",
         total: "Total",
@@ -86,6 +94,13 @@ export const translations = {
         "Pierre magique": "Pierre magique"
     },
     en: {
+        // Header
+        brandSubtitle: "Metin2 Upgrade Optimizer",
+        
+        // Titles
+        resetTitle: "Reset",
+        exportTitle: "Export",
+        
         configTab: "Configuration",
         analysisTab: "Analysis",
         selectItem: "Item Selection",
@@ -104,6 +119,8 @@ export const translations = {
         custom: "Custom",
         avgCost: "Average Cost",
         avgTrials: "Average Trials",
+        avgTrialsTotal: "Total Average Trials",
+        level: "Level",
         trialsPerLevel: "Trials per level",
         successProb: "P(success)",
         interval95: "95% Interval",
@@ -137,7 +154,6 @@ export const translations = {
         riskLow: "Low",
         riskMedium: "Medium",
         riskHigh: "High",
-        level: "Level",
         quantity: "Quantity",
         unitCost: "Unit Cost",
         total: "Total",
@@ -157,6 +173,13 @@ export const translations = {
         "Pierre magique": "Magic Stone"
     },
     ro: {
+        // Header
+        brandSubtitle: "Optimizator de îmbunătățire Metin2",
+        
+        // Titles
+        resetTitle: "Resetare",
+        exportTitle: "Export",
+        
         configTab: "Configurare",
         analysisTab: "Analiză",
         selectItem: "Selectarea obiectului",
@@ -175,6 +198,8 @@ export const translations = {
         custom: "Personalizată",
         avgCost: "Cost mediu",
         avgTrials: "Încercări medii",
+        avgTrialsTotal: "Încercări totale medii",
+        level: "Nivel",
         trialsPerLevel: "Încercări per nivel",
         successProb: "P(succes)",
         interval95: "Interval 95%",
@@ -208,7 +233,6 @@ export const translations = {
         riskLow: "Scăzut",
         riskMedium: "Mediu",
         riskHigh: "Ridicat",
-        level: "Nivel",
         quantity: "Cantitate",
         unitCost: "Cost unitar",
         total: "Total",
@@ -228,6 +252,13 @@ export const translations = {
         "Pierre magique": "Piatră Magică"
     },
     tr: {
+        // Header
+        brandSubtitle: "Metin2 Yükseltme Optimizasyonu",
+        
+        // Titles
+        resetTitle: "Sıfırla",
+        exportTitle: "Dışa Aktar",
+        
         configTab: "Yapılandırma",
         analysisTab: "Analiz",
         selectItem: "Eşya Seçimi",
@@ -246,6 +277,8 @@ export const translations = {
         custom: "Özel",
         avgCost: "Ortalama Maliyet",
         avgTrials: "Ortalama Deneme",
+        avgTrialsTotal: "Toplam Ortalama Deneme",
+        level: "Seviye",
         trialsPerLevel: "Seviye başına deneme",
         successProb: "P(başarı)",
         interval95: "%95 Aralık",
@@ -279,7 +312,6 @@ export const translations = {
         riskLow: "Düşük",
         riskMedium: "Orta",
         riskHigh: "Yüksek",
-        level: "Seviye",
         quantity: "Miktar",
         unitCost: "Birim Maliyet",
         total: "Toplam",
@@ -299,6 +331,13 @@ export const translations = {
         "Pierre magique": "Sihirli Taş"
     },
     de: {
+        // Header
+        brandSubtitle: "Metin2 Verbesserungs-Optimierer",
+        
+        // Titles
+        resetTitle: "Zurücksetzen",
+        exportTitle: "Exportieren",
+        
         configTab: "Konfiguration",
         analysisTab: "Analyse",
         selectItem: "Gegenstand auswählen",
@@ -317,6 +356,8 @@ export const translations = {
         custom: "Benutzerdefiniert",
         avgCost: "Durchschnittskosten",
         avgTrials: "Durchschn. Versuche",
+        avgTrialsTotal: "Gesamt Durchschn. Versuche",
+        level: "Stufe",
         trialsPerLevel: "Versuche pro Stufe",
         successProb: "P(Erfolg)",
         interval95: "95% Intervall",
@@ -350,7 +391,6 @@ export const translations = {
         riskLow: "Niedrig",
         riskMedium: "Mittel",
         riskHigh: "Hoch",
-        level: "Stufe",
         quantity: "Anzahl",
         unitCost: "Stückkosten",
         total: "Gesamt",

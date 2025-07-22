@@ -39,11 +39,43 @@ class UpwaysApp {
         this.strategies = {};
         this.showIntervals = true; // Peut être changé à false pour désactiver les intervalles 95%
         
+        // SEO multilingue
+        this.seoData = {
+            fr: {
+                title: "Upways - Calculateur amélioration Metin2 | Optimiser vos upgrades",
+                description: "Calculez la meilleure stratégie pour améliorer vos objets dans Metin2. Économisez temps et yang avec Upways, l'optimiseur d'amélioration gratuit.",
+                keywords: "metin2, upways, amélioration, upgrade, calculateur, optimiseur"
+            },
+            en: {
+                title: "Upways - Metin2 Upgrade Calculator | Optimize your upgrades",
+                description: "Calculate the best strategy to upgrade your items in Metin2. Save time and yang with Upways, the free upgrade optimizer.",
+                keywords: "metin2, upways, upgrade, calculator, optimizer, enhancement"
+            },
+            ro: {
+                title: "Upways - Calculator upgrade Metin2 | Optimizează upgrade-urile",
+                description: "Calculează cea mai bună strategie pentru a-ți îmbunătăți obiectele în Metin2. Economisește timp și yang cu Upways, optimizatorul gratuit.",
+                keywords: "metin2, upways, upgrade, calculator, optimizator, îmbunătățire"
+            },
+            tr: {
+                title: "Upways - Metin2 Yükseltme Hesaplayıcısı | Yükseltmeleri optimize et",
+                description: "Metin2'de eşyalarınızı yükseltmek için en iyi stratejiyi hesaplayın. Upways ile zaman ve yang tasarrufu yapın.",
+                keywords: "metin2, upways, yükseltme, hesaplayıcı, optimizasyon"
+            },
+            de: {
+                title: "Upways - Metin2 Upgrade Rechner | Optimiere deine Upgrades",
+                description: "Berechne die beste Strategie um deine Gegenstände in Metin2 zu verbessern. Spare Zeit und Yang mit Upways.",
+                keywords: "metin2, upways, verbesserung, upgrade, rechner, optimierer"
+            }
+        };
+        
         // Initialisation
         this.init();
     }
 
     async init() {
+        // Gérer les paramètres d'URL pour la langue
+        this.handleUrlParams();
+        
         try {
             // Charger les données
             this.uiState.showLoading(this.translator.t('calculating'));
@@ -56,7 +88,7 @@ class UpwaysApp {
             // Attacher les événements globaux
             this.attachGlobalEvents();
             
-            // Mettre à jour la langue
+            // Mettre à jour la langue et le SEO
             this.updateLanguage();
             
             console.log('Application initialized');
@@ -65,6 +97,44 @@ class UpwaysApp {
             this.uiState.showToast('error', this.translator.t('errorAnalysis'));
         } finally {
             this.uiState.hideLoading();
+        }
+    }
+
+    handleUrlParams() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const lang = urlParams.get('lang');
+        
+        if (lang && this.translator.isLanguageAvailable(lang)) {
+            this.translator.setLanguage(lang);
+        }
+    }
+
+    updateSEO() {
+        const lang = this.translator.getLanguage();
+        const seo = this.seoData[lang] || this.seoData.fr;
+        
+        // Mettre à jour le titre avec l'année courante
+        document.title = seo.title + ' | ' + new Date().getFullYear();
+        
+        // Mettre à jour les meta tags
+        const metaDescription = document.querySelector('meta[name="description"]');
+        if (metaDescription) {
+            metaDescription.content = seo.description;
+        }
+        
+        const metaKeywords = document.querySelector('meta[name="keywords"]');
+        if (metaKeywords) {
+            metaKeywords.content = seo.keywords;
+        }
+        
+        // Mettre à jour l'attribut lang du document
+        document.documentElement.lang = lang;
+        
+        // Mettre à jour l'URL canonique avec la langue
+        const canonical = document.querySelector('link[rel="canonical"]');
+        if (canonical) {
+            const baseUrl = 'https://metin2upways.com';
+            canonical.href = lang === 'fr' ? baseUrl : `${baseUrl}/?lang=${lang}`;
         }
     }
 
@@ -99,11 +169,8 @@ class UpwaysApp {
     }
 
     attachGlobalEvents() {
-        // Changement de langue
-        document.getElementById('languageSelect').addEventListener('change', (e) => {
-            this.translator.setLanguage(e.target.value);
-            this.updateLanguage();
-        });
+        // Sélecteur de langue personnalisé
+        this.initCustomLanguageSelector();
 
         // Navigation
         document.querySelectorAll('.nav-btn').forEach(btn => {
@@ -118,6 +185,68 @@ class UpwaysApp {
 
         // Reset
         document.getElementById('resetBtn').addEventListener('click', () => this.resetAll());
+    }
+
+    /**
+     * Initialise le sélecteur de langue personnalisé
+     */
+    initCustomLanguageSelector() {
+        const selector = document.getElementById('languageSelector');
+        const button = document.getElementById('languageSelectorButton');
+        const dropdown = document.getElementById('languageDropdown');
+        const options = dropdown.querySelectorAll('.language-option');
+
+        // Ouvrir/fermer le dropdown
+        button.addEventListener('click', (e) => {
+            e.stopPropagation();
+            selector.classList.toggle('open');
+        });
+
+        // Sélectionner une langue
+        options.forEach(option => {
+            option.addEventListener('click', () => {
+                const lang = option.dataset.lang;
+                this.translator.setLanguage(lang);
+                this.updateLanguage();
+                selector.classList.remove('open');
+            });
+        });
+
+        // Fermer le dropdown en cliquant ailleurs
+        document.addEventListener('click', (e) => {
+            if (!selector.contains(e.target)) {
+                selector.classList.remove('open');
+            }
+        });
+    }
+
+    /**
+     * Met à jour l'affichage du sélecteur de langue personnalisé
+     */
+    updateLanguageSelector() {
+        const lang = this.translator.getLanguage();
+        const button = document.getElementById('languageSelectorButton');
+        const dropdown = document.getElementById('languageDropdown');
+        
+        // Obtenir les informations de la langue sélectionnée
+        const selectedOption = dropdown.querySelector(`[data-lang="${lang}"]`);
+        if (selectedOption) {
+            // Copier le drapeau SVG
+            const flagSvg = selectedOption.querySelector('.language-flag').cloneNode(true);
+            const languageName = selectedOption.querySelector('span').textContent;
+            
+            // Mettre à jour le bouton
+            const buttonFlag = button.querySelector('.language-flag');
+            const buttonName = button.querySelector('.language-name');
+            
+            buttonFlag.parentNode.replaceChild(flagSvg, buttonFlag);
+            buttonName.textContent = languageName;
+            
+            // Marquer l'option active
+            dropdown.querySelectorAll('.language-option').forEach(opt => {
+                opt.classList.toggle('active', opt.dataset.lang === lang);
+            });
+        }
     }
 
     /**
@@ -168,8 +297,22 @@ class UpwaysApp {
      * Met à jour la langue dans toute l'application
      */
     updateLanguage() {
-        // Mettre à jour le sélecteur
-        document.getElementById('languageSelect').value = this.translator.getLanguage();
+        const lang = this.translator.getLanguage();
+        
+        // Mettre à jour l'URL sans recharger la page
+        const url = new URL(window.location);
+        if (lang === 'fr') {
+            url.searchParams.delete('lang');
+        } else {
+            url.searchParams.set('lang', lang);
+        }
+        window.history.replaceState({}, '', url);
+        
+        // Mettre à jour le SEO
+        this.updateSEO();
+        
+        // Mettre à jour le sélecteur de langue personnalisé
+        this.updateLanguageSelector();
         
         // Mettre à jour les traductions de la page
         this.translator.updatePageTranslations();
@@ -178,9 +321,14 @@ class UpwaysApp {
         this.searchComponent.updateLanguage();
         this.configComponent.updateLanguage();
         
-        // Si on a des résultats, les mettre à jour
-        if (this.strategies.optimal) {
-            this.analysisComponent.displayStrategyDetails();
+        // Mettre à jour le composant d'analyse
+        if (this.analysisComponent) {
+            this.analysisComponent.updateLanguage();
+        }
+        
+        // Mettre à jour le graphique
+        if (this.chartComponent) {
+            this.chartComponent.updateLanguage();
         }
     }
 

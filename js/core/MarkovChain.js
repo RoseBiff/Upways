@@ -288,7 +288,7 @@ export class MarkovChainWithIntervals extends MarkovChain {
                 y: cumulativePercentage
             });
 
-            if (percentage > 0 && percentage < 0.01) {
+            if (cumulativePercentage > 99) {
                 break;
             }
 
