@@ -20,9 +20,13 @@ def convert_images_to_png(item_proto: ItemProto):
             print(f"Image file {input_path} does not exist.")
             continue
 
-        tga_image = Image.open(input_path)
+        output_filename = os.path.splitext(image_filename)[0] + ".png"
+        output_path = os.path.join(OUTPUT_PATH, output_filename)
 
-        output_path = os.path.join(OUTPUT_PATH, f"{vnum}.png")
+        if os.path.exists(output_path):
+            continue
+
+        tga_image = Image.open(input_path)
 
         tga_image.save(output_path, "PNG")
         count += 1
