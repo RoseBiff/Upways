@@ -46,4 +46,4 @@ def convert_equipment_data():
         f"Equipment refine chains saved to {OUTPUT_JSON_PATH} ({len(equipment_data)} entries)"
     )
 
-    return equipment_data
+    return list(equipment_data.keys())

@@ -49,7 +49,7 @@ export class Translator {
     /**
      * Obtient le nom localisé d'un objet
      */
-    getLocalizedName(item, lang = null) {
+    getLocalizedName(id, lang = null) {
         const targetLang = lang || this.currentLang;
         
         // Si c'est un string direct, le retourner

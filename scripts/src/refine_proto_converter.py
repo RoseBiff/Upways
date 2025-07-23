@@ -49,3 +49,15 @@ def convert_refine_proto_to_json():
         json.dump(entries, outfile, indent=2, ensure_ascii=False)
 
     print(f"Refine data saved to {OUTPUT_JSON_PATH} ({len(entries)} entries)")
+
+    # Collect unique MaterialVnum values
+    material_vnums = set()
+    for entry in entries.values():
+        for i in range(1, 5):
+            vnum = int(entry[f"MaterialVnum{i}"])
+            if vnum is not None and vnum != 0:
+                material_vnums.add(vnum)
+
+    print(f"Unique material vnums collected: {len(material_vnums)}")
+
+    return list(material_vnums)

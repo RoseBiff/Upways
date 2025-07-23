@@ -4,27 +4,48 @@
  */
 export class DataService {
     constructor() {
-        this.data = {};
+        this.equipmentRefines = {};
+        this.itemIcons = {};
+        this.refineProto = {};
         this.upgradeCosts = {};
         this.materialCosts = {};
         this.recentItems = [];
     }
 
     /**
-     * Charge les données depuis le fichier JSON
+     * Charge les données depuis les fichiers JSON
      */
     async loadData() {
         try {
-            const response = await fetch('data_full.json');
-            this.data = await response.json();
-            console.log(`${Object.keys(this.data).length} items loaded`);
-            return this.data;
+            const [
+                equipmentRefinesResponse,
+                itemIconsResponse,
+                refineProtoResponse,
+            ] = await Promise.all([
+                fetch('data/equipment_refines.json'),
+                fetch('data/item_icons.json'),
+                fetch('data/refine_proto.json'),
+            ]);
+
+            this.equipmentRefines = await equipmentRefinesResponse.json();
+            this.itemIcons = await itemIconsResponse.json();
+            this.refineProto = await refineProtoResponse.json();
+
+            console.log(`${Object.keys(this.equipmentRefines).length} equipment items loaded`);
+            console.log(`${Object.keys(this.itemIcons).length} item icons loaded`);
+            console.log(`${Object.keys(this.refineProto).length} refine entries loaded`);
+
+            return {
+                equipmentRefines: this.equipmentRefines,
+                itemIcons: this.itemIcons,
+                refineProto: this.refineProto,
+            };
         } catch (error) {
             console.error('Error loading data:', error);
             throw error;
         }
     }
-
+    
     /**
      * Charge les paramètres sauvegardés depuis localStorage
      */

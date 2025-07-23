@@ -49,14 +49,14 @@ export class SearchComponent {
         
         // Rechercher dans les noms traduits
         const matches = [];
-        const data = this.dataService.data;
-        
-        Object.entries(data).forEach(([id, item]) => {
-            const name = this.translator.getLocalizedName(item).toLowerCase();
+        const equipmentRefines = this.dataService.equipmentRefines;
+
+        Object.keys(equipmentRefines).forEach((id) => {
+            const name = this.translator.getLocalizedName(id).toLowerCase();
             if (name.includes(query)) {
                 matches.push({ 
                     id, 
-                    name: this.translator.getLocalizedName(item), 
+                    name: this.translator.getLocalizedName(id), 
                     score: name.startsWith(query) ? 0 : 1 
                 });
             }

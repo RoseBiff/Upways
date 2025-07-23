@@ -16,9 +16,10 @@ UP_ITEM_VNUMS = [
 if __name__ == "__main__":
     os.makedirs(os.path.join("public", "data"), exist_ok=True)
 
-    equipment_data = convert_equipment_data()
-    equipment_vnums = list(equipment_data.keys())
+    equipment_vnums = convert_equipment_data()
+    material_vnums = convert_refine_proto_to_json()
 
-    convert_images_to_png(equipment_vnums, UP_ITEM_VNUMS)
-    convert_refine_proto_to_json()
-    convert_localized_items_to_json(equipment_vnums, UP_ITEM_VNUMS)
+    item_vnums = set(equipment_vnums + material_vnums + UP_ITEM_VNUMS)
+
+    convert_images_to_png(item_vnums)
+    convert_localized_items_to_json(item_vnums)
