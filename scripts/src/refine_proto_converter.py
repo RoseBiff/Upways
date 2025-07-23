@@ -22,6 +22,10 @@ COLUMNS = [
 ]
 
 
+def format_materials(entry):
+    pass
+
+
 def convert_refine_proto_to_json():
     with open(REFINE_PROTO_PATH, "r", encoding="utf-8") as file:
         content = file.read()
@@ -43,6 +47,8 @@ def convert_refine_proto_to_json():
             for v in values_raw.split(",")
         ]
         entry = dict(zip(COLUMNS, values))
+        format_materials(entry)
+
         entries[entry["RefineSet"]] = entry
 
     with open(OUTPUT_REFINE_PROTO_PATH, "w", encoding="utf-8") as outfile:

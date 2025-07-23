@@ -19,6 +19,7 @@ LANGS_DATA = {
 
 class ItemProto:
     VNUM = "Vnum"
+    NAME = "Name"
     REFINED_VNUM = "RefinedVnum"
     REFINE_SET = "RefineSet"
     SEP = "\t"
@@ -31,7 +32,7 @@ class ItemProto:
             ITEM_PROTO_PATH,
             encoding_errors="ignore",
             sep=self.SEP,
-            usecols=[self.VNUM, self.REFINED_VNUM, self.REFINE_SET],
+            usecols=[self.VNUM, self.NAME, self.REFINED_VNUM, self.REFINE_SET],
         )
 
         data = data[data[self.VNUM].str.isdigit()]
