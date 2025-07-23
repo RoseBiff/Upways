@@ -1,9 +1,11 @@
-import os
 import pandas as pd
 
-ITEM_PROTO_PATH = os.path.join("data", "item_proto.txt")
-ITEM_NAMES_PATH = os.path.join("data", "locale", "{lang}", "item_names.txt")
-ITEM_LIST_PATH = os.path.join("data", "item_list.txt")
+from src.paths import (
+    ITEM_PROTO_PATH,
+    ITEM_LIST_PATH,
+    INGAME_EQUIPMENT_VNUMS_PATH,
+    ITEM_NAMES_PATH,
+)
 
 
 LANGS_DATA = {
@@ -90,3 +92,10 @@ class ImagePaths:
 
     def _convert_data(self):
         self.data: pd.Series = self.data.str.extract(r"([^/]+\.tga)$").squeeze()
+
+
+def get_equipment_vnums():
+    with open(INGAME_EQUIPMENT_VNUMS_PATH, "r") as file:
+        vnums = [int(line.strip()) for line in file if line.strip().isdigit()]
+
+    return vnums

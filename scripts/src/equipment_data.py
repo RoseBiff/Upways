@@ -1,9 +1,8 @@
-import os
 import json
 
 from src.open_files import ItemProto
-
-OUTPUT_JSON_PATH = os.path.join("public", "data", "equipment_refines.json")
+from src.open_files import get_equipment_vnums
+from src.paths import EQUIPMENT_REFINES_PATH
 
 
 def convert_equipment_data():
@@ -14,9 +13,9 @@ def convert_equipment_data():
     refine_set_col = ItemProto.REFINE_SET
     refined_vnum_col = ItemProto.REFINED_VNUM
 
-    equipment_vnums = data.index[data[refine_set_col] > 0].tolist()
+    equipment_vnums = get_equipment_vnums()
 
-    for vnum in equipment_vnums:
+    for vnum in equipment_vnums[::-1]:
         if vnum in visited_vnums:
             continue
 
@@ -39,11 +38,11 @@ def convert_equipment_data():
         if len(refine_sets) < 8:
             del equipment_data[vnum]
 
-    with open(OUTPUT_JSON_PATH, "w", encoding="utf-8") as outfile:
+    with open(EQUIPMENT_REFINES_PATH, "w", encoding="utf-8") as outfile:
         json.dump(equipment_data, outfile, indent=2, ensure_ascii=False)
 
     print(
-        f"Equipment refine chains saved to {OUTPUT_JSON_PATH} ({len(equipment_data)} entries)"
+        f"Equipment refine chains saved to {EQUIPMENT_REFINES_PATH} ({len(equipment_data)} entries)"
     )
 
-    return list(equipment_data.keys())
+    return equipment_vnums

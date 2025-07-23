@@ -1,10 +1,8 @@
 import os
-import json
 from src.open_files import ImagePaths
 from PIL import Image
 
-IMAGES_PATH = os.path.join("data", "item")
-OUTPUT_IMAGE_PATH = os.path.join("public", "data", "item")
+from src.paths import IMAGES_PATH, OUTPUT_IMAGE_PATH
 
 
 def convert_images_to_png(item_vnums: set[int]):

@@ -1,11 +1,11 @@
-import os
 import re
 import json
 
-INPUT_SQL_PATH = os.path.join("data", "refine_proto.sql")
-OUTPUT_JSON_PATH = os.path.join("public", "data", "refine_proto.json")
+from src.paths import (
+    REFINE_PROTO_PATH,
+    OUTPUT_REFINE_PROTO_PATH,
+)
 
-ITEM_PROTO_PATH = os.path.join("data", "item_proto.txt")
 
 COLUMNS = [
     "RefineSet",
@@ -23,7 +23,7 @@ COLUMNS = [
 
 
 def convert_refine_proto_to_json():
-    with open(INPUT_SQL_PATH, "r", encoding="utf-8") as file:
+    with open(REFINE_PROTO_PATH, "r", encoding="utf-8") as file:
         content = file.read()
 
     # Trouver toutes les lignes contenant des VALUES
@@ -45,10 +45,10 @@ def convert_refine_proto_to_json():
         entry = dict(zip(COLUMNS, values))
         entries[entry["RefineSet"]] = entry
 
-    with open(OUTPUT_JSON_PATH, "w", encoding="utf-8") as outfile:
+    with open(OUTPUT_REFINE_PROTO_PATH, "w", encoding="utf-8") as outfile:
         json.dump(entries, outfile, indent=2, ensure_ascii=False)
 
-    print(f"Refine data saved to {OUTPUT_JSON_PATH} ({len(entries)} entries)")
+    print(f"Refine data saved to {OUTPUT_REFINE_PROTO_PATH} ({len(entries)} entries)")
 
     # Collect unique MaterialVnum values
     material_vnums = set()

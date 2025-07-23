@@ -1,24 +1,18 @@
 import os
 import json
-import re
+
 from src.open_files import GameNames
-
-
-OUTPUT_JSON_PATH = os.path.join("public", "data", "locale", "{lang}", "item_names.json")
+from src.paths import OUTPUT_ITEM_NAMES_PATH
 
 
 def convert_localized_items_to_json(
     item_vnums: set[int],
 ):
     item_names = GameNames().data
-
     filtered = item_names.loc[item_names.index.intersection(item_vnums)]
 
-    for col in filtered.columns:
-        filtered[col] = filtered[col].map(lambda x: re.sub(r"\s?\+\d+$", "", x))
-
     for lang, col in filtered.items():
-        output_path = OUTPUT_JSON_PATH.format(lang=lang)
+        output_path = OUTPUT_ITEM_NAMES_PATH.format(lang=lang)
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
         entries = col.to_dict()
