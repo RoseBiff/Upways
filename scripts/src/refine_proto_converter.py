@@ -23,7 +23,17 @@ COLUMNS = [
 
 
 def format_materials(entry):
-    pass
+    materials = []
+
+    for i in range(1, 5):
+        vnum = entry[f"MaterialVnum{i}"]
+        count = entry[f"MaterialCount{i}"]
+        if vnum is not None and vnum != 0 and count is not None and count != 0:
+            materials.append({"Vnum": int(vnum), "Count": int(count)})
+        del entry[f"MaterialVnum{i}"]
+        del entry[f"MaterialCount{i}"]
+
+    entry["Materials"] = materials
 
 
 def convert_refine_proto_to_json():
@@ -59,10 +69,8 @@ def convert_refine_proto_to_json():
     # Collect unique MaterialVnum values
     material_vnums = set()
     for entry in entries.values():
-        for i in range(1, 5):
-            vnum = int(entry[f"MaterialVnum{i}"])
-            if vnum is not None and vnum != 0:
-                material_vnums.add(vnum)
+        for material in entry["Materials"]:
+            material_vnums.add(material["Vnum"])
 
     print(f"Unique material vnums collected: {len(material_vnums)}")
 
