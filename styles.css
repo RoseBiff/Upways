@@ -3005,3 +3005,97 @@ select:focus-visible {
         --border-color: rgba(255, 255, 255, 0.2);
     }
 }
+
+/* Table de détails du graphique */
+.chart-detail-container {
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.detail-table-wrapper {
+    overflow-x: auto;
+    margin: 1rem 0;
+}
+
+.detail-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+}
+
+.detail-table th,
+.detail-table td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.detail-table th {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+}
+
+.detail-table tbody tr:hover {
+    background: var(--bg-hover);
+}
+
+.prob-cell {
+    color: var(--primary);
+    font-weight: 600;
+}
+
+.trials-cell {
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.ratio-cell {
+    font-weight: 600;
+}
+
+.ratio-cell.good {
+    color: var(--success);
+}
+
+.ratio-cell.moderate {
+    color: var(--warning);
+}
+
+.ratio-cell.high {
+    color: var(--danger);
+}
+
+.detail-note {
+    margin-top: 1rem;
+    padding: 0.75rem 1rem;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-md);
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+/* Amélioration du tooltip du graphique */
+.chart-section canvas {
+    cursor: crosshair;
+}
+/* Boutons du graphique */
+.chart-buttons {
+    display: flex;
+    gap: 0.5rem;
+    margin-left: auto;
+}
+
+.chart-section .chart-title {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.chart-section .btn-small {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+}

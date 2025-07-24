@@ -330,6 +330,8 @@ export class StrategyService {
             totalCost,
             markov,
             extendedWaypoints,
+            startLevel,  // Ajouter cette ligne
+            endLevel,    // Ajouter cette ligne
             intervals: {
                 total: markov.intervals.total,
                 byLevel: extendedWaypoints.map((w, i) => ({

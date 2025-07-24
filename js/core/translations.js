@@ -56,6 +56,11 @@ export const translations = {
         xAxisLabel: "Nombre de tentatives",
         yAxisLabel: "Probabilité de succès (%)",
         probabilityAt: "Probabilité à",
+        // Dans chaque langue, ajoutez :
+        chartDetails: "Détails de probabilité",
+        ratio: "Ratio",
+        detailNote: "Les ratios sont calculés par rapport au nombre moyen d'essais",
+        estimatedCost: "Coût estimé",
         
         // Tooltips et décomposition des coûts
         trialInterval: "Essais",

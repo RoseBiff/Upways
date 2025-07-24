@@ -7,6 +7,7 @@ import { SearchComponent } from './components/SearchComponent.js';
 import { ConfigComponent } from './components/ConfigComponent.js';
 import { AnalysisComponent } from './components/AnalysisComponent.js';
 import { ChartComponent } from './components/ChartComponent.js';
+import { SimulationComponent } from './components/SimulationComponent.js';
 
 import { Translator } from './utils/translator.js';
 import { Formatters } from './utils/formatters.js';
@@ -136,34 +137,42 @@ class UpwaysApp {
     }
 
     initComponents() {
-        // Composant de recherche
-        this.searchComponent = new SearchComponent(
-            this.dataService,
-            this.translator,
-            (itemId, itemName) => this.onItemSelected(itemId, itemName)
-        );
+    // Composant de recherche
+    this.searchComponent = new SearchComponent(
+        this.dataService,
+        this.translator,
+        (itemId, itemName) => this.onItemSelected(itemId, itemName)
+    );
 
-        // Composant de configuration
-        this.configComponent = new ConfigComponent(
-            this.dataService,
-            this.translator,
-            (change) => this.onConfigChanged(change)
-        );
+    // Composant de configuration
+    this.configComponent = new ConfigComponent(
+        this.dataService,
+        this.translator,
+        (change) => this.onConfigChanged(change)
+    );
 
-        // Composant d'analyse
-        this.analysisComponent = new AnalysisComponent(
-            this.dataService,
-            this.translator,
-            this.formatters,
-            (change) => this.onStrategyChanged(change)
-        );
+    // Composant d'analyse
+    this.analysisComponent = new AnalysisComponent(
+        this.dataService,
+        this.translator,
+        this.formatters,
+        (change) => this.onStrategyChanged(change)
+    );
 
-        // Composant de graphique
-        this.chartComponent = new ChartComponent(this.translator);
-        
-        // Configurer l'affichage des intervalles
-        this.analysisComponent.setShowIntervals(this.showIntervals);
-    }
+    // Composant de graphique
+    this.chartComponent = new ChartComponent(this.translator);
+    
+    // Configurer l'affichage des intervalles
+    this.analysisComponent.setShowIntervals(this.showIntervals);
+
+    // ========== AJOUTER ICI LE COMPOSANT DE SIMULATION ==========
+    
+    // Créer le composant de simulation
+    this.simulationComponent = new SimulationComponent(this.dataService);
+    
+    // Créer le bouton de simulation (mais ne pas l'afficher tout de suite)
+    this.createSimulationButton();
+}
 
     attachGlobalEvents() {
         // Sélecteur de langue personnalisé
@@ -383,6 +392,165 @@ class UpwaysApp {
     }
 
     /**
+     * Crée le bouton de simulation
+     */
+    createSimulationButton() {
+        // Attendre que le DOM soit prêt
+        setTimeout(() => {
+            const chartTitle = document.querySelector('.chart-section .chart-title');
+            if (!chartTitle) return;
+            
+            // Créer un conteneur pour les boutons si nécessaire
+            let buttonContainer = chartTitle.querySelector('.chart-buttons');
+            if (!buttonContainer) {
+                buttonContainer = document.createElement('div');
+                buttonContainer.className = 'chart-buttons';
+                chartTitle.appendChild(buttonContainer);
+            }
+            
+            // Créer le bouton de simulation
+            const simulateBtn = document.createElement('button');
+            simulateBtn.className = 'btn btn-secondary btn-small';
+            simulateBtn.innerHTML = '<span class="btn-icon">🎲</span> Simuler';
+            simulateBtn.style.display = 'none'; // Caché par défaut
+            simulateBtn.id = 'simulateBtn';
+            
+            simulateBtn.onclick = () => this.runSimulation();
+            
+            buttonContainer.appendChild(simulateBtn);
+        }, 100);
+    }
+
+    /**
+     * Lance la simulation Monte Carlo
+     */
+    /**
+     * Lance la simulation Monte Carlo
+     */
+    async runSimulation() {
+        // Récupérer la stratégie actuelle
+        const currentStrategyType = this.analysisComponent.getCurrentStrategy();
+        const strategy = this.strategies[currentStrategyType];
+
+        if (!strategy) {
+            this.uiState.showToast('error', 'Aucune stratégie sélectionnée');
+            return;
+        }
+
+        // Afficher le loading
+        this.uiState.showLoading('Simulation en cours...');
+
+        // Lancer la simulation avec un délai pour l'UI
+        setTimeout(async () => {
+            try {
+                // Nombre de simulations
+                const numSims = 10000;
+                
+                // Lancer la simulation
+                const results = this.simulationComponent.simulateUpgradeRuns(strategy, numSims);
+                
+                // Retirer l'ancienne courbe empirique si elle existe
+                this.chartComponent.removeEmpiricalCurve();
+                
+                // Ajouter la nouvelle courbe empirique
+                this.chartComponent.addEmpiricalCurve(
+                    results.empiricalCurve, 
+                    `Simulation (${numSims} essais)`
+                );
+                
+                // Activer la légende
+                this.chartComponent.toggleLegend(true);
+                
+                // Afficher les statistiques dans la console
+                console.log('=== Résultats de simulation ===');
+                console.log('Statistiques:', results.stats);
+                
+                // Comparer avec la théorie
+                if (this.chartComponent.chart) {
+                    const theoreticalCurve = this.chartComponent.chart.data.datasets[0].data;
+                    const comparison = this.simulationComponent.compareWithTheory(theoreticalCurve);
+                    
+                    if (comparison) {
+                        console.log('=== Comparaison théorie vs simulation ===');
+                        console.log(`Erreur moyenne: ${comparison.avgError.toFixed(2)}%`);
+                        console.log(`Erreur maximale: ${comparison.maxError.toFixed(2)}%`);
+                    }
+                }
+                
+                // Message de succès
+                this.uiState.showToast('success', 
+                    `Simulation terminée: ${results.stats.mean.toFixed(0)} essais en moyenne (5%: ${results.stats.percentile5}, 95%: ${results.stats.percentile95})`
+                );
+                
+                // ========== LOGS DE COMPARAISON DÉTAILLÉE ==========
+                console.log('\n=== Comparaison détaillée ===');
+                
+                // Récupérer la moyenne théorique
+                let theoreticalMean;
+                if (strategy.endLevel && strategy.endLevel > 9) {
+                    // Pour les niveaux > 9, utiliser les waypoints étendus ou calculer manuellement
+                    if (strategy.extendedWaypoints) {
+                        theoreticalMean = strategy.extendedWaypoints.reduce((sum, w) => sum + w, 0);
+                    } else {
+                        // Calculer manuellement : Markov jusqu'à 9 + somme des 1/p pour chaque niveau > 9
+                        theoreticalMean = strategy.markov ? strategy.markov.totalTrials : 0;
+                        for (let i = 0; i < strategy.path.length; i++) {
+                            const level = strategy.startLevel + i + 1;
+                            if (level > 9) {
+                                const rate = strategy.path[i].rate / 100;
+                                theoreticalMean += 1 / rate;
+                            }
+                        }
+                    }
+                } else {
+                    theoreticalMean = strategy.markov ? strategy.markov.totalTrials : 0;
+                }
+                const empiricalMean = results.stats.mean;
+                
+                console.log(`Moyenne théorique: ${theoreticalMean.toFixed(2)}`);
+                console.log(`Moyenne empirique: ${empiricalMean.toFixed(2)}`);
+                console.log(`Écart absolu: ${(empiricalMean - theoreticalMean).toFixed(2)}`);
+                console.log(`Écart relatif: ${((empiricalMean - theoreticalMean) / theoreticalMean * 100).toFixed(2)}%`);
+                
+                // Comparer les percentiles
+                if (this.chartComponent.chart && this.chartComponent.chart.data.datasets[0].data) {
+                    const theoreticalData = this.chartComponent.chart.data.datasets[0].data;
+                    
+                    // Trouver les percentiles théoriques
+                    const findPercentileTrials = (data, percentile) => {
+                        for (let i = 0; i < data.length; i++) {
+                            if (data[i].y >= percentile) {
+                                return data[i].x;
+                            }
+                        }
+                        return data[data.length - 1].x;
+                    };
+                    
+                    const theo5 = findPercentileTrials(theoreticalData, 5);
+                    const theo50 = findPercentileTrials(theoreticalData, 50);
+                    const theo95 = findPercentileTrials(theoreticalData, 95);
+                    
+                    console.log('\n=== Comparaison des percentiles ===');
+                    console.log(`5e percentile - Théorique: ${theo5}, Empirique: ${results.stats.percentile5}, Écart: ${((results.stats.percentile5 - theo5) / theo5 * 100).toFixed(1)}%`);
+                    console.log(`Médiane - Théorique: ${theo50}, Empirique: ${results.stats.median}, Écart: ${((results.stats.median - theo50) / theo50 * 100).toFixed(1)}%`);
+                    console.log(`95e percentile - Théorique: ${theo95}, Empirique: ${results.stats.percentile95}, Écart: ${((results.stats.percentile95 - theo95) / theo95 * 100).toFixed(1)}%`);
+                    
+                    console.log('\n=== Statistiques par niveau ===');
+                    results.stats.levelStats.forEach(levelStat => {
+                        console.log(`Niveau ${levelStat.level}: Moyenne=${levelStat.mean.toFixed(2)}, Min=${levelStat.min}, Max=${levelStat.max}`);
+                    });
+                }
+                // ==========================================================
+                
+            } catch (error) {
+                console.error('Erreur de simulation:', error);
+                this.uiState.showToast('error', 'Erreur lors de la simulation');
+            } finally {
+                this.uiState.hideLoading();
+            }
+        }, 100);
+    }
+    /**
      * Lance l'analyse
      */
     async runAnalysis() {
@@ -430,6 +598,19 @@ class UpwaysApp {
             // Dessiner le graphique
             this.chartComponent.drawTrialsProbabilityChart(this.strategies.optimal);
             
+            this.uiState.showToast('success', this.translator.t('analysisComplete'));
+
+            // Dessiner le graphique
+            this.chartComponent.drawTrialsProbabilityChart(this.strategies.optimal);
+            
+            // ========== AJOUTER ICI ==========
+            // Afficher le bouton de simulation
+            const simulateBtn = document.getElementById('simulateBtn');
+            if (simulateBtn) {
+                simulateBtn.style.display = '';
+            }
+            // =================================
+
             this.uiState.showToast('success', this.translator.t('analysisComplete'));
         } catch (error) {
             console.error('Analysis error:', error);
