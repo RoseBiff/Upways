@@ -1,7 +1,8 @@
 import { MarkovChainWithIntervals } from '../core/MarkovChain.js';
 
 /**
- * Service de calcul des stratégies d'amélioration
+ * Service de calcul des stratégies d'amélioration - Version 3.6
+ * Pierre magique autorisée dans l'optimisation pour tous les niveaux
  */
 export class StrategyService {
     constructor(dataService) {
@@ -9,13 +10,21 @@ export class StrategyService {
     }
 
     /**
-     * Calcule la stratégie optimale avec une exploration exhaustive déterministe
-     * IMPORTANT: Pour les niveaux > 9, on force l'utilisation de pierres magiques uniquement
+     * Calcule la stratégie optimale
+     * Règles :
+     * - Niveaux 1-4 : Parchemin de Guerre uniquement
+     * - Niveaux 5-9 : Optimisation incluant Pierre magique
+     * - Niveaux 10+ : Pierre magique uniquement (forcé)
      */
     async calculateOptimalStrategy(itemId, startLevel, endLevel) {
-        const itemData = this.dataService.getItemById(itemId);
+        const itemData = await this.dataService.getItemById(itemId);
 
-        // Définir les méthodes d'amélioration disponibles pour les niveaux 5-9
+        // Si on ne dépasse pas le niveau 9, calcul normal avec toutes les options
+        if (endLevel <= 9) {
+            return this.calculateOptimalStrategyStandard(itemData, startLevel, endLevel);
+        }
+
+        // Si on dépasse le niveau 9, optimiser jusqu'à 9 puis forcer pierre magique
         const methods = [
             {
                 name: "Parchemin de bénédiction",
@@ -39,18 +48,72 @@ export class StrategyService {
             }
         ];
 
-        // Déterminer le niveau max pour l'optimisation (max 9)
-        const optimizationEndLevel = Math.min(endLevel, 9);
+        // Construire le chemin optimal jusqu'à 9
+        let bestPath = [];
+        let bestCost = Infinity;
+
+        // Niveaux 1-4 : toujours Parchemin de Guerre
+        const basePath = ["Parchemin de Guerre", "Parchemin de Guerre", "Parchemin de Guerre", "Parchemin de Guerre"];
+
+        // Optimiser les niveaux 5-9 (incluant Pierre magique)
+        const combinations = this.generateCombinationsForRange(methods, 5);
         
+        for (const combo of combinations) {
+            const testPath = [...basePath, ...combo];
+            
+            // Ajouter Pierre magique pour les niveaux 10+
+            const fullPath = [...testPath];
+            for (let i = 10; i <= endLevel; i++) {
+                fullPath.push("Pierre magique");
+            }
+            
+            // Évaluer ce chemin
+            const strategy = await this.evaluateFullPath(fullPath, itemData, startLevel, endLevel);
+            
+            if (strategy.totalCost < bestCost) {
+                bestCost = strategy.totalCost;
+                bestPath = fullPath;
+            }
+        }
+
+        // Retourner la meilleure stratégie trouvée
+        return this.evaluateFullPath(bestPath, itemData, startLevel, endLevel);
+    }
+
+    /**
+     * Calcul standard pour les niveaux <= 9
+     */
+    async calculateOptimalStrategyStandard(itemData, startLevel, endLevel) {
+        const methods = [
+            {
+                name: "Parchemin de bénédiction",
+                getRate: (level) => itemData[level.toString()]?.success_rate || 0,
+                noDowngrade: false
+            },
+            {
+                name: "Manuel de Forgeron", 
+                getRate: (level) => [100, 100, 90, 80, 70, 60, 50, 30, 20][level - 1] || 0,
+                noDowngrade: false
+            },
+            {
+                name: "Parchemin du Dieu Dragon",
+                getRate: (level) => [100, 75, 65, 55, 45, 40, 35, 25, 20][level - 1] || 0,
+                noDowngrade: false
+            },
+            {
+                name: "Pierre magique",
+                getRate: (level) => itemData[level.toString()]?.success_rate || 0,
+                noDowngrade: true
+            }
+        ];
+
         let bestStrategy = null;
         let bestCost = Infinity;
 
-        // Générer toutes les combinaisons possibles pour la plage de niveaux jusqu'à +9
-        const combinations = this.generateAllCombinations(methods, startLevel, optimizationEndLevel);
+        const combinations = this.generateAllCombinations(methods, 0, endLevel);
 
-        // Évaluer chaque combinaison
         for (const combination of combinations) {
-            const strategy = this.evaluateStrategyDeterministic(combination, itemData, startLevel, endLevel);
+            const strategy = await this.evaluateFullPath(combination, itemData, startLevel, endLevel);
 
             if (strategy.totalCost < bestCost) {
                 bestCost = strategy.totalCost;
@@ -62,45 +125,74 @@ export class StrategyService {
     }
 
     /**
+     * Génère les combinaisons pour une plage spécifique (5-9)
+     */
+    generateCombinationsForRange(methods, count) {
+        const combinations = [];
+        
+        function generateCombos(currentCombo, remaining) {
+            if (remaining === 0) {
+                combinations.push([...currentCombo]);
+                return;
+            }
+            
+            for (const method of methods) {
+                currentCombo.push(method.name);
+                generateCombos(currentCombo, remaining - 1);
+                currentCombo.pop();
+            }
+        }
+        
+        generateCombos([], count);
+        return combinations;
+    }
+
+    /**
      * Calcule une stratégie personnalisée
+     * Force Pierre magique après niveau 9 uniquement
      */
     async calculateCustomStrategy(customScenario, itemId, startLevel, endLevel) {
-        const itemData = this.dataService.getItemById(itemId);
+        const itemData = await this.dataService.getItemById(itemId);
         
-        // S'assurer que le scénario est bien défini
-        if (!customScenario || customScenario.length === 0) {
-            // Initialiser avec un scénario par défaut
+        // S'assurer que le scénario couvre tout le chemin depuis le niveau 1
+        if (!customScenario || customScenario.length < endLevel) {
             customScenario = [];
-            for (let i = startLevel + 1; i <= endLevel; i++) {
+            for (let i = 1; i <= endLevel; i++) {
                 if (i <= 4) {
                     customScenario.push("Parchemin de Guerre");
                 } else if (i > 9) {
                     customScenario.push("Pierre magique");
                 } else {
-                    // Par défaut, utiliser Parchemin du Dieu Dragon pour les niveaux 5-9
                     customScenario.push("Parchemin du Dieu Dragon");
                 }
             }
         }
         
-        return this.evaluateStrategy(customScenario, itemData, startLevel, endLevel);
+        // Forcer Pierre magique après niveau 9 uniquement
+        const correctedScenario = [...customScenario];
+        for (let i = 9; i < correctedScenario.length; i++) {
+            if (i + 1 > 9) { // Niveau i+1 car l'index commence à 0
+                correctedScenario[i] = "Pierre magique";
+            }
+        }
+        
+        return this.evaluateFullPath(correctedScenario, itemData, startLevel, endLevel);
     }
 
     /**
      * Génère toutes les combinaisons possibles d'objets d'amélioration
      */
-    generateAllCombinations(methods, startLevel, endLevel) {
+    generateAllCombinations(methods, fromLevel, toLevel) {
         const combinations = [];
-        const numLevels = endLevel - startLevel;
+        const numLevels = toLevel;
 
-        // Fonction récursive pour générer les combinaisons
         function generateCombos(currentCombo, levelIndex) {
             if (levelIndex === numLevels) {
                 combinations.push([...currentCombo]);
                 return;
             }
 
-            const currentLevel = startLevel + levelIndex + 1;
+            const currentLevel = levelIndex + 1;
 
             // Pour les niveaux 1-4, utiliser uniquement Parchemin de Guerre
             if (currentLevel <= 4) {
@@ -108,7 +200,7 @@ export class StrategyService {
                 generateCombos(currentCombo, levelIndex + 1);
                 currentCombo.pop();
             } else if (currentLevel <= 9) {
-                // Pour les niveaux 5-9, tester tous les objets d'amélioration
+                // Pour les niveaux 5-9, tester TOUTES les options incluant Pierre magique
                 const availableMethods = methods.filter(method => 
                     method.name !== "Parchemin de Guerre"
                 );
@@ -131,185 +223,123 @@ export class StrategyService {
     }
 
     /**
-     * Évalue une stratégie spécifique de manière déterministe
+     * Évalue un chemin complet d'amélioration
      */
-    evaluateStrategyDeterministic(upgradePath, itemData, startLevel, endLevel) {
+    async evaluateFullPath(fullUpgradePath, itemData, startLevel, endLevel) {
         const path = [];
-        const rates = [];
-        const flags = [];
-        const costs = [];
-
-        // Construire les taux de succès pour TOUS les niveaux (0 à endLevel)
         const fullRates = [];
         const fullFlags = [];
         const fullCosts = [];
+        const fullYangCosts = [];
 
-        // Remplir les taux pour les niveaux 0 à startLevel (valeurs par défaut)
-        for (let level = 1; level <= startLevel; level++) {
-            const levelData = itemData[level.toString()] || { materials: {}, success_rate: 0 };
-            const defaultOption = level <= 4 ? "Parchemin de Guerre" : "Parchemin de bénédiction";
-            const rate = this.calculateSuccessRate(level, defaultOption, levelData.success_rate);
-
-            fullRates.push(rate);
-            fullFlags.push(defaultOption === "Pierre magique");
-            const materialCost = this.calculateMaterialCost(levelData.materials || {});
-            const upgradeCost = this.dataService.getUpgradeCost(defaultOption);
-            fullCosts.push(materialCost + upgradeCost);
-        }
-
-        // Ajouter les taux pour le chemin spécifié
-        for (let i = 0; i < upgradePath.length; i++) {
-            const level = startLevel + i + 1;
-            let upgradeType = upgradePath[i];
-            
-            // Forcer pierre magique pour les niveaux > 9
-            if (level > 9) {
-                upgradeType = "Pierre magique";
-            }
-            
-            const levelData = itemData[level.toString()] || { materials: {}, success_rate: 0 };
+        // Limiter le calcul Markov au niveau 9 maximum pour performance
+        const markovEndLevel = Math.min(endLevel, 9);
+        
+        // Construire les données jusqu'au niveau markovEndLevel
+        for (let level = 1; level <= markovEndLevel; level++) {
+            const upgradeType = fullUpgradePath[level - 1];
+            const levelData = itemData[level.toString()] || { materials: {}, success_rate: 0, yang_cost: 0 };
             const rate = this.calculateSuccessRate(level, upgradeType, levelData.success_rate);
-
-            path.push({ 
-                name: upgradeType, 
-                rate, 
-                noDowngrade: upgradeType === "Pierre magique" 
-            });
-
+            
             fullRates.push(rate);
             fullFlags.push(upgradeType === "Pierre magique");
-
-            const materialCost = this.calculateMaterialCost(levelData.materials || {});
+            
+            const yangCost = levelData.yang_cost || 0;
+            fullYangCosts.push(yangCost);
+            
+            const yangCostInMillions = yangCost / 1000000;
+            const materialCost = await this.calculateMaterialCost(levelData.materials || {});
             const upgradeCost = this.dataService.getUpgradeCost(upgradeType);
-            fullCosts.push(materialCost + upgradeCost);
+            const totalLevelCost = yangCostInMillions + materialCost + upgradeCost;
+            
+            fullCosts.push(totalLevelCost);
+            
+            if (level > startLevel && level <= endLevel) {
+                path.push({ 
+                    name: upgradeType, 
+                    rate, 
+                    noDowngrade: upgradeType === "Pierre magique",
+                    yangCost: yangCost,
+                    yangCostInMillions: yangCostInMillions,
+                    materialCost: materialCost,
+                    upgradeCost: upgradeCost,
+                    totalCost: totalLevelCost
+                });
+            }
         }
+
+        // Créer la chaîne de Markov jusqu'au niveau 9
+        const markov = new MarkovChainWithIntervals(
+            fullRates, 
+            fullFlags, 
+            Math.min(startLevel, markovEndLevel), 
+            markovEndLevel,
+            5000
+        );
+
+        // Calculer les waypoints étendus pour les niveaux > 9
+        const extendedWaypoints = [...markov.waypoints];
+        let additionalCost = 0;
         
-        // Pour les niveaux au-delà du chemin fourni (si endLevel > upgradePath.length)
-        for (let level = startLevel + upgradePath.length + 1; level <= endLevel; level++) {
-            const upgradeType = "Pierre magique"; // Toujours pierre magique pour > 9
-            const levelData = itemData[level.toString()] || { materials: {}, success_rate: 0 };
-            const rate = this.calculateSuccessRate(level, upgradeType, levelData.success_rate);
-            
-            path.push({ 
-                name: upgradeType, 
-                rate, 
-                noDowngrade: true 
-            });
-            
-            fullRates.push(rate);
-            fullFlags.push(true);
-            
-            const materialCost = this.calculateMaterialCost(levelData.materials || {});
-            const upgradeCost = this.dataService.getUpgradeCost(upgradeType);
-            fullCosts.push(materialCost + upgradeCost);
-        }
-
-        // Créer la chaîne de Markov
-        const markov = new MarkovChainWithIntervals(fullRates, fullFlags, startLevel, endLevel);
-
-        // Extraire les waypoints pour les niveaux pertinents
-        const relevantWaypoints = [];
-        for (let i = startLevel + 1; i <= endLevel; i++) {
-            relevantWaypoints.push(markov.waypoints[i - 1]);
+        if (endLevel > 9) {
+            // Pour les niveaux 10+, calculer avec Pierre magique
+            for (let level = 10; level <= endLevel; level++) {
+                const levelData = itemData[level.toString()] || { materials: {}, success_rate: 10, yang_cost: 0 };
+                const rate = levelData.success_rate || 10;
+                const expectedTrials = 100 / rate;
+                
+                extendedWaypoints[level - 1] = expectedTrials;
+                
+                // Calculer le coût
+                const yangCost = levelData.yang_cost || 0;
+                const yangCostInMillions = yangCost / 1000000;
+                const materialCost = await this.calculateMaterialCost(levelData.materials || {});
+                const upgradeCost = this.dataService.getUpgradeCost("Pierre magique");
+                const totalLevelCost = yangCostInMillions + materialCost + upgradeCost;
+                
+                additionalCost += totalLevelCost * expectedTrials;
+                
+                if (level > startLevel) {
+                    path.push({ 
+                        name: "Pierre magique", 
+                        rate, 
+                        noDowngrade: true,
+                        yangCost: yangCost,
+                        yangCostInMillions: yangCostInMillions,
+                        materialCost: materialCost,
+                        upgradeCost: upgradeCost,
+                        totalCost: totalLevelCost,
+                        expectedTrials: expectedTrials
+                    });
+                }
+            }
         }
 
         // Calculer le coût total
-        const totalCost = fullCosts.reduce((sum, cost, i) => sum + cost * markov.waypoints[i], 0);
+        const markovCost = fullCosts.slice(0, markovEndLevel).reduce((sum, cost, i) => sum + cost * markov.waypoints[i], 0);
+        const totalCost = markovCost + additionalCost;
 
         return {
             path,
-            rates: fullRates.slice(startLevel, endLevel),
-            flags: fullFlags.slice(startLevel, endLevel),
-            costs: fullCosts.slice(startLevel, endLevel),
-            waypoints: relevantWaypoints,
+            fullPath: fullUpgradePath,
+            rates: fullRates,
+            flags: fullFlags,
+            costs: fullCosts,
+            yangCosts: fullYangCosts,
+            waypoints: extendedWaypoints.slice(startLevel, endLevel),
             totalCost,
             markov,
+            extendedWaypoints,
             intervals: {
                 total: markov.intervals.total,
-                byLevel: relevantWaypoints.map((_, i) => markov.intervals.byLevel[startLevel + i])
-            },
-            riskLevel: markov.riskLevel
-        };
-    }
-
-    /**
-     * Évalue une stratégie avec la logique corrigée de la chaîne de Markov
-     */
-    evaluateStrategy(upgradePath, itemData, startLevel, endLevel) {
-        const path = [];
-        const rates = [];
-        const flags = [];
-        const costs = [];
-        
-        // Construire les taux de succès pour TOUS les niveaux (0 à endLevel)
-        const fullRates = [];
-        const fullFlags = [];
-        const fullCosts = [];
-        
-        // Remplir les taux pour les niveaux 0 à startLevel
-        for (let level = 1; level <= startLevel; level++) {
-            const levelData = itemData[level.toString()] || { materials: {}, success_rate: 0 };
-            const defaultOption = level <= 4 ? "Parchemin de Guerre" : "Parchemin de bénédiction";
-            const rate = this.calculateSuccessRate(level, defaultOption, levelData.success_rate);
-            
-            fullRates.push(rate);
-            fullFlags.push(defaultOption === "Pierre magique");
-            const materialCost = this.calculateMaterialCost(levelData.materials || {});
-            const upgradeCost = this.dataService.getUpgradeCost(defaultOption);
-            fullCosts.push(materialCost + upgradeCost);
-        }
-        
-        // Ajouter les taux pour le chemin réel (startLevel+1 à endLevel)
-        for (let i = 0; i < upgradePath.length; i++) {
-            const level = startLevel + i + 1;
-            let upgradeType = upgradePath[i];
-            
-            // Forcer pierre magique pour les niveaux > 9
-            if (level > 9 && upgradeType !== "Pierre magique") {
-                console.warn(`Niveau ${level}: forcé à Pierre magique`);
-                upgradeType = "Pierre magique";
-            }
-            
-            const levelData = itemData[level.toString()] || { materials: {}, success_rate: 0 };
-            const rate = this.calculateSuccessRate(level, upgradeType, levelData.success_rate);
-            
-            path.push({ 
-                name: upgradeType, 
-                rate, 
-                noDowngrade: upgradeType === "Pierre magique" 
-            });
-            
-            fullRates.push(rate);
-            fullFlags.push(upgradeType === "Pierre magique");
-            
-            const materialCost = this.calculateMaterialCost(levelData.materials || {});
-            const upgradeCost = this.dataService.getUpgradeCost(upgradeType);
-            fullCosts.push(materialCost + upgradeCost);
-        }
-        
-        // Créer la chaîne de Markov avec tous les taux
-        const markov = new MarkovChainWithIntervals(fullRates, fullFlags, startLevel, endLevel);
-        
-        // Extraire uniquement les waypoints pour les niveaux qui nous intéressent
-        const relevantWaypoints = [];
-        for (let i = startLevel + 1; i <= endLevel; i++) {
-            relevantWaypoints.push(markov.waypoints[i - 1]);
-        }
-        
-        // Calculer le coût total en utilisant les waypoints complets
-        const totalCost = fullCosts.reduce((sum, cost, i) => sum + cost * markov.waypoints[i], 0);
-        
-        return {
-            path,
-            rates: fullRates.slice(startLevel, endLevel),
-            flags: fullFlags.slice(startLevel, endLevel),
-            costs: fullCosts.slice(startLevel, endLevel),
-            waypoints: relevantWaypoints,
-            totalCost,
-            markov,
-            intervals: {
-                total: markov.intervals.total,
-                byLevel: relevantWaypoints.map((_, i) => markov.intervals.byLevel[startLevel + i])
+                byLevel: extendedWaypoints.map((w, i) => ({
+                    mean: w,
+                    std: Math.sqrt(w),
+                    ci95: {
+                        lower: Math.max(0, w - 1.96 * Math.sqrt(w)),
+                        upper: w + 1.96 * Math.sqrt(w)
+                    }
+                }))
             },
             riskLevel: markov.riskLevel
         };
@@ -324,18 +354,14 @@ export class StrategyService {
             case "Pierre magique":
                 return baseRate || 0;
             case "Manuel de Forgeron":
-                // Taux fixes jusqu'au niveau 9
                 if (level <= 9) {
                     return [100, 100, 90, 80, 70, 60, 50, 30, 20][level - 1] || 0;
                 }
-                // Au-delà, utiliser le taux de base
                 return baseRate || 0;
             case "Parchemin du Dieu Dragon":
-                // Taux fixes jusqu'au niveau 9
                 if (level <= 9) {
                     return [100, 75, 65, 55, 45, 40, 35, 25, 20][level - 1] || 0;
                 }
-                // Au-delà, utiliser le taux de base
                 return baseRate || 0;
             case "Parchemin de Guerre":
                 return 100;
@@ -345,13 +371,46 @@ export class StrategyService {
     }
 
     /**
-     * Calcule le coût total des matériaux
+     * Calcule le coût total des matériaux (retourne en millions)
      */
-    calculateMaterialCost(materials) {
+    async calculateMaterialCost(materials) {
         let cost = 0;
-        Object.entries(materials).forEach(([id, info]) => {
+        for (const [id, info] of Object.entries(materials)) {
             cost += this.dataService.getMaterialCost(id) * (info.qty || 0);
-        });
+        }
         return cost;
+    }
+
+    /**
+     * Estime le nombre d'essais pour une probabilité cible
+     */
+    estimateTrialsForProbability(strategy, targetProbability = 0.95) {
+        if (!strategy || !strategy.markov) return null;
+        
+        const points = strategy.markov.calculateTrialsProbabilities();
+        
+        for (const point of points) {
+            if (point.y >= targetProbability * 100) {
+                return point.x;
+            }
+        }
+        
+        return null;
+    }
+
+    /**
+     * Compare deux stratégies
+     */
+    compareStrategies(strategy1, strategy2) {
+        return {
+            costDifference: strategy2.totalCost - strategy1.totalCost,
+            costRatio: strategy2.totalCost / strategy1.totalCost,
+            trialsDifference: strategy2.markov.totalTrials - strategy1.markov.totalTrials,
+            trialsRatio: strategy2.markov.totalTrials / strategy1.markov.totalTrials,
+            riskComparison: {
+                strategy1: strategy1.riskLevel,
+                strategy2: strategy2.riskLevel
+            }
+        };
     }
 }

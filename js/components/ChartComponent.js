@@ -1,5 +1,6 @@
 /**
- * Composant de gestion des graphiques
+ * Composant de gestion des graphiques - Version 3.0
+ * Support des traductions en temps réel
  */
 export class ChartComponent {
     constructor(translator) {
@@ -8,12 +9,24 @@ export class ChartComponent {
         this.currentStrategy = null;
         
         this.initElements();
+        
+        // S'abonner aux changements de langue
+        this.translator.addObserver(this);
     }
 
     initElements() {
         this.canvas = document.getElementById('probabilityChart');
         this.ctx = this.canvas.getContext('2d');
         this.chartLegend = document.getElementById('chartLegend');
+    }
+
+    /**
+     * Gestion des événements de traduction
+     */
+    onTranslationEvent(event, data) {
+        if (event === 'languageChanged') {
+            this.updateLanguage();
+        }
     }
 
     /**
@@ -46,8 +59,21 @@ export class ChartComponent {
             { x: Math.round(meanTrials * 2), label: '200%' }
         ];
         
+        // Configuration du graphique avec traductions
+        const config = this.createChartConfig(points, meanTrials);
+        
         // Créer le graphique
-        this.chart = new Chart(this.ctx, {
+        this.chart = new Chart(this.ctx, config);
+        
+        // Mettre à jour la légende
+        this.updateLegend(strategy, keyPoints);
+    }
+
+    /**
+     * Crée la configuration du graphique avec traductions
+     */
+    createChartConfig(points, meanTrials) {
+        return {
             type: 'line',
             data: {
                 datasets: [{
@@ -186,10 +212,7 @@ export class ChartComponent {
                     }
                 }
             }
-        });
-        
-        // Mettre à jour la légende avec des points clés
-        this.updateLegend(strategy, keyPoints);
+        };
     }
 
     /**
@@ -260,6 +283,9 @@ export class ChartComponent {
             this.chart.destroy();
             this.chart = null;
         }
+        
+        // Se désabonner des changements de langue
+        this.translator.removeObserver(this);
     }
 
     /**
@@ -290,5 +316,86 @@ export class ChartComponent {
         if (!this.chart) return null;
         
         return this.chart.toBase64Image();
+    }
+
+    /**
+     * Obtient les données du graphique
+     */
+    getChartData() {
+        if (!this.currentStrategy || !this.currentStrategy.markov) return null;
+        
+        return {
+            points: this.currentStrategy.markov.calculateTrialsProbabilities(),
+            meanTrials: this.currentStrategy.markov.totalTrials
+        };
+    }
+
+    /**
+     * Met à jour la taille du graphique
+     */
+    resize() {
+        if (this.chart) {
+            this.chart.resize();
+        }
+    }
+
+    /**
+     * Réinitialise le graphique
+     */
+    reset() {
+        if (this.chart) {
+            this.chart.destroy();
+            this.chart = null;
+        }
+        this.currentStrategy = null;
+        
+        // Effacer la légende
+        if (this.chartLegend) {
+            this.chartLegend.innerHTML = '';
+        }
+    }
+
+    /**
+     * Met en évidence un point spécifique sur le graphique
+     */
+    highlightPoint(trials) {
+        if (!this.chart || !this.currentStrategy) return;
+        
+        const points = this.currentStrategy.markov.calculateTrialsProbabilities();
+        const point = points.find(p => Math.round(p.x) === trials);
+        
+        if (point) {
+            // Ajouter une annotation temporaire
+            this.chart.options.plugins.annotation.annotations.highlight = {
+                type: 'point',
+                xValue: point.x,
+                yValue: point.y,
+                backgroundColor: '#f59e0b',
+                borderColor: '#f59e0b',
+                borderWidth: 2,
+                radius: 8
+            };
+            
+            this.chart.update();
+            
+            // Retirer après 2 secondes
+            setTimeout(() => {
+                delete this.chart.options.plugins.annotation.annotations.highlight;
+                this.chart.update();
+            }, 2000);
+        }
+    }
+
+    /**
+     * Active/désactive l'animation
+     */
+    setAnimation(enabled) {
+        if (this.chart) {
+            this.chart.options.animation = enabled ? {
+                duration: 1000,
+                easing: 'easeInOutQuart'
+            } : false;
+            this.chart.update();
+        }
     }
 }

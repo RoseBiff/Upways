@@ -14,7 +14,8 @@ import { Calculator } from './utils/calculations.js';
 import { UIState, showToast, confirm } from './utils/ui-helpers.js';
 
 /**
- * Application principale Upways
+ * Application principale Upways - Version 3.1
+ * Réinitialisation de l'onglet analyse lors du changement d'objet
  */
 class UpwaysApp {
     constructor() {
@@ -37,7 +38,7 @@ class UpwaysApp {
         this.currentItemId = null;
         this.currentItemName = null;
         this.strategies = {};
-        this.showIntervals = true; // Peut être changé à false pour désactiver les intervalles 95%
+        this.showIntervals = true;
         
         // SEO multilingue
         this.seoData = {
@@ -77,9 +78,7 @@ class UpwaysApp {
         this.handleUrlParams();
         
         try {
-            // Charger les données
-            this.uiState.showLoading(this.translator.t('calculating'));
-            await this.dataService.loadData();
+            // Charger uniquement les paramètres sauvegardés
             this.dataService.loadSavedSettings();
             
             // Initialiser les composants
@@ -91,12 +90,10 @@ class UpwaysApp {
             // Mettre à jour la langue et le SEO
             this.updateLanguage();
             
-            console.log('Application initialized');
+            console.log('Application initialized with optimized loading');
         } catch (error) {
             console.error('Initialization error:', error);
             this.uiState.showToast('error', this.translator.t('errorAnalysis'));
-        } finally {
-            this.uiState.hideLoading();
         }
     }
 
@@ -204,10 +201,22 @@ class UpwaysApp {
 
         // Sélectionner une langue
         options.forEach(option => {
-            option.addEventListener('click', () => {
+            option.addEventListener('click', async () => {
                 const lang = option.dataset.lang;
-                this.translator.setLanguage(lang);
-                this.updateLanguage();
+                
+                // Attendre le changement de langue
+                this.uiState.showLoading(this.translator.t('calculating'));
+                
+                try {
+                    await this.translator.setLanguage(lang);
+                    this.updateLanguage();
+                } catch (error) {
+                    console.error('Error changing language:', error);
+                    this.uiState.showToast('error', 'Error changing language');
+                } finally {
+                    this.uiState.hideLoading();
+                }
+                
                 selector.classList.remove('open');
             });
         });
@@ -252,10 +261,16 @@ class UpwaysApp {
     /**
      * Gestion des événements
      */
-    onItemSelected(itemId, itemName) {
+    async onItemSelected(itemId, itemName) {
+        // Si on change d'objet et qu'une analyse avait été faite
+        if (this.currentItemId && this.currentItemId !== itemId && Object.keys(this.strategies).length > 0) {
+            // Réinitialiser l'état de l'analyse
+            this.resetAnalysisState();
+        }
+        
         this.currentItemId = itemId;
         this.currentItemName = itemName;
-        this.configComponent.setCurrentItem(itemId);
+        await this.configComponent.setCurrentItem(itemId);
         
         // Réinitialiser le scénario personnalisé dans le composant d'analyse
         const startLevel = this.configComponent.getStartLevel();
@@ -265,6 +280,28 @@ class UpwaysApp {
             endLevel,
             itemId
         });
+    }
+
+    /**
+     * Réinitialise l'état de l'analyse
+     */
+    resetAnalysisState() {
+        // Vider les stratégies
+        this.strategies = {};
+        
+        // Bloquer l'onglet analyse
+        const analysisTabBtn = document.getElementById('analysisTabBtn');
+        if (analysisTabBtn) {
+            analysisTabBtn.classList.add('disabled');
+        }
+        
+        // Revenir à l'onglet configuration
+        this.switchTab('config');
+        
+        // Réinitialiser le graphique
+        if (this.chartComponent) {
+            this.chartComponent.reset();
+        }
     }
 
     onConfigChanged(change) {
@@ -375,13 +412,10 @@ class UpwaysApp {
             // Calculer toutes les stratégies
             await this.calculateAllStrategies();
             
-            // Débloquer l'onglet analyse AVANT de changer d'onglet
+            // Débloquer l'onglet analyse
             const analysisTabBtn = document.getElementById('analysisTabBtn');
             if (analysisTabBtn) {
                 analysisTabBtn.classList.remove('disabled');
-                console.log('Analysis tab unlocked');
-            } else {
-                console.error('Analysis tab button not found!');
             }
             
             // Passer à l'onglet analyse
@@ -404,6 +438,7 @@ class UpwaysApp {
             this.uiState.hideLoading();
         }
     }
+
     /**
      * Calcule toutes les stratégies
      */
@@ -451,7 +486,7 @@ class UpwaysApp {
             this.analysisComponent.setStrategies(this.strategies);
             
             // Forcer la mise à jour de l'affichage
-            this.analysisComponent.displayStrategyDetails();
+            await this.analysisComponent.displayStrategyDetails();
             
             // Mettre à jour le graphique si on est en stratégie personnalisée
             if (this.analysisComponent.getCurrentStrategy() === 'custom') {
@@ -481,12 +516,11 @@ class UpwaysApp {
             this.uiState.showLoading(this.translator.t('calculating'));
 
             // Récupérer le nom traduit de l'objet
-            const itemData = this.dataService.getItemById(this.currentItemId);
-            const translatedItemName = this.translator.getLocalizedName(itemData);
+            const translatedItemName = this.dataService.itemNames[this.currentItemId] || `Item ${this.currentItemId}`;
 
             await this.exportService.exportResults(
                 strategy,
-                translatedItemName, // Passer le nom déjà traduit
+                translatedItemName,
                 this.currentItemId,
                 this.configComponent.getStartLevel(),
                 this.configComponent.getEndLevel(),
@@ -533,9 +567,27 @@ class UpwaysApp {
             this.analysisComponent.setShowIntervals(show);
         }
     }
+
+    /**
+     * Nettoyage global de l'application
+     */
+    destroy() {
+        // Nettoyer tous les composants
+        if (this.searchComponent) this.searchComponent.destroy();
+        if (this.configComponent) this.configComponent.destroy();
+        if (this.analysisComponent) this.analysisComponent.destroy();
+        if (this.chartComponent) this.chartComponent.destroy();
+    }
 }
 
 // Initialiser l'application
 document.addEventListener('DOMContentLoaded', () => {
     window.app = new UpwaysApp();
+    
+    // Gérer le nettoyage lors de la fermeture
+    window.addEventListener('beforeunload', () => {
+        if (window.app) {
+            window.app.destroy();
+        }
+    });
 });

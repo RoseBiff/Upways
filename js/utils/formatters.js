@@ -1,9 +1,12 @@
 /**
- * Utilitaires de formatage
+ * Utilitaires de formatage - Version 2.2
+ * Ajout de la fonction pour retirer le niveau d'amélioration
  */
 
 /**
- * Formate une valeur de coût avec séparateur approprié selon la langue
+ * Formate une valeur de coût en millions/wons selon la valeur
+ * @param {number} value - Valeur en millions
+ * @param {string} lang - Code de langue
  */
 export function formatCost(value, lang = 'fr') {
     if (!value || value === 0) return '0M';
@@ -11,12 +14,27 @@ export function formatCost(value, lang = 'fr') {
     // Déterminer le séparateur décimal selon la langue
     const decimalSeparator = lang === 'en' ? '.' : ',';
     
+    // Si >= 100M, afficher en Wons (1W = 100M)
     if (value >= 100) {
-        const wons = Math.floor(value / 100);
-        const millions = Math.floor(value % 100);
-        return `${wons.toLocaleString(lang)}${decimalSeparator}${millions.toString().padStart(2, '0')}w`;
+        const wons = value / 100;
+        
+        // Si c'est un nombre entier de wons
+        if (wons === Math.floor(wons)) {
+            return `${Math.floor(wons)}w`;
+        }
+        
+        // Sinon, afficher avec 2 décimales
+        return `${wons.toFixed(2).replace('.', decimalSeparator)}w`;
     }
-    return `${Math.floor(value)}M`;
+    
+    // Si < 100M, afficher en millions
+    // Si c'est un nombre entier
+    if (value === Math.floor(value)) {
+        return `${Math.floor(value)}M`;
+    }
+    
+    // Sinon, afficher avec 1 décimale max
+    return `${value.toFixed(1).replace('.', decimalSeparator)}M`;
 }
 
 /**
@@ -24,6 +42,36 @@ export function formatCost(value, lang = 'fr') {
  */
 export function formatNumber(value, lang = 'fr') {
     return value.toLocaleString(lang);
+}
+
+/**
+ * Formate un nombre en yang avec séparateurs de milliers
+ * @param {number} value - Valeur en yangs
+ * @param {string} lang - Code de langue
+ */
+export function formatYang(value, lang = 'fr') {
+    if (!value || value === 0) return '0';
+    
+    // Utiliser toLocaleString pour avoir les séparateurs appropriés
+    return value.toLocaleString(lang) + ' yang';
+}
+
+/**
+ * Convertit des millions en yangs
+ * @param {number} millions - Valeur en millions
+ * @returns {number} Valeur en yangs
+ */
+export function millionsToYang(millions) {
+    return millions * 1000000;
+}
+
+/**
+ * Convertit des yangs en millions
+ * @param {number} yang - Valeur en yangs
+ * @returns {number} Valeur en millions
+ */
+export function yangToMillions(yang) {
+    return yang / 1000000;
 }
 
 /**
@@ -149,6 +197,29 @@ export function roundTo(value, decimals = 2) {
 }
 
 /**
+ * Normalise une chaîne pour la recherche (enlève accents, met en minuscules)
+ */
+export function normalizeString(str) {
+    return str
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, ''); // Enlève les accents
+}
+
+/**
+ * Retire le niveau d'amélioration (+0) d'un nom d'équipement
+ * @param {string} name - Le nom de l'équipement
+ * @param {boolean} keepUpgradeLevel - Si true, garde le niveau d'amélioration
+ * @returns {string} Le nom sans le niveau d'amélioration
+ */
+export function removeUpgradeLevel(name, keepUpgradeLevel = false) {
+    if (!name || keepUpgradeLevel) return name || '';
+    
+    // Retirer le +0 à la fin du nom
+    return name.replace(/\+0$/, '').trim();
+}
+
+/**
  * Classe utilitaire pour créer un formateur avec contexte
  */
 export class Formatters {
@@ -164,6 +235,11 @@ export class Formatters {
     formatNumber(value) {
         const lang = this.translator.getLanguage();
         return formatNumber(value, lang);
+    }
+
+    formatYang(value) {
+        const lang = this.translator.getLanguage();
+        return formatYang(value, lang);
     }
 
     formatPercentage(value, decimals = 0) {
@@ -197,5 +273,13 @@ export class Formatters {
         const lang = this.translator.getLanguage();
         const range = formatRange(Math.ceil(lower), Math.ceil(upper), formatNumber, lang);
         return unit ? `${range} ${unit}` : range;
+    }
+
+    normalizeString(str) {
+        return normalizeString(str);
+    }
+    
+    removeUpgradeLevel(name, keepUpgradeLevel = false) {
+        return removeUpgradeLevel(name, keepUpgradeLevel);
     }
 }

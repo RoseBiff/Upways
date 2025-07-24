@@ -1,5 +1,6 @@
 /**
- * Composant d'affichage des résultats d'analyse
+ * Composant d'affichage des résultats d'analyse - Version 3.6
+ * Utilisation des noms traduits pour les objets d'amélioration
  */
 export class AnalysisComponent {
     constructor(dataService, translator, formatters, onStrategyChanged) {
@@ -15,10 +16,15 @@ export class AnalysisComponent {
         this.endLevel = 9;
         this.currentItemId = null;
         this.showIntervals = true;
+        this.tooltipInstances = [];
+        this.expandedGroups = new Set(); // Pour gérer l'expansion des groupes
         
         this.initElements();
         this.attachEvents();
         this.initTooltip();
+        
+        // S'abonner aux changements de langue
+        this.translator.addObserver(this);
     }
 
     initElements() {
@@ -51,6 +57,15 @@ export class AnalysisComponent {
     initTooltip() {
         this.tooltip = this.elements.tooltip;
         this.tooltipContent = this.elements.tooltipContent;
+    }
+
+    /**
+     * Gestion des événements de traduction
+     */
+    onTranslationEvent(event, data) {
+        if (event === 'languageChanged' || event === 'tooltipsNeedUpdate') {
+            this.updateLanguage();
+        }
     }
 
     /**
@@ -88,19 +103,21 @@ export class AnalysisComponent {
     }
 
     /**
-     * Initialise le scénario personnalisé
+     * Initialise le scénario personnalisé avec le chemin complet
      */
     initCustomScenario() {
         this.customScenario = [];
-        for (let i = this.startLevel + 1; i <= this.endLevel; i++) {
-            if (i <= 4) {
-                this.customScenario[i - this.startLevel - 1] = "Parchemin de Guerre";
-            } else if (i > 9) {
+        
+        // Inclure TOUS les niveaux depuis 1 jusqu'à endLevel
+        for (let level = 1; level <= this.endLevel; level++) {
+            if (level <= 4) {
+                this.customScenario[level - 1] = "Parchemin de Guerre";
+            } else if (level > 9) {
                 // Forcer pierre magique pour les niveaux > 9
-                this.customScenario[i - this.startLevel - 1] = "Pierre magique";
+                this.customScenario[level - 1] = "Pierre magique";
             } else {
                 // Par défaut, utiliser Parchemin du Dieu Dragon pour les niveaux 5-9
-                this.customScenario[i - this.startLevel - 1] = "Parchemin du Dieu Dragon";
+                this.customScenario[level - 1] = "Parchemin du Dieu Dragon";
             }
         }
     }
@@ -114,49 +131,43 @@ export class AnalysisComponent {
             
             const card = document.querySelector(`.strategy-card[data-strategy="${key}"]`);
             if (!card) return;
-            
+
             // Données principales
             const totalTrials = Math.round(strategy.markov.totalTrials);
             const totalCost = this.formatters.formatCost(strategy.totalCost);
             
-            // Récupérer les points du graphique (qui sont corrects)
+            // Récupérer les points du graphique
             const points = strategy.markov.calculateTrialsProbabilities();
             
             // Trouver les essais correspondant à 5% et 95% de probabilité
             let trials5 = null;
             let trials95 = null;
             
-            // Parcourir les points pour trouver où on atteint 5% et 95%
             for (let i = 0; i < points.length; i++) {
                 const point = points[i];
                 
-                // Trouver le premier point où on dépasse 5%
                 if (trials5 === null && point.y >= 5) {
                     trials5 = point.x;
                 }
                 
-                // Trouver le premier point où on dépasse 95%
                 if (trials95 === null && point.y >= 95) {
                     trials95 = point.x;
-                    break; // On peut arrêter ici
+                    break;
                 }
             }
             
-            // Si on n'a pas trouvé 95%, prendre le dernier point
             if (trials95 === null && points.length > 0) {
                 trials95 = points[points.length - 1].x;
             }
             
-            // Si on n'a pas trouvé 5%, prendre le premier point
             if (trials5 === null && points.length > 0) {
                 trials5 = points[0].x;
             }
             
-            // Arrondir les valeurs
             trials5 = Math.round(trials5 || totalTrials * 0.5);
             trials95 = Math.round(trials95 || totalTrials * 2);
             
-            // Reconstruire le contenu de la carte
+            // Reconstruire le contenu de la carte avec traductions
             card.innerHTML = `
                 <div class="strategy-header">
                     <span class="strategy-icon">${key === 'optimal' ? '⭐' : '🎨'}</span>
@@ -217,88 +228,103 @@ export class AnalysisComponent {
     /**
      * Affiche les détails de la stratégie sélectionnée
      */
-    displayStrategyDetails() {
+    async displayStrategyDetails() {
         const strategy = this.strategies[this.currentStrategy];
         if (!strategy) return;
 
         // Chemin d'amélioration
-        this.displayUpgradePath(strategy);
+        await this.displayUpgradePath(strategy);
         
         // Objets requis
-        this.displayRequiredItems(strategy);
+        await this.displayRequiredItems(strategy);
         
         // Matériaux requis
-        this.displayRequiredMaterials(strategy);
+        await this.displayRequiredMaterials(strategy);
     }
 
     /**
-     * Affiche le chemin d'amélioration
+     * Affiche le chemin d'amélioration avec groupement amélioré
      */
-    displayUpgradePath(strategy) {
+    async displayUpgradePath(strategy) {
         const isCustom = this.currentStrategy === 'custom';
-        const itemData = this.dataService.getItemById(this.currentItemId);
+        const itemData = await this.dataService.getItemById(this.currentItemId);
         
-        if (!strategy.markov || !strategy.markov.waypoints) {
-            console.error('Strategy markov data missing');
-            return;
-        }
-
-        const fullWaypoints = strategy.markov.waypoints;
+        // Utiliser les waypoints étendus si disponibles
+        const fullWaypoints = strategy.extendedWaypoints || strategy.markov.waypoints;
         const fullIntervals = strategy.markov.intervals.byLevel;
+
+        // Nettoyer les anciens tooltips
+        this.cleanupTooltips();
 
         // Construire le chemin complet
         const pathSteps = [];
-
-        for (let level = 1; level <= this.endLevel; level++) {
-            const waypointValue = fullWaypoints[level - 1];
         
-            if (waypointValue > 0.01) {
-                const levelData = itemData[level.toString()] || { materials: {}, success_rate: 0 };
+        for (let level = 1; level <= this.endLevel; level++) {
+            const waypointValue = fullWaypoints[level - 1] || 0;
+        
+            if (waypointValue > 0.01 || (level >= this.startLevel && level <= this.endLevel)) {
+                const levelData = itemData[level.toString()] || { materials: {}, success_rate: 0, yang_cost: 0 };
             
                 let upgradeType;
                 let isEditable = false;
-                let customIndex = -1;
+                let customIndex = level - 1;
 
-                if (level > this.startLevel && level <= this.endLevel) {
-                    const pathIndex = level - this.startLevel - 1;
-                    upgradeType = strategy.path[pathIndex].name;
-                    // Éditable seulement si personnalisé ET niveau 5-9
-                    isEditable = isCustom && level > 4 && level <= 9;
-                    customIndex = pathIndex;
+                // Déterminer le type d'amélioration
+                if (isCustom) {
+                    upgradeType = this.customScenario[customIndex] || "Parchemin de bénédiction";
+                    // Éditable uniquement pour les niveaux 5-9
+                    isEditable = level >= 5 && level <= 9;
                 } else {
-                    if (level <= 4) {
-                        upgradeType = "Parchemin de Guerre";
-                    } else if (level <= 9) {
-                        upgradeType = "Parchemin de bénédiction";
+                    if (strategy.fullPath && strategy.fullPath[customIndex]) {
+                        upgradeType = strategy.fullPath[customIndex];
+                    } else if (level > this.startLevel && level <= this.endLevel) {
+                        const pathIndex = level - this.startLevel - 1;
+                        upgradeType = strategy.path[pathIndex].name;
                     } else {
-                        upgradeType = "Pierre magique";
+                        if (level <= 4) {
+                            upgradeType = "Parchemin de Guerre";
+                        } else if (level <= 9) {
+                            upgradeType = "Parchemin de bénédiction";
+                        } else {
+                            upgradeType = "Pierre magique";
+                        }
                     }
                 }
 
                 const rate = this.calculateSuccessRate(level, upgradeType, levelData.success_rate);
-                const levelInterval = fullIntervals[level - 1];
+                const levelInterval = fullIntervals[level - 1] || {
+                    mean: waypointValue,
+                    std: Math.sqrt(waypointValue),
+                    ci95: {
+                        lower: Math.max(0, waypointValue - 1.96 * Math.sqrt(waypointValue)),
+                        upper: waypointValue + 1.96 * Math.sqrt(waypointValue)
+                    }
+                };
 
-                // Calculer le coût moyen pour ce niveau
+                // Calculer les coûts
+                const yangCost = levelData.yang_cost || 0;
                 const materialCost = this.calculateMaterialCost(levelData.materials || {});
                 const upgradeCost = this.dataService.getUpgradeCost(upgradeType);
-                const levelCost = materialCost + upgradeCost;
-                const avgCost = levelCost * waypointValue;
+                
+                const yangCostInMillions = yangCost / 1000000;
+                const totalLevelCostPerTrial = yangCostInMillions + materialCost + upgradeCost;
+                const avgCost = totalLevelCostPerTrial * waypointValue;
 
                 const itemInterval = {
                     lower: Math.ceil(levelInterval.ci95.lower),
                     upper: Math.ceil(levelInterval.ci95.upper)
                 };
                 const costInterval = {
-                    lower: levelCost * levelInterval.ci95.lower,
-                    upper: levelCost * levelInterval.ci95.upper
+                    lower: totalLevelCostPerTrial * levelInterval.ci95.lower,
+                    upper: totalLevelCostPerTrial * levelInterval.ci95.upper
                 };
 
                 const isBelowStart = level <= this.startLevel;
                 const isTarget = level > this.startLevel && level <= this.endLevel;
                 const isMagicStoneOnly = level > 9;
 
-                // Récupérer les matériaux requis pour ce niveau
-                const materials = this.getMaterialsForLevel(levelData.materials || {}, waypointValue);
+                // Récupérer les matériaux
+                const materials = await this.getMaterialsForLevel(levelData.materials || {}, waypointValue);
 
                 pathSteps.push({
                     level,
@@ -313,21 +339,30 @@ export class AnalysisComponent {
                     levelInterval,
                     itemInterval,
                     costInterval,
-                    levelCost,
+                    levelCost: totalLevelCostPerTrial,
                     avgCost,
-                    materials
+                    materials,
+                    yangCost,
+                    yangCostInMillions,
+                    materialCost,
+                    upgradeCost,
+                    levelData
                 });
             }
         }
 
-        // Générer le HTML sans séparation
-        let pathHtml = '<div class="upgrade-path">';
+        // Créer l'affichage
+        let pathHtml = '';
         
-        pathSteps.forEach(step => {
-            pathHtml += this.createPathStepHtml(step, isCustom);
-        });
-        
-        pathHtml += '</div>';
+        if (this.endLevel > 20) {
+            pathHtml = this.createGroupedPathDisplay(pathSteps, isCustom);
+        } else {
+            pathHtml = '<div class="upgrade-path">';
+            pathSteps.forEach(step => {
+                pathHtml += this.createPathStepHtml(step, isCustom);
+            });
+            pathHtml += '</div>';
+        }
 
         this.elements.upgradePath.innerHTML = pathHtml;
 
@@ -338,6 +373,11 @@ export class AnalysisComponent {
             });
         }
 
+        // Attacher les événements d'expansion/collapse
+        this.elements.upgradePath.querySelectorAll('.group-header').forEach(header => {
+            header.addEventListener('click', (e) => this.toggleGroup(e.currentTarget));
+        });
+
         // Attacher les tooltips
         this.attachPathTooltips(pathSteps);
 
@@ -346,12 +386,126 @@ export class AnalysisComponent {
     }
 
     /**
+     * Crée un affichage groupé pour les chemins très longs
+     */
+    createGroupedPathDisplay(pathSteps, isCustom) {
+        let html = '<div class="upgrade-path grouped">';
+        
+        // Afficher les premiers niveaux individuellement
+        const individualLimit = 20;
+        
+        // Afficher tous les niveaux jusqu'à individualLimit individuellement
+        for (let i = 0; i < pathSteps.length && pathSteps[i].level <= individualLimit; i++) {
+            html += this.createPathStepHtml(pathSteps[i], isCustom);
+        }
+        
+        // Grouper les niveaux restants par dizaines
+        const groupSize = 10;
+        let currentGroupStart = individualLimit + 1; // Commencer à 21
+        
+        while (currentGroupStart <= this.endLevel) {
+            const groupEnd = Math.min(currentGroupStart + groupSize - 1, this.endLevel);
+            
+            // Collecter les steps de ce groupe
+            const groupSteps = pathSteps.filter(step => 
+                step.level >= currentGroupStart && step.level <= groupEnd
+            );
+            
+            if (groupSteps.length > 0) {
+                // Calculer les totaux du groupe
+                let totalCost = 0;
+                let totalTrials = 0;
+                const groupMaterials = new Map();
+                
+                groupSteps.forEach(step => {
+                    totalCost += step.avgCost;
+                    totalTrials += step.waypoint;
+                    
+                    // Agréger les matériaux
+                    step.materials.forEach(mat => {
+                        if (groupMaterials.has(mat.id)) {
+                            const existing = groupMaterials.get(mat.id);
+                            existing.avgQty += mat.avgQty;
+                        } else {
+                            groupMaterials.set(mat.id, {
+                                ...mat,
+                                avgQty: mat.avgQty
+                            });
+                        }
+                    });
+                });
+                
+                const groupKey = `${currentGroupStart}-${groupEnd}`;
+                const isExpanded = this.expandedGroups.has(groupKey);
+                
+                html += `
+                    <div class="path-group" data-group="${groupKey}">
+                        <div class="group-header ${isExpanded ? 'expanded' : ''}" data-group-id="${groupKey}">
+                            <div class="group-toggle">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="${isExpanded ? '6 9 12 15 18 9' : '9 6 15 12 9 18'}"/>
+                                </svg>
+                            </div>
+                            <div class="group-info">
+                                <span class="group-range">+${currentGroupStart} → +${groupEnd}</span>
+                                <span class="group-summary">
+                                    ${Math.round(totalTrials)} ${this.translator.t('trials')} • 
+                                    ${this.formatters.formatCost(totalCost)}
+                                </span>
+                            </div>
+                            <div class="group-upgrade-icon">
+                                <img src="${this.dataService.getUpgradeItemImagePath('Pierre magique')}" 
+                                     class="group-upgrade-icon-img" 
+                                     title="${this.dataService.getUpgradeItemName('Pierre magique')}"
+                                     onerror="this.style.display='none'">
+                            </div>
+                        </div>
+                        <div class="group-content" style="${isExpanded ? '' : 'display: none;'}">
+                            ${groupSteps.map(step => this.createPathStepHtml(step, isCustom)).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            currentGroupStart += groupSize;
+        }
+        
+        html += '</div>';
+        return html;
+    }
+
+    /**
+     * Bascule l'état d'expansion d'un groupe
+     */
+    toggleGroup(header) {
+        const groupId = header.dataset.groupId;
+        const content = header.nextElementSibling;
+        
+        if (this.expandedGroups.has(groupId)) {
+            this.expandedGroups.delete(groupId);
+            header.classList.remove('expanded');
+            content.style.display = 'none';
+        } else {
+            this.expandedGroups.add(groupId);
+            header.classList.add('expanded');
+            content.style.display = '';
+        }
+    }
+
+    /**
      * Crée le HTML pour une étape du chemin
      */
     createPathStepHtml(step, isCustom) {
-        const options = step.level <= 4 ? ["Parchemin de Guerre"] : 
-            step.level > 9 ? ["Pierre magique"] : 
-            ["Parchemin de bénédiction", "Manuel de Forgeron", "Parchemin du Dieu Dragon", "Pierre magique"];
+        const upgradeOptions = this.dataService.getUpgradeOptions();
+        let options = [];
+        
+        if (step.level <= 4) {
+            options = ["Parchemin de Guerre"];
+        } else if (step.level > 9) {
+            options = ["Pierre magique"];
+        } else {
+            options = ["Parchemin de bénédiction", "Manuel de Forgeron", "Parchemin du Dieu Dragon", "Pierre magique"];
+        }
         
         let stepClass = 'path-step';
         if (step.isBelowStart) stepClass += ' below-start';
@@ -359,20 +513,32 @@ export class AnalysisComponent {
         if (step.isEditable) stepClass += ' editable';
         if (step.isMagicStoneOnly) stepClass += ' magic-stone-only';
         
-        // Créer la liste des matériaux requis
+        // Créer la liste des matériaux requis avec images
         const materialsHtml = step.materials.length > 0 ? `
             <div class="step-materials">
                 ${step.materials.map(mat => `
-                    <div class="material-item" title="${mat.name}: ${mat.avgQty} ${this.translator.t('avgRequired')}">
-                        ${mat.imgName ? `<img src="img/${mat.imgName}" class="material-icon" onerror="this.style.display='none'">` : ''}
+                    <div class="material-item" title="${mat.name}: ${mat.qty} (${this.translator.t('avgRequired')}: ${mat.avgQty})">
+                        <img src="${this.dataService.getItemImagePath(mat.id)}" 
+                             class="material-icon" 
+                             onerror="this.style.display='none'">
                         <span class="material-qty">${mat.qty}</span>
                     </div>
                 `).join('')}
             </div>
         ` : '';
         
+        // Afficher la décomposition du coût si yang > 0
+        const costBreakdown = step.yangCost > 0 ? `
+            <div class="step-cost-breakdown" style="font-size: 0.65rem; opacity: 0.8;">
+                <span style="color: #fbbf24;">${this.formatters.formatNumber(step.yangCost)} yang</span>
+            </div>
+        ` : '';
+        
+        // Obtenir l'image de l'objet d'amélioration
+        const upgradeItemImage = this.dataService.getUpgradeItemImagePath(step.upgradeType);
+        const upgradeItemDisplayName = this.dataService.getUpgradeItemName(step.upgradeType);
+        
         if (step.isEditable && step.customIndex >= 0) {
-            // S'assurer que le customScenario a la bonne valeur
             if (this.customScenario[step.customIndex] !== step.upgradeType) {
                 this.customScenario[step.customIndex] = step.upgradeType;
             }
@@ -381,23 +547,27 @@ export class AnalysisComponent {
                 <div class="${stepClass}" data-level="${step.customIndex}">
                     <div class="step-header">
                         <span class="step-level">+${step.level}</span>
-                        <img src="img/${this.getUpgradeIcon(step.upgradeType)}" 
+                        <img src="${upgradeItemImage}" 
                              class="step-icon" 
                              onerror="this.style.display='none'">
                     </div>
                     <div class="step-content">
                         <select class="step-select" data-level="${step.customIndex}">
-                            ${options.map(opt => `
-                                <option value="${opt}" ${opt === step.upgradeType ? 'selected' : ''}>
-                                    ${this.translator.t(opt)}
-                                </option>
-                            `).join('')}
+                            ${options.map(opt => {
+                                const optionData = upgradeOptions.find(o => o.internalName === opt);
+                                return `
+                                    <option value="${opt}" ${opt === step.upgradeType ? 'selected' : ''}>
+                                        ${optionData ? optionData.displayName : opt}
+                                    </option>
+                                `;
+                            }).join('')}
                         </select>
                         <div class="step-stats">
                             <div class="step-rate">${step.rate}%</div>
                             <div class="step-trials">${step.waypoint.toFixed(1)}x</div>
                         </div>
                         <div class="step-cost">${this.formatters.formatCost(step.avgCost)}</div>
+                        ${costBreakdown}
                     </div>
                     ${materialsHtml}
                 </div>
@@ -407,17 +577,18 @@ export class AnalysisComponent {
                 <div class="${stepClass}">
                     <div class="step-header">
                         <span class="step-level">+${step.level}</span>
-                        <img src="img/${this.getUpgradeIcon(step.upgradeType)}" 
+                        <img src="${upgradeItemImage}" 
                              class="step-icon" 
                              onerror="this.style.display='none'">
                     </div>
                     <div class="step-content">
-                        <div class="step-name">${this.translator.t(step.upgradeType)}</div>
+                        <div class="step-name">${upgradeItemDisplayName}</div>
                         <div class="step-stats">
                             <div class="step-rate">${step.rate}%</div>
                             <div class="step-trials">${step.waypoint.toFixed(1)}x</div>
                         </div>
                         <div class="step-cost">${this.formatters.formatCost(step.avgCost)}</div>
+                        ${costBreakdown}
                     </div>
                     ${materialsHtml}
                 </div>
@@ -433,12 +604,12 @@ export class AnalysisComponent {
         this.elements.upgradePath.querySelectorAll('.step-select').forEach(select => {
             const index = parseInt(select.dataset.level);
             if (index >= 0) {
-                const level = this.startLevel + index + 1;
-                // Permettre la modification seulement pour les niveaux 5-9
+                const level = index + 1;
                 if (level >= 5 && level <= 9) {
+                    // Permettre toutes les options pour les niveaux 5-9
                     this.customScenario[index] = select.value;
                 } else if (level > 9) {
-                    // Forcer pierre magique pour > 9
+                    // Forcer Pierre magique pour les niveaux > 9
                     this.customScenario[index] = "Pierre magique";
                     select.value = "Pierre magique";
                 }
@@ -457,17 +628,19 @@ export class AnalysisComponent {
     /**
      * Récupère les matériaux formatés pour un niveau
      */
-    getMaterialsForLevel(materials, waypoint) {
+    async getMaterialsForLevel(materials, waypoint) {
         const result = [];
-        Object.entries(materials).forEach(([id, info]) => {
+        for (const [id, info] of Object.entries(materials)) {
+            const name = this.translator.getMaterialName(id);
             result.push({
                 id,
-                name: this.translator.getLocalizedName(info),
+                name: name,
                 imgName: info.img_name,
                 qty: info.qty,
-                avgQty: Math.ceil(info.qty * waypoint)
+                avgQty: Math.ceil(info.qty * waypoint),
+                imgPath: this.dataService.getItemImagePath(id)
             });
-        });
+        }
         return result;
     }
 
@@ -476,44 +649,93 @@ export class AnalysisComponent {
      */
     attachPathTooltips(pathSteps) {
         const pathElements = this.elements.upgradePath.querySelectorAll('.path-step');
+        
         pathElements.forEach((stepElem, i) => {
-            const step = pathSteps[i];
+            const step = pathSteps.find(s => s.level === parseInt(stepElem.querySelector('.step-level').textContent.slice(1)));
             if (!step) return;
             
-            // Créer le contenu du tooltip avec les matériaux
-            let materialsTooltip = '';
-            if (step.materials.length > 0) {
-                materialsTooltip = `
+            const tooltipHandler = (e) => {
+                // Créer le contenu du tooltip avec les matériaux
+                let materialsTooltip = '';
+                if (step.materials.length > 0) {
+                    materialsTooltip = `
+                        <div class="tooltip-section">
+                            <div class="tooltip-subtitle">${this.translator.t('itemsRequired')}:</div>
+                            ${step.materials.map(mat => `
+                                <div class="tooltip-row">
+                                    <span>${mat.name}:</span>
+                                    <span>${mat.qty} (${this.translator.t('avgRequired')}: ${mat.avgQty})</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                }
+                
+                // Ajouter la décomposition des coûts
+                const costBreakdown = `
                     <div class="tooltip-section">
-                        <div class="tooltip-subtitle">${this.translator.t('itemsRequired')}:</div>
-                        ${step.materials.map(mat => `
+                        <div class="tooltip-subtitle">${this.translator.t('costBreakdown')}:</div>
+                        ${step.yangCost > 0 ? `
                             <div class="tooltip-row">
-                                <span>${mat.name}:</span>
-                                <span>${mat.qty} (${this.translator.t('avgRequired')}: ${mat.avgQty})</span>
+                                <span>${this.translator.t('yangCost')}:</span>
+                                <span>${this.formatters.formatNumber(step.yangCost)} yang</span>
                             </div>
-                        `).join('')}
+                        ` : ''}
+                        ${step.materialCost > 0 ? `
+                            <div class="tooltip-row">
+                                <span>${this.translator.t('materialCost')}:</span>
+                                <span>${this.formatters.formatCost(step.materialCost)}</span>
+                            </div>
+                        ` : ''}
+                        ${step.upgradeCost > 0 ? `
+                            <div class="tooltip-row">
+                                <span>${this.translator.t('upgradeCost')}:</span>
+                                <span>${this.formatters.formatCost(step.upgradeCost)}</span>
+                            </div>
+                        ` : ''}
+                        <div class="tooltip-row" style="border-top: 1px solid var(--border-color); padding-top: 0.25rem; margin-top: 0.25rem;">
+                            <span>${this.translator.t('totalCostPerTrial')}:</span>
+                            <span>${this.formatters.formatCost(step.levelCost)}</span>
+                        </div>
                     </div>
                 `;
-            }
+                
+                const tooltipContent = `
+                    <div class="tooltip-title">${this.translator.t('level')} +${step.level}</div>
+                    ${step.isBelowStart ? `<div class="tooltip-warning">⚠️ ${this.translator.t('belowStartLevel')}</div>` : ''}
+                    ${step.isMagicStoneOnly ? `<div class="tooltip-warning">✨ ${this.translator.t('magicStoneRecommended')}</div>` : ''}
+                    <div class="tooltip-row">
+                        <span>${this.translator.t('avgTrials')}:</span>
+                        <span>${step.waypoint.toFixed(1)}</span>
+                    </div>
+                    <div class="tooltip-row">
+                        <span>${this.translator.t('avgCost')}:</span>
+                        <span>${this.formatters.formatCost(step.avgCost)}</span>
+                    </div>
+                    ${costBreakdown}
+                    ${materialsTooltip}
+                `;
+                
+                this.showTooltip(stepElem, tooltipContent);
+            };
             
-            const tooltipContent = `
-                <div class="tooltip-title">${this.translator.t('level')} +${step.level}</div>
-                ${step.isBelowStart ? `<div class="tooltip-warning">⚠️ ${this.translator.t('belowStartLevel')}</div>` : ''}
-                ${step.isMagicStoneOnly ? `<div class="tooltip-warning">✨ ${this.translator.t('magicStoneRecommended')}</div>` : ''}
-                <div class="tooltip-row">
-                    <span>${this.translator.t('avgTrials')}:</span>
-                    <span>${step.waypoint.toFixed(1)}</span>
-                </div>
-                <div class="tooltip-row">
-                    <span>${this.translator.t('avgCost')}:</span>
-                    <span>${this.formatters.formatCost(step.avgCost)}</span>
-                </div>
-                ${materialsTooltip}
-            `;
-            
-            stepElem.addEventListener('mouseenter', () => this.showTooltip(stepElem, tooltipContent));
+            stepElem.addEventListener('mouseenter', tooltipHandler);
             stepElem.addEventListener('mouseleave', () => this.hideTooltip());
+            
+            // Stocker pour nettoyage
+            this.tooltipInstances.push({ element: stepElem, handler: tooltipHandler });
         });
+    }
+
+    /**
+     * Nettoie les tooltips existants
+     */
+    cleanupTooltips() {
+        this.tooltipInstances.forEach(({ element, handler }) => {
+            element.removeEventListener('mouseenter', handler);
+            element.removeEventListener('mouseleave', () => this.hideTooltip());
+        });
+        this.tooltipInstances = [];
     }
 
     updateStrategyConnection() {
@@ -531,21 +753,16 @@ export class AnalysisComponent {
             const connection = document.createElement('div');
             connection.className = 'strategy-connection';
 
-            // Obtenir le conteneur parent
             const container = document.getElementById('analysisTab');
-
-            // Calculer les positions
             const cardRect = activeCard.getBoundingClientRect();
             const pathRect = pathSection.getBoundingClientRect();
             const containerRect = container.getBoundingClientRect();
 
-            // Position relative au conteneur
             const cardBottom = cardRect.bottom - containerRect.top;
             const pathTop = pathRect.top - containerRect.top;
             const centerX = cardRect.left + cardRect.width / 2 - containerRect.left;
 
-            // Ajuster la hauteur pour partir du bas de la carte jusqu'au haut de la section
-            const height = pathTop - cardBottom - 10; // 10px de marge
+            const height = pathTop - cardBottom - 10;
 
             connection.style.left = centerX + 'px';
             connection.style.top = cardBottom + 'px';
@@ -553,7 +770,6 @@ export class AnalysisComponent {
 
             container.appendChild(connection);
 
-            // Animer l'apparition
             requestAnimationFrame(() => {
                 connection.classList.add('active');
             });
@@ -569,13 +785,11 @@ export class AnalysisComponent {
             case "Pierre magique":
                 return baseRate || 0;
             case "Manuel de Forgeron":
-                // Taux fixes jusqu'au niveau 9
                 if (level <= 9) {
                     return [100, 100, 90, 80, 70, 60, 50, 30, 20][level - 1] || 0;
                 }
                 return baseRate || 0;
             case "Parchemin du Dieu Dragon":
-                // Taux fixes jusqu'au niveau 9
                 if (level <= 9) {
                     return [100, 75, 65, 55, 45, 40, 35, 25, 20][level - 1] || 0;
                 }
@@ -595,42 +809,35 @@ export class AnalysisComponent {
         return cost;
     }
 
-    getUpgradeIcon(upgradeType) {
-        const iconMap = {
-            "Parchemin de bénédiction": "Parchemin_de_bénédiction.png",
-            "Manuel de Forgeron": "Manuel_de_Forgeron.png",
-            "Parchemin du Dieu Dragon": "Parchemin_du_Dieu_Dragon.png",
-            "Parchemin de Guerre": "Parchemin_de_Guerre.png",
-            "Pierre magique": "Pierre_magique.png"
-        };
-        return iconMap[upgradeType] || "default.png";
-    }
-
     /**
      * Affiche les objets requis
      */
-    displayRequiredItems(strategy) {
-        if (!strategy.markov || !strategy.markov.waypoints) return;
-        
+    async displayRequiredItems(strategy) {
         const items = {};
-        const fullWaypoints = strategy.markov.waypoints;
+        const fullWaypoints = strategy.extendedWaypoints || strategy.markov.waypoints;
         
         for (let level = 1; level <= this.endLevel; level++) {
-            const waypointValue = fullWaypoints[level - 1];
+            const waypointValue = fullWaypoints[level - 1] || 0;
             
             if (waypointValue > 0.01) {
                 let upgradeType;
                 
-                if (level > this.startLevel && level <= this.endLevel) {
-                    const pathIndex = level - this.startLevel - 1;
-                    upgradeType = strategy.path[pathIndex].name;
+                if (this.currentStrategy === 'custom') {
+                    upgradeType = this.customScenario[level - 1] || "Parchemin de bénédiction";
                 } else {
-                    if (level <= 4) {
-                        upgradeType = "Parchemin de Guerre";
-                    } else if (level <= 9) {
-                        upgradeType = "Parchemin de bénédiction";
+                    if (strategy.fullPath && strategy.fullPath[level - 1]) {
+                        upgradeType = strategy.fullPath[level - 1];
+                    } else if (level > this.startLevel && level <= this.endLevel) {
+                        const pathIndex = level - this.startLevel - 1;
+                        upgradeType = strategy.path[pathIndex].name;
                     } else {
-                        upgradeType = "Pierre magique";
+                        if (level <= 4) {
+                            upgradeType = "Parchemin de Guerre";
+                        } else if (level <= 9) {
+                            upgradeType = "Parchemin de bénédiction";
+                        } else {
+                            upgradeType = "Pierre magique";
+                        }
                     }
                 }
                 
@@ -646,54 +853,57 @@ export class AnalysisComponent {
                 
                 const levelInterval = strategy.markov.intervals.byLevel[level - 1];
                 items[upgradeType].quantity += Math.round(waypointValue);
-                if (this.showIntervals) {
+                if (this.showIntervals && levelInterval) {
                     items[upgradeType].quantityLower += Math.ceil(levelInterval.ci95.lower);
                     items[upgradeType].quantityUpper += Math.ceil(levelInterval.ci95.upper);
                 }
             }
         }
 
-        this.elements.requiredItems.innerHTML = Object.values(items).map(item => `
-            <div class="item-row">
-                <img src="img/${this.getUpgradeIcon(item.name)}" class="item-icon" onerror="this.style.display='none'">
-                <span class="item-name">${this.translator.t(item.name)}</span>
-                <span class="item-qty" ${this.showIntervals ? `title="${item.quantityLower} - ${item.quantityUpper}"` : ''}>${item.quantity}</span>
-                <span class="item-cost">${this.formatters.formatCost(item.quantity * item.unitCost)}</span>
-            </div>
-        `).join('');
+        this.elements.requiredItems.innerHTML = Object.values(items).map(item => {
+            const displayName = this.dataService.getUpgradeItemName(item.name);
+            return `
+                <div class="item-row">
+                    <img src="${this.dataService.getUpgradeItemImagePath(item.name)}" class="item-icon" onerror="this.style.display='none'">
+                    <span class="item-name">${displayName}</span>
+                    <span class="item-qty" ${this.showIntervals ? `title="${item.quantityLower} - ${item.quantityUpper}"` : ''}>${item.quantity}</span>
+                    <span class="item-cost">${this.formatters.formatCost(item.quantity * item.unitCost)}</span>
+                </div>
+            `;
+        }).join('');
     }
 
     /**
      * Affiche les matériaux requis
      */
-    displayRequiredMaterials(strategy) {
-        if (!strategy.markov || !strategy.markov.waypoints) return;
-        
-        const itemData = this.dataService.getItemById(this.currentItemId);
+    async displayRequiredMaterials(strategy) {
+        const itemData = await this.dataService.getItemById(this.currentItemId);
         const materials = {};
-        const fullWaypoints = strategy.markov.waypoints;
+        const fullWaypoints = strategy.extendedWaypoints || strategy.markov.waypoints;
         
         for (let level = 1; level <= this.endLevel; level++) {
             const levelData = itemData[level.toString()];
-            if (levelData?.materials && fullWaypoints[level - 1] > 0.01) {
+            const waypointValue = fullWaypoints[level - 1] || 0;
+            
+            if (levelData?.materials && waypointValue > 0.01) {
                 Object.entries(levelData.materials).forEach(([id, info]) => {
                     if (!materials[id]) {
                         materials[id] = {
                             id,
-                            name: this.translator.getLocalizedName(info),
+                            name: this.translator.getMaterialName(id),
                             imgName: info.img_name,
                             quantity: 0,
                             unitCost: this.dataService.getMaterialCost(id)
                         };
                     }
-                    materials[id].quantity += info.qty * Math.ceil(fullWaypoints[level - 1]);
+                    materials[id].quantity += info.qty * Math.round(waypointValue);
                 });
             }
         }
 
         this.elements.requiredMaterials.innerHTML = Object.values(materials).map(mat => `
             <div class="item-row">
-                <img src="img/${mat.imgName || 'default.png'}" class="item-icon" onerror="this.style.display='none'">
+                <img src="${this.dataService.getItemImagePath(mat.id)}" class="item-icon" onerror="this.style.display='none'">
                 <span class="item-name">${mat.name}</span>
                 <span class="item-qty">${mat.quantity}</span>
                 <span class="item-cost">${this.formatters.formatCost(mat.quantity * mat.unitCost)}</span>
@@ -738,15 +948,21 @@ export class AnalysisComponent {
     /**
      * Met à jour l'affichage lors d'un changement de langue
      */
-    updateLanguage() {
-        // Mettre à jour les cartes de stratégies si elles existent
+    async updateLanguage() {
         if (this.strategies.optimal) {
             this.updateStrategyCards();
         }
         
-        // Mettre à jour les détails affichés si une stratégie est sélectionnée
         if (this.strategies[this.currentStrategy]) {
-            this.displayStrategyDetails();
+            await this.displayStrategyDetails();
         }
+    }
+    
+    /**
+     * Nettoyage
+     */
+    destroy() {
+        this.translator.removeObserver(this);
+        this.cleanupTooltips();
     }
 }

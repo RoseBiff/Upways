@@ -1,3 +1,7 @@
+/**
+ * Composant de configuration - Version 3.4
+ * Réinitialisation des niveaux lors du changement d'objet
+ */
 export class ConfigComponent {
     constructor(dataService, translator, onConfigChanged) {
         this.dataService = dataService;
@@ -9,17 +13,12 @@ export class ConfigComponent {
         this.currentItemId = null;
         this.maxItemLevel = 21; // Par défaut
         
-        this.upgradeOptions = [
-            "Parchemin de bénédiction",
-            "Manuel de Forgeron",
-            "Parchemin du Dieu Dragon",
-            "Parchemin de Guerre",
-            "Pierre magique"
-        ];
-        
         this.initElements();
         this.attachEvents();
         this.displayUpgradeItemPrices();
+        
+        // S'abonner aux changements de langue
+        this.translator.addObserver(this);
     }
 
     initElements() {
@@ -54,43 +53,37 @@ export class ConfigComponent {
     }
 
     /**
+     * Gestion des événements de traduction
+     */
+    onTranslationEvent(event, data) {
+        if (event === 'languageChanged') {
+            this.updateLanguage();
+        }
+    }
+
+    /**
      * Met à jour les limites de niveau selon l'objet sélectionné
      */
-    updateLevelLimits() {
+    async updateLevelLimits() {
         if (!this.currentItemId) return;
         
-        const itemData = this.dataService.getItemById(this.currentItemId);
-        if (!itemData) return;
-        
-        // Trouver le niveau maximum de l'objet
-        let maxLevel = 0;
-        for (let level = 1; level <= 21; level++) {
-            if (itemData[level.toString()]) {
-                maxLevel = level;
-            }
-        }
+        const maxLevel = await this.dataService.getMaxLevelForItem(this.currentItemId);
+        if (!maxLevel) return;
         
         this.maxItemLevel = maxLevel;
         
-        // Masquer complètement les options non disponibles au lieu de les désactiver
+        // Reconstruire les sélecteurs avec les bonnes options
+        this.rebuildLevelSelectors();
+        
+        // Réinitialiser les niveaux aux valeurs par défaut
+        this.startLevel = 0;
+        this.endLevel = Math.min(9, maxLevel);
+        
+        this.elements.startLevel.value = this.startLevel;
+        this.elements.endLevel.value = this.endLevel;
+        
+        // Mettre à jour l'affichage
         this.updateLevelSelectors();
-        
-        // Si le niveau actuel est trop élevé, le réduire
-        if (parseInt(this.elements.startLevel.value) > maxLevel - 1) {
-            this.elements.startLevel.value = Math.max(0, maxLevel - 1);
-            this.startLevel = parseInt(this.elements.startLevel.value);
-        }
-        
-        if (parseInt(this.elements.endLevel.value) > maxLevel) {
-            this.elements.endLevel.value = maxLevel;
-            this.endLevel = maxLevel;
-        }
-        
-        // S'assurer que endLevel > startLevel
-        if (this.endLevel <= this.startLevel) {
-            this.endLevel = Math.min(this.startLevel + 1, maxLevel);
-            this.elements.endLevel.value = this.endLevel;
-        }
         
         // Notifier le changement
         if (this.onConfigChanged) {
@@ -103,32 +96,48 @@ export class ConfigComponent {
     }
 
     /**
+     * Reconstruit les sélecteurs de niveau avec le bon nombre d'options
+     */
+    rebuildLevelSelectors() {
+        // Sauvegarder les valeurs actuelles
+        const currentStart = parseInt(this.elements.startLevel.value);
+        const currentEnd = parseInt(this.elements.endLevel.value);
+        
+        // Reconstruire le sélecteur de départ
+        this.elements.startLevel.innerHTML = '';
+        for (let i = 0; i < this.maxItemLevel; i++) {
+            const option = document.createElement('option');
+            option.value = i;
+            option.textContent = `+${i}`;
+            this.elements.startLevel.appendChild(option);
+        }
+        
+        // Reconstruire le sélecteur de fin
+        this.elements.endLevel.innerHTML = '';
+        for (let i = 1; i <= this.maxItemLevel; i++) {
+            const option = document.createElement('option');
+            option.value = i;
+            option.textContent = `+${i}`;
+            this.elements.endLevel.appendChild(option);
+        }
+        
+        // Ne pas restaurer les valeurs, laisser les valeurs par défaut définies dans updateLevelLimits
+    }
+
+    /**
      * Met à jour les sélecteurs de niveau en cachant les options non disponibles
      */
     updateLevelSelectors() {
-        // Mettre à jour le sélecteur de départ
-        const startOptions = this.elements.startLevel.options;
-        for (let i = 0; i < startOptions.length; i++) {
-            const value = parseInt(startOptions[i].value);
-            if (value >= this.maxItemLevel) {
-                startOptions[i].style.display = 'none';
-            } else {
-                startOptions[i].style.display = '';
-                startOptions[i].text = `+${value}`;
-            }
-        }
-        
-        // Mettre à jour le sélecteur de fin
-        const endOptions = this.elements.endLevel.options;
         const currentStartLevel = parseInt(this.elements.startLevel.value);
         
+        // Mettre à jour le sélecteur de fin pour n'afficher que les options valides
+        const endOptions = this.elements.endLevel.options;
         for (let i = 0; i < endOptions.length; i++) {
             const value = parseInt(endOptions[i].value);
-            if (value > this.maxItemLevel || value <= currentStartLevel) {
+            if (value <= currentStartLevel) {
                 endOptions[i].style.display = 'none';
             } else {
                 endOptions[i].style.display = '';
-                endOptions[i].text = `+${value}`;
             }
         }
     }
@@ -152,6 +161,11 @@ export class ConfigComponent {
             this.elements.endLevel.value = this.endLevel;
         }
         
+        // Mettre à jour l'affichage des matériaux si nécessaire
+        if (this.currentItemId) {
+            this.displayMaterialPrices();
+        }
+        
         // Notifier le changement
         if (this.onConfigChanged) {
             this.onConfigChanged({
@@ -167,15 +181,16 @@ export class ConfigComponent {
      */
     displayUpgradeItemPrices() {
         const costs = this.dataService.upgradeCosts;
+        const upgradeOptions = this.dataService.getUpgradeOptions();
         
-        this.elements.upgradeItemPrices.innerHTML = this.upgradeOptions.map(option => {
-            const translatedName = this.translator.t(option);
+        this.elements.upgradeItemPrices.innerHTML = upgradeOptions.map(option => {
+            const imagePath = this.dataService.getUpgradeItemImagePath(option.internalName);
             return `
                 <div class="price-item">
-                    <img src="img/${this.getUpgradeIcon(option)}" class="price-icon" onerror="this.style.display='none'">
-                    <label>${translatedName}</label>
-                    <input type="number" class="price-input" data-type="upgrade" data-name="${option}" 
-                           value="${costs[option] || 0}" min="0" step="0.1">
+                    <img src="${imagePath}" class="price-icon" onerror="this.style.display='none'">
+                    <label>${option.displayName}</label>
+                    <input type="number" class="price-input" data-type="upgrade" data-name="${option.internalName}" 
+                           value="${costs[option.internalName] || 0}" min="0" step="0.1">
                     <span class="currency">M</span>
                 </div>
             `;
@@ -189,10 +204,10 @@ export class ConfigComponent {
     /**
      * Affiche les prix des matériaux pour l'objet sélectionné
      */
-    displayMaterialPrices() {
+    async displayMaterialPrices() {
         if (!this.currentItemId) return;
         
-        const materials = this.getAllMaterialsWithImages();
+        const materials = await this.getAllMaterialsWithImages();
         if (materials.length === 0) {
             this.elements.materialSection.style.display = 'none';
             return;
@@ -203,7 +218,7 @@ export class ConfigComponent {
         this.elements.materialSection.style.display = 'block';
         this.elements.materialPrices.innerHTML = materials.map(mat => `
             <div class="price-item">
-                ${mat.imgName ? `<img src="img/${mat.imgName}" class="price-icon" onerror="this.style.display='none'">` : ''}
+                ${mat.imgPath ? `<img src="${mat.imgPath}" class="price-icon" onerror="this.style.display='none'">` : ''}
                 <label>${mat.name}</label>
                 <input type="number" class="price-input" data-type="material" data-name="${mat.id}" 
                        value="${costs[mat.id] || 0}" min="0" step="0.1">
@@ -244,21 +259,24 @@ export class ConfigComponent {
     /**
      * Obtient tous les matériaux avec leurs images
      */
-    getAllMaterialsWithImages() {
+    async getAllMaterialsWithImages() {
         if (!this.currentItemId) return [];
         
         const materialsMap = new Map();
-        const itemData = this.dataService.getItemById(this.currentItemId);
+        const itemData = await this.dataService.getItemById(this.currentItemId);
         
+        // Parcourir les niveaux actuels pour collecter les matériaux
         for (let i = this.startLevel + 1; i <= this.endLevel; i++) {
             const levelData = itemData[i.toString()];
             if (levelData?.materials) {
                 Object.entries(levelData.materials).forEach(([id, info]) => {
                     if (!materialsMap.has(id)) {
+                        // Récupérer le nom traduit
+                        const name = this.translator.getMaterialName(id);
                         materialsMap.set(id, {
                             id,
-                            name: this.translator.getLocalizedName(info),
-                            imgName: info.img_name
+                            name: name,
+                            imgPath: this.dataService.getItemImagePath(id)
                         });
                     }
                 });
@@ -269,29 +287,19 @@ export class ConfigComponent {
     }
 
     /**
-     * Obtient l'icône pour un type d'amélioration
-     */
-    getUpgradeIcon(upgradeType) {
-        const iconMap = {
-            "Parchemin de bénédiction": "Parchemin_de_bénédiction.png",
-            "Manuel de Forgeron": "Manuel_de_Forgeron.png",
-            "Parchemin du Dieu Dragon": "Parchemin_du_Dieu_Dragon.png",
-            "Parchemin de Guerre": "Parchemin_de_Guerre.png",
-            "Pierre magique": "Pierre_magique.png"
-        };
-        return iconMap[upgradeType] || "default.png";
-    }
-
-    /**
      * Définit l'objet actuellement sélectionné
      */
-    setCurrentItem(itemId) {
+    async setCurrentItem(itemId) {
         this.currentItemId = itemId;
-        this.displayMaterialPrices();
-        this.elements.analyzeBtn.disabled = false;
         
-        // Mettre à jour les limites de niveau selon l'objet
-        this.updateLevelLimits();
+        // Mettre à jour les limites de niveau ET réinitialiser les niveaux
+        await this.updateLevelLimits();
+        
+        // Afficher les matériaux
+        await this.displayMaterialPrices();
+        
+        // Activer le bouton d'analyse
+        this.elements.analyzeBtn.disabled = false;
     }
 
     /**
@@ -307,11 +315,11 @@ export class ConfigComponent {
     exportConfig() {
         try {
             const config = {
-                version: "1.0",
+                version: "3.3",
                 date: new Date().toISOString(),
                 item: {
                     id: this.currentItemId,
-                    name: this.currentItemId ? this.translator.getLocalizedName(this.dataService.getItemById(this.currentItemId)) : null
+                    name: this.currentItemId ? this.dataService.itemNames[this.currentItemId] : null
                 },
                 levels: {
                     start: this.startLevel,
@@ -335,18 +343,14 @@ export class ConfigComponent {
             
             URL.revokeObjectURL(url);
             
-            // Utiliser le UIState si disponible, sinon alert
+            // Utiliser le UIState si disponible
             if (window.app && window.app.uiState) {
                 window.app.uiState.showToast('success', this.translator.t('configExported'));
-            } else {
-                alert(this.translator.t('configExported'));
             }
         } catch (error) {
             console.error('Export config error:', error);
             if (window.app && window.app.uiState) {
                 window.app.uiState.showToast('error', this.translator.t('exportConfigError'));
-            } else {
-                alert(this.translator.t('exportConfigError'));
             }
         }
     }
@@ -362,8 +366,8 @@ export class ConfigComponent {
             const text = await file.text();
             const config = JSON.parse(text);
             
-            // Vérifier la version
-            if (!config.version || config.version !== "1.0") {
+            // Vérifier la version (accepter toutes les versions pour compatibilité)
+            if (!config.version) {
                 throw new Error('Invalid config version');
             }
             
@@ -386,16 +390,21 @@ export class ConfigComponent {
             
             // Sélectionner l'objet si présent
             if (config.item && config.item.id && window.app && window.app.searchComponent) {
-                window.app.searchComponent.selectItemById(config.item.id);
+                await window.app.searchComponent.selectItemById(config.item.id);
             }
             
-            // Appliquer les niveaux
+            // Appliquer les niveaux APRÈS avoir sélectionné l'objet
             if (config.levels) {
-                if (config.levels.start !== undefined) {
+                // Attendre que l'objet soit chargé
+                await new Promise(resolve => setTimeout(resolve, 100));
+                
+                if (config.levels.start !== undefined && config.levels.start < this.maxItemLevel) {
                     this.elements.startLevel.value = config.levels.start;
+                    this.startLevel = config.levels.start;
                 }
-                if (config.levels.end !== undefined) {
+                if (config.levels.end !== undefined && config.levels.end <= this.maxItemLevel) {
                     this.elements.endLevel.value = config.levels.end;
+                    this.endLevel = config.levels.end;
                 }
                 this.updateLevelRange();
             }
@@ -403,7 +412,7 @@ export class ConfigComponent {
             // Appliquer la langue
             if (config.language && window.app && window.app.translator) {
                 if (window.app.translator.isLanguageAvailable(config.language)) {
-                    window.app.translator.setLanguage(config.language);
+                    await window.app.translator.setLanguage(config.language);
                     window.app.updateLanguage();
                 }
             }
@@ -413,15 +422,11 @@ export class ConfigComponent {
             
             if (window.app && window.app.uiState) {
                 window.app.uiState.showToast('success', this.translator.t('configImported'));
-            } else {
-                alert(this.translator.t('configImported'));
             }
         } catch (error) {
             console.error('Import config error:', error);
             if (window.app && window.app.uiState) {
                 window.app.uiState.showToast('error', this.translator.t('importConfigError'));
-            } else {
-                alert(this.translator.t('importConfigError'));
             }
         }
     }
@@ -429,10 +434,10 @@ export class ConfigComponent {
     /**
      * Met à jour l'affichage lors d'un changement de langue
      */
-    updateLanguage() {
+    async updateLanguage() {
         this.displayUpgradeItemPrices();
         if (this.currentItemId) {
-            this.displayMaterialPrices();
+            await this.displayMaterialPrices();
         }
     }
 
@@ -445,5 +450,24 @@ export class ConfigComponent {
 
     getEndLevel() {
         return this.endLevel;
+    }
+    
+    /**
+     * Réinitialise les niveaux aux valeurs par défaut
+     */
+    resetLevels() {
+        this.startLevel = 0;
+        this.endLevel = Math.min(9, this.maxItemLevel);
+        this.elements.startLevel.value = this.startLevel;
+        this.elements.endLevel.value = this.endLevel;
+        this.updateLevelSelectors();
+    }
+    
+    /**
+     * Nettoyage
+     */
+    destroy() {
+        // Se désabonner des changements de langue
+        this.translator.removeObserver(this);
     }
 }

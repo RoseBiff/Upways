@@ -57,7 +57,7 @@ export const translations = {
         yAxisLabel: "Probabilité de succès (%)",
         probabilityAt: "Probabilité à",
         
-        // Tooltips
+        // Tooltips et décomposition des coûts
         trialInterval: "Essais",
         itemInterval: "Objets",
         costInterval: "Coût moyen",
@@ -67,6 +67,11 @@ export const translations = {
         avgItemsRequired: "Nombre moyen d'objets nécessaires",
         belowStartLevel: "Niveau en dessous du départ",
         magicStoneRecommended: "Pierre magique recommandée au-delà de +9",
+        costBreakdown: "Décomposition du coût",
+        yangCost: "Coût en yang",
+        materialCost: "Coût matériaux",
+        upgradeCost: "Coût objet d'amélioration",
+        totalCostPerTrial: "Coût total par essai",
         
         // Statistiques
         totalTrials: "Essais moyens",
@@ -96,13 +101,6 @@ export const translations = {
         noStrategySelected: "Aucune stratégie sélectionnée",
         exportFailed: "Échec de l'export",
         customStrategyError: "Erreur lors du calcul de la stratégie personnalisée",
-        
-        // Objets d'amélioration
-        "Parchemin de bénédiction": "Parchemin de bénédiction",
-        "Manuel de Forgeron": "Manuel de Forgeron",
-        "Parchemin du Dieu Dragon": "Parchemin du Dieu Dragon",
-        "Parchemin de Guerre": "Parchemin de Guerre",
-        "Pierre magique": "Pierre magique",
         
         // Modale de partage
         shareResultTitle: "Résultat de l'analyse",
@@ -179,7 +177,7 @@ export const translations = {
         yAxisLabel: "Success probability (%)",
         probabilityAt: "Probability at",
         
-        // Tooltips
+        // Tooltips and cost breakdown
         trialInterval: "Trials",
         itemInterval: "Items",
         costInterval: "Cost",
@@ -189,6 +187,11 @@ export const translations = {
         avgItemsRequired: "Average number of items needed",
         belowStartLevel: "Level below start",
         magicStoneRecommended: "Magic stone recommended beyond +9",
+        costBreakdown: "Cost breakdown",
+        yangCost: "Yang cost",
+        materialCost: "Materials cost",
+        upgradeCost: "Upgrade item cost",
+        totalCostPerTrial: "Total cost per trial",
         
         totalTrials: "Average Trials",
         costRange95: "95% Interval",
@@ -211,13 +214,6 @@ export const translations = {
         noStrategySelected: "No strategy selected",
         exportFailed: "Export failed",
         customStrategyError: "Error calculating custom strategy",
-        
-        // Upgrade items
-        "Parchemin de bénédiction": "Blessing Scroll",
-        "Manuel de Forgeron": "Blacksmith Handbook",
-        "Parchemin du Dieu Dragon": "Dragon God Scroll",
-        "Parchemin de Guerre": "War Scroll",
-        "Pierre magique": "Magic Stone",
         
         // Share modal
         shareResultTitle: "Analysis Result",
@@ -294,7 +290,7 @@ export const translations = {
         yAxisLabel: "Probabilitate de succes (%)",
         probabilityAt: "Probabilitate la",
         
-        // Tooltips
+        // Tooltips și defalcare costuri
         trialInterval: "Încercări",
         itemInterval: "Obiecte",
         costInterval: "Cost",
@@ -304,6 +300,11 @@ export const translations = {
         avgItemsRequired: "Număr mediu de obiecte necesare",
         belowStartLevel: "Nivel sub start",
         magicStoneRecommended: "Piatră magică recomandată peste +9",
+        costBreakdown: "Defalcare cost",
+        yangCost: "Cost yang",
+        materialCost: "Cost materiale",
+        upgradeCost: "Cost obiect upgrade",
+        totalCostPerTrial: "Cost total per încercare",
         
         totalTrials: "Încercări medii",
         costRange95: "Interval 95%",
@@ -326,13 +327,6 @@ export const translations = {
         noStrategySelected: "Nicio strategie selectată",
         exportFailed: "Export eșuat",
         customStrategyError: "Eroare la calcularea strategiei personalizate",
-        
-        // Obiecte de upgrade
-        "Parchemin de bénédiction": "Pergament de Binecuvântare",
-        "Manuel de Forgeron": "Manual de Fierar",
-        "Parchemin du Dieu Dragon": "Pergament al Zeului Dragon",
-        "Parchemin de Guerre": "Pergament de Război",
-        "Pierre magique": "Piatră Magică",
         
         // Modal partajare
         shareResultTitle: "Rezultatul analizei",
@@ -409,7 +403,7 @@ export const translations = {
         yAxisLabel: "Başarı olasılığı (%)",
         probabilityAt: "Olasılık",
         
-        // Araç ipuçları
+        // Araç ipuçları ve maliyet dökümü
         trialInterval: "Deneme",
         itemInterval: "Eşya",
         costInterval: "Maliyet",
@@ -419,6 +413,11 @@ export const translations = {
         avgItemsRequired: "Ortalama gerekli eşya sayısı",
         belowStartLevel: "Başlangıç altı seviye",
         magicStoneRecommended: "+9'dan sonra sihirli taş önerilir",
+        costBreakdown: "Maliyet dökümü",
+        yangCost: "Yang maliyeti",
+        materialCost: "Malzeme maliyeti",
+        upgradeCost: "Yükseltme eşyası maliyeti",
+        totalCostPerTrial: "Deneme başına toplam maliyet",
         
         totalTrials: "Ortalama Deneme",
         costRange95: "%95 Aralık",
@@ -441,13 +440,6 @@ export const translations = {
         noStrategySelected: "Strateji seçilmedi",
         exportFailed: "Dışa aktarma başarısız",
         customStrategyError: "Özel strateji hesaplama hatası",
-        
-        // Yükseltme eşyaları
-        "Parchemin de bénédiction": "Kutsama Kağıdı",
-        "Manuel de Forgeron": "Demirci El Kitabı",
-        "Parchemin du Dieu Dragon": "Ejderha Tanrı Kağıdı",
-        "Parchemin de Guerre": "Savaş Kağıdı",
-        "Pierre magique": "Sihirli Taş",
         
         // Paylaşım modali
         shareResultTitle: "Analiz Sonucu",
@@ -524,7 +516,7 @@ export const translations = {
         yAxisLabel: "Erfolgswahrscheinlichkeit (%)",
         probabilityAt: "Wahrscheinlichkeit bei",
         
-        // Tooltips
+        // Tooltips und Kostenaufschlüsselung
         trialInterval: "Versuche",
         itemInterval: "Gegenstände",
         costInterval: "Kosten",
@@ -534,6 +526,11 @@ export const translations = {
         avgItemsRequired: "Durchschnittliche Anzahl benötigter Gegenstände",
         belowStartLevel: "Stufe unter Start",
         magicStoneRecommended: "Magischer Stein empfohlen über +9",
+        costBreakdown: "Kostenaufschlüsselung",
+        yangCost: "Yang-Kosten",
+        materialCost: "Materialkosten",
+        upgradeCost: "Verbesserungsgegenstand-Kosten",
+        totalCostPerTrial: "Gesamtkosten pro Versuch",
         
         totalTrials: "Durchschn. Versuche",
         costRange95: "95% Intervall",
@@ -556,13 +553,6 @@ export const translations = {
         noStrategySelected: "Keine Strategie ausgewählt",
         exportFailed: "Export fehlgeschlagen",
         customStrategyError: "Fehler bei der Berechnung der benutzerdefinierten Strategie",
-        
-        // Verbesserungsgegenstände
-        "Parchemin de bénédiction": "Segensrolle",
-        "Manuel de Forgeron": "Schmiedehandbuch",
-        "Parchemin du Dieu Dragon": "Drachengott-Rolle",
-        "Parchemin de Guerre": "Kriegsrolle",
-        "Pierre magique": "Magischer Stein",
         
         // Teilen-Modal
         shareResultTitle: "Analyseergebnis",

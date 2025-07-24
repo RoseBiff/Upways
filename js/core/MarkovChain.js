@@ -175,10 +175,10 @@ export class MarkovChain {
 export class MarkovChainWithIntervals extends MarkovChain {
     constructor(successRates, noDowngradeFlags, startLevel = 0, endLevel = 9, maxTrial = 10000) {
         super(successRates, noDowngradeFlags, startLevel, endLevel);
+        this.maxTrial = maxTrial;
         this.calculateVariances();
         this.calculateIntervals();
         this._points = null; // Points pour les probabilités cumulées
-        this.maxTrial = maxTrial;
     }
 
     calculateVariances() {

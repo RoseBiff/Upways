@@ -1,12 +1,14 @@
 import { translations } from '../core/translations.js';
 
 /**
- * Gestionnaire de traductions
+ * Gestionnaire de traductions - Version 3.0
+ * Support complet des traductions en temps réel
  */
 export class Translator {
     constructor(dataService) {
         this.dataService = dataService;
         this.currentLang = 'fr';
+        this.observers = [];
         this.loadLanguage();
     }
 
@@ -21,15 +23,51 @@ export class Translator {
     }
 
     /**
-     * Change la langue courante
+     * Change la langue courante et notifie tous les observateurs
      */
-    setLanguage(lang) {
-        if (translations[lang]) {
-            this.currentLang = lang;
-            this.dataService.saveLanguage(lang);
-            return true;
+    async setLanguage(lang) {
+        if (!translations[lang]) return false;
+        
+        this.currentLang = lang;
+        this.dataService.saveLanguage(lang);
+        
+        // Recharger les noms d'items pour la nouvelle langue
+        await this.dataService.changeLanguage(lang);
+        
+        // Notifier tous les observateurs du changement
+        this.notifyObservers('languageChanged', lang);
+        
+        return true;
+    }
+
+    /**
+     * Ajoute un observateur pour les changements
+     */
+    addObserver(observer) {
+        if (!this.observers.includes(observer)) {
+            this.observers.push(observer);
         }
-        return false;
+    }
+
+    /**
+     * Retire un observateur
+     */
+    removeObserver(observer) {
+        const index = this.observers.indexOf(observer);
+        if (index > -1) {
+            this.observers.splice(index, 1);
+        }
+    }
+
+    /**
+     * Notifie tous les observateurs d'un événement
+     */
+    notifyObservers(event, data) {
+        this.observers.forEach(observer => {
+            if (typeof observer.onTranslationEvent === 'function') {
+                observer.onTranslationEvent(event, data);
+            }
+        });
     }
 
     /**
@@ -47,7 +85,23 @@ export class Translator {
     }
 
     /**
-     * Obtient le nom localisé d'un objet
+     * Traduit un texte qui peut être une clé ou un nom d'item
+     * Priorité : traduction de clé > nom d'item > texte original
+     */
+    translate(text) {
+        // D'abord vérifier si c'est une clé de traduction
+        const translation = this.t(text);
+        if (translation !== text) {
+            return translation;
+        }
+        
+        // Sinon retourner le texte tel quel
+        return text;
+    }
+
+    /**
+     * Obtient le nom localisé d'un objet/matériau
+     * Gère à la fois les objets avec structure names et les IDs directs
      */
     getLocalizedName(item, lang = null) {
         const targetLang = lang || this.currentLang;
@@ -55,12 +109,13 @@ export class Translator {
         // Si c'est un string direct, le retourner
         if (typeof item === 'string') return item;
         
-        // Si l'objet a un champ names
+        // Si l'objet a un champ names (structure de données)
         if (item && item.names) {
             // Essayer la langue cible
             if (item.names[targetLang]) return item.names[targetLang];
             
-            // Fallback: fr -> en -> première langue disponible
+            // Fallback: langue actuelle -> fr -> en -> première disponible
+            if (item.names[this.currentLang]) return item.names[this.currentLang];
             if (item.names.fr) return item.names.fr;
             if (item.names.en) return item.names.en;
             
@@ -71,7 +126,19 @@ export class Translator {
             }
         }
         
+        // Si l'objet a un ID, chercher dans itemNames
+        if (item && item.id) {
+            return this.dataService.itemNames[item.id] || `Item ${item.id}`;
+        }
+        
         return 'Unknown';
+    }
+
+    /**
+     * Traduit un nom de matériau par son ID
+     */
+    getMaterialName(materialId) {
+        return this.dataService.getMaterialName(materialId);
     }
 
     /**
@@ -97,6 +164,17 @@ export class Translator {
         document.querySelectorAll('[data-i18n-aria-label]').forEach(elem => {
             elem.setAttribute('aria-label', this.t(elem.getAttribute('data-i18n-aria-label')));
         });
+        
+        // Mettre à jour les tooltips dynamiques
+        this.updateDynamicTooltips();
+    }
+
+    /**
+     * Met à jour les tooltips dynamiques
+     */
+    updateDynamicTooltips() {
+        // Cette méthode sera appelée par les composants qui gèrent des tooltips
+        this.notifyObservers('tooltipsNeedUpdate');
     }
 
     /**
@@ -215,5 +293,44 @@ export class Translator {
     getTranslations(lang = null) {
         const targetLang = lang || this.currentLang;
         return { ...translations[targetLang] };
+    }
+
+    /**
+     * Crée un proxy réactif pour les traductions
+     */
+    createReactiveTranslations() {
+        const self = this;
+        return new Proxy({}, {
+            get(target, prop) {
+                return self.t(prop);
+            }
+        });
+    }
+
+    /**
+     * Traduit un tableau de clés
+     */
+    translateBatch(keys) {
+        const result = {};
+        keys.forEach(key => {
+            result[key] = this.t(key);
+        });
+        return result;
+    }
+
+    /**
+     * Obtient toutes les traductions pour un préfixe donné
+     */
+    getTranslationsByPrefix(prefix) {
+        const currentTranslations = translations[this.currentLang];
+        const result = {};
+        
+        Object.keys(currentTranslations).forEach(key => {
+            if (key.startsWith(prefix)) {
+                result[key] = currentTranslations[key];
+            }
+        });
+        
+        return result;
     }
 }

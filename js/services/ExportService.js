@@ -1,10 +1,19 @@
 /**
- * Service d'export des résultats avec options de partage
+ * Service d'export des résultats avec options de partage - Version 3.7
+ * Utilisation du logo externe
  */
 export class ExportService {
     constructor(formatters, translator) {
         this.formatters = formatters;
         this.translator = translator;
+    }
+
+    /**
+     * Retire le +0 d'un nom d'équipement
+     */
+    removeUpgradeLevel(name) {
+        if (!name) return '';
+        return name.replace(/\+0$/, '').trim();
     }
 
     /**
@@ -17,32 +26,45 @@ export class ExportService {
             document.body.appendChild(captureContainer);
 
             // Récupérer l'image de l'objet
-            const selectedImgSrc = document.getElementById('itemImage').src;
+            const selectedImgSrc = dataService.getItemImagePath(currentItemId);
+            
+            // Retirer le +0 du nom de l'item pour l'affichage
+            const displayItemName = this.removeUpgradeLevel(currentItem);
 
             // Créer le header
             const header = this.createHeader();
             captureContainer.appendChild(header);
 
             // Créer la section du chemin d'amélioration
-            // currentItem est maintenant déjà traduit
-            const pathSection = this.createPathSection(strategy, currentItem, selectedImgSrc);
+            const pathSection = this.createPathSection(strategy, displayItemName, selectedImgSrc);
             captureContainer.appendChild(pathSection);
 
-            // Créer l'affichage du chemin (version améliorée)
-            const pathDisplay = this.createImprovedPathDisplay(strategy, currentItemId, startLevel, endLevel, dataService);
+            // Attendre la création de l'affichage du chemin
+            const pathDisplay = await this.createImprovedPathDisplay(strategy, currentItemId, startLevel, endLevel, dataService);
             pathSection.appendChild(pathDisplay);
 
             // Ajouter le tableau des prix utilisés
-            const priceTable = this.createPriceTable(strategy, currentItemId, startLevel, endLevel, dataService);
+            const priceTable = await this.createPriceTable(strategy, currentItemId, startLevel, endLevel, dataService);
             captureContainer.appendChild(priceTable);
+
+            // Forcer le rendu avant la capture
+            await new Promise(resolve => setTimeout(resolve, 100));
 
             // Capturer avec html2canvas
             const canvas = await html2canvas(captureContainer, {
                 backgroundColor: '#1a1f2e',
                 scale: 2,
                 logging: false,
+                width: 1200,
+                height: captureContainer.scrollHeight + 40,
                 windowWidth: 1200,
-                windowHeight: captureContainer.scrollHeight
+                windowHeight: captureContainer.scrollHeight + 40,
+                y: 0,
+                x: 0,
+                scrollY: 0,
+                scrollX: 0,
+                allowTaint: true,
+                useCORS: true
             });
 
             // Nettoyer
@@ -52,14 +74,14 @@ export class ExportService {
             const exportMode = options.mode || 'download';
 
             if (exportMode === 'download') {
-                // Téléchargement direct (comportement actuel)
+                // Téléchargement direct
                 const link = document.createElement('a');
-                link.download = `upways-${currentItem}-${new Date().toISOString().slice(0, 10)}.png`;
+                link.download = `upways-${displayItemName}-${new Date().toISOString().slice(0, 10)}.png`;
                 link.href = canvas.toDataURL();
                 link.click();
             } else if (exportMode === 'share') {
                 // Afficher une modale avec l'image et les options de partage
-                this.showShareModal(canvas, currentItem);
+                this.showShareModal(canvas, displayItemName);
             }
 
             return true;
@@ -152,24 +174,23 @@ export class ExportService {
      */
     showToast(type, message) {
         // Utiliser la fonction showToast existante si disponible
-        if (window.showToast) {
-            window.showToast(type, message);
+        if (window.app && window.app.uiState) {
+            window.app.uiState.showToast(type, message);
         } else {
             alert(message);
         }
     }
 
-    // ... (garder toutes les autres méthodes existantes)
-    
     createCaptureContainer() {
         const container = document.createElement('div');
         container.style.cssText = `
             width: 1200px;
             background: #1a1f2e;
-            padding: 20px;
+            padding: 40px 20px;
             position: absolute;
             left: -9999px;
             top: 0;
+            margin: 0;
         `;
         return container;
     }
@@ -186,9 +207,11 @@ export class ExportService {
             border-radius: 10px;
         `;
 
+        // Créer le contenu avec le logo externe
         header.innerHTML = `
             <div style="display: flex; align-items: center; gap: 20px;">
-                <img src="logo.png" alt="Logo" style="height: 50px;">
+                <img src="logo.png" alt="Upways" style="width: 50px; height: 50px; object-fit: contain;" 
+                     onerror="this.src='logo.svg'; this.onerror=null;">
                 <h1 style="color: #ffffff; font-size: 28px; margin: 0;">Upways</h1>
             </div>
             <div style="text-align: right;">
@@ -202,8 +225,8 @@ export class ExportService {
         return header;
     }
 
-    // Nouvelle méthode pour créer l'affichage amélioré du chemin
-    createImprovedPathDisplay(strategy, currentItemId, startLevel, endLevel, dataService) {
+    // Méthode pour créer l'affichage amélioré du chemin
+    async createImprovedPathDisplay(strategy, currentItemId, startLevel, endLevel, dataService) {
         const pathDisplay = document.createElement('div');
         pathDisplay.style.cssText = `
             display: flex;
@@ -215,21 +238,36 @@ export class ExportService {
             justify-content: flex-start;
         `;
 
-        const itemData = dataService.getItemById(currentItemId);
-        const fullWaypoints = strategy.markov.waypoints;
+        const itemData = await dataService.getItemById(currentItemId);
+        const fullWaypoints = strategy.extendedWaypoints || strategy.markov.waypoints;
 
         let hasLevelsAbove9 = false;
 
-        for (let level = 1; level <= endLevel; level++) {
-            const waypointValue = fullWaypoints[level - 1];
+        // Pour l'export, on affiche tous les niveaux jusqu'à 30, puis on groupe
+        const individualDisplayLimit = 30;
+        const maxDisplayLevel = Math.min(endLevel, 100); // Limiter l'affichage à 100 max
+
+        // Afficher les niveaux individuels
+        for (let level = 1; level <= Math.min(endLevel, individualDisplayLimit); level++) {
+            const waypointValue = fullWaypoints[level - 1] || 0;
         
             if (waypointValue > 0.01) {
-                const levelData = itemData[level.toString()] || { materials: {}, success_rate: 0 };
+                const levelData = itemData[level.toString()] || { materials: {}, success_rate: 0, yang_cost: 0 };
             
                 let upgradeType;
-                if (level > startLevel && level <= endLevel) {
+                
+                // Utiliser fullPath si disponible (stratégie optimale)
+                if (strategy.fullPath && strategy.fullPath[level - 1]) {
+                    upgradeType = strategy.fullPath[level - 1];
+                } else if (level > startLevel && level <= endLevel) {
                     const pathIndex = level - startLevel - 1;
-                    upgradeType = strategy.path[pathIndex].name;
+                    if (strategy.path[pathIndex]) {
+                        upgradeType = strategy.path[pathIndex].name;
+                    } else {
+                        upgradeType = level <= 4 ? "Parchemin de Guerre" : 
+                                     level <= 9 ? "Parchemin de bénédiction" : 
+                                     "Pierre magique";
+                    }
                 } else {
                     upgradeType = level <= 4 ? "Parchemin de Guerre" : 
                                  level <= 9 ? "Parchemin de bénédiction" : 
@@ -240,9 +278,100 @@ export class ExportService {
             
                 if (level > 9) hasLevelsAbove9 = true;
             
-                const stepDiv = this.createCompactStepDiv(level, upgradeType, rate, waypointValue, level <= startLevel, level > 9);
+                // Calculer correctement les coûts
+                const yangCost = levelData.yang_cost || 0;
+                const yangCostInMillions = yangCost / 1000000;
+                const materialCost = this.calculateMaterialCost(levelData.materials || {}, dataService);
+                const upgradeCost = dataService.getUpgradeCost(upgradeType);
+                const totalLevelCost = yangCostInMillions + materialCost + upgradeCost;
+                const avgCost = totalLevelCost * waypointValue;
+                
+                const stepDiv = this.createCompactStepDiv(
+                    level, 
+                    upgradeType, 
+                    rate, 
+                    waypointValue, 
+                    level <= startLevel, 
+                    level > 9, 
+                    yangCost, 
+                    avgCost,
+                    dataService
+                );
                 pathDisplay.appendChild(stepDiv);
             }
+        }
+        
+        // Si on a des niveaux au-delà de 30, afficher un résumé
+        if (endLevel > individualDisplayLimit) {
+            const remainingLevels = endLevel - individualDisplayLimit;
+            const groupsCount = Math.ceil(remainingLevels / 10);
+            
+            const summaryDiv = document.createElement('div');
+            summaryDiv.style.cssText = `
+                width: 100%;
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                margin-top: 10px;
+                padding: 10px;
+                background: rgba(99, 102, 241, 0.1);
+                border: 1px solid #6366f1;
+                border-radius: 6px;
+            `;
+            
+            // Afficher les groupes de 10 en commençant à 31
+            for (let groupStart = individualDisplayLimit + 1; groupStart <= endLevel; groupStart += 10) {
+                const groupEnd = Math.min(groupStart + 9, endLevel);
+                
+                // Calculer les totaux pour ce groupe
+                let groupTrials = 0;
+                let groupCost = 0;
+                
+                for (let level = groupStart; level <= groupEnd; level++) {
+                    const waypointValue = fullWaypoints[level - 1] || 0;
+                    if (waypointValue > 0.01) {
+                        const levelData = itemData[level.toString()] || { materials: {}, success_rate: 10, yang_cost: 0 };
+                        const yangCost = levelData.yang_cost || 0;
+                        const yangCostInMillions = yangCost / 1000000;
+                        const materialCost = this.calculateMaterialCost(levelData.materials || {}, dataService);
+                        const upgradeCost = dataService.getUpgradeCost("Pierre magique");
+                        const totalLevelCost = yangCostInMillions + materialCost + upgradeCost;
+                        
+                        groupTrials += waypointValue;
+                        groupCost += totalLevelCost * waypointValue;
+                    }
+                }
+                
+                const groupDiv = document.createElement('div');
+                groupDiv.style.cssText = `
+                    background: #1a1f2e;
+                    border: 2px solid #9333ea;
+                    border-radius: 6px;
+                    padding: 10px;
+                    text-align: center;
+                    font-size: 11px;
+                    width: 120px;
+                `;
+                
+                const magicStoneName = dataService.getUpgradeItemName('Pierre magique');
+                
+                groupDiv.innerHTML = `
+                    <div style="font-size: 12px; color: #e0aaff; font-weight: bold; margin-bottom: 5px;">
+                        +${groupStart} → +${groupEnd}
+                    </div>
+                    <img src="${dataService.getUpgradeItemImagePath('Pierre magique')}" style="width: 32px; height: 32px; display: block; margin: 5px auto;">
+                    <div style="color: #e0aaff; font-size: 10px; margin: 5px 0;">
+                        ${Math.round(groupTrials)} ${this.translator.t('trials')}
+                    </div>
+                    <div style="font-size: 10px; color: #6366f1; font-weight: bold;">
+                        ${this.formatters.formatCost(groupCost)}
+                    </div>
+                `;
+                
+                summaryDiv.appendChild(groupDiv);
+            }
+            
+            pathDisplay.appendChild(summaryDiv);
         }
 
         // Ajouter une note si des niveaux > 9 sont présents
@@ -266,8 +395,8 @@ export class ExportService {
         return pathDisplay;
     }
 
-    // Nouvelle méthode pour créer le tableau des prix
-    createPriceTable(strategy, currentItemId, startLevel, endLevel, dataService) {
+    // Méthode pour créer le tableau des prix
+    async createPriceTable(strategy, currentItemId, startLevel, endLevel, dataService) {
         const container = document.createElement('div');
         container.style.cssText = `
             background: #0f1419;
@@ -284,7 +413,7 @@ export class ExportService {
             margin-bottom: 15px;
             text-align: center;
         `;
-        title.textContent = this.translator.t('priceConfiguration') || 'Configuration des prix utilisés';
+        title.textContent = this.translator.t('priceConfiguration');
         container.appendChild(title);
 
         // Créer deux colonnes
@@ -295,27 +424,21 @@ export class ExportService {
             gap: 20px;
         `;
 
-        // Colonne 1: Objets d'amélioration (afficher TOUS, même à 0)
+        // Colonne 1: Objets d'amélioration
         const upgradeColumn = document.createElement('div');
         const upgradeTitle = document.createElement('h4');
         upgradeTitle.style.cssText = 'color: #cbd5e1; font-size: 14px; margin-bottom: 10px;';
         upgradeTitle.textContent = this.translator.t('upgradeItems');
         upgradeColumn.appendChild(upgradeTitle);
 
-        const upgradeItems = [
-            "Parchemin de bénédiction",
-            "Manuel de Forgeron",
-            "Parchemin du Dieu Dragon",
-            "Parchemin de Guerre",
-            "Pierre magique"
-        ];
+        const upgradeOptions = dataService.getUpgradeOptions();
 
-        upgradeItems.forEach(item => {
-            const cost = dataService.getUpgradeCost(item);
+        upgradeOptions.forEach(option => {
+            const cost = dataService.getUpgradeCost(option.internalName);
             const row = document.createElement('div');
             row.style.cssText = 'display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 12px;';
             row.innerHTML = `
-                <span style="color: #94a3b8;">${this.translator.t(item)}:</span>
+                <span style="color: #94a3b8;">${option.displayName}:</span>
                 <span style="color: ${cost > 0 ? '#6366f1' : '#6B7280'}; font-weight: bold;">
                     ${this.formatters.formatCost(cost)}
                 </span>
@@ -323,7 +446,7 @@ export class ExportService {
             upgradeColumn.appendChild(row);
         });
 
-        // Colonne 2: Matériaux uniques (pas de duplication)
+        // Colonne 2: Matériaux uniques
         const materialsColumn = document.createElement('div');
         const materialsTitle = document.createElement('h4');
         materialsTitle.style.cssText = 'color: #cbd5e1; font-size: 14px; margin-bottom: 10px;';
@@ -332,17 +455,17 @@ export class ExportService {
 
         // Collecter TOUS les matériaux uniques de l'objet
         const allMaterials = new Map();
-        const itemData = dataService.getItemById(currentItemId);
+        const itemData = await dataService.getItemById(currentItemId);
 
         // Parcourir tous les niveaux pour collecter les matériaux uniques
-        for (let level = 1; level <= 21; level++) {
+        for (let level = 1; level <= 255; level++) {
             const levelData = itemData[level.toString()];
             if (levelData?.materials) {
                 Object.entries(levelData.materials).forEach(([id, info]) => {
                     if (!allMaterials.has(id)) {
                         allMaterials.set(id, {
                             id,
-                            name: this.translator.getLocalizedName(info)
+                            name: dataService.getMaterialName(id)
                         });
                     }
                 });
@@ -382,8 +505,8 @@ export class ExportService {
         return container;
     }
 
-    // Version compacte du stepDiv pour l'export
-    createCompactStepDiv(level, upgradeType, rate, waypointValue, isBelowStart, isHighLevel) {
+    // Version compacte du stepDiv pour l'export avec affichage du coût en yang
+    createCompactStepDiv(level, upgradeType, rate, waypointValue, isBelowStart, isHighLevel, yangCost, avgCost, dataService) {
         const stepDiv = document.createElement('div');
         stepDiv.style.cssText = `
             background: ${isHighLevel ? 'linear-gradient(135deg, #4a3c5a, #362847)' : 
@@ -397,7 +520,7 @@ export class ExportService {
             text-align: center;
             font-size: 10px;
             width: 100px;
-            min-height: 120px;
+            min-height: 140px;
             position: relative;
             display: flex;
             flex-direction: column;
@@ -438,12 +561,32 @@ export class ExportService {
             justify-content: center;
         `;
 
+        // Afficher le coût en yang si > 0
+        const yangDisplay = yangCost > 0 ? `
+            <div style="font-size: 8px; color: #fbbf24; margin-top: 2px;">
+                ${this.formatters.formatNumber(yangCost)} yang
+            </div>
+        ` : '';
+
+        // Afficher le coût total moyen
+        const avgCostDisplay = `
+            <div style="font-size: 9px; color: #6366f1; font-weight: bold;">
+                ${this.formatters.formatCost(avgCost)}
+            </div>
+        `;
+        
+        // Obtenir l'image et le nom traduit de l'objet d'amélioration
+        const upgradeItemImage = dataService.getUpgradeItemImagePath(upgradeType);
+        const upgradeItemName = dataService.getUpgradeItemName(upgradeType);
+
         content.innerHTML = `
             <div style="font-size: 11px; color: ${isHighLevel ? '#e0aaff' : '#6366f1'}; font-weight: bold;">+${level}</div>
-            <img src="img/${this.getUpgradeIcon(upgradeType)}" style="width: 32px; height: 32px; display: block;">
-            <div style="font-size: 9px; color: #cbd5e1; line-height: 1.2;">${this.translator.t(upgradeType)}</div>
+            <img src="${upgradeItemImage}" style="width: 32px; height: 32px; display: block;">
+            <div style="font-size: 9px; color: #cbd5e1; line-height: 1.2;">${upgradeItemName}</div>
             <div style="color: #48bb78; font-size: 11px; font-weight: bold;">${rate}%</div>
             <div style="color: ${isHighLevel ? '#e0aaff' : '#6366f1'}; font-size: 10px;">${waypointValue.toFixed(1)}x</div>
+            ${avgCostDisplay}
+            ${yangDisplay}
         `;
 
         stepDiv.appendChild(content);
@@ -460,7 +603,7 @@ export class ExportService {
             margin-bottom: 20px;
         `;
 
-        const totalCost = Math.round(strategy.totalCost);
+        const totalCost = strategy.totalCost; // Déjà en millions
 
         section.innerHTML = `
             <h2 style="color: #ffffff; font-size: 22px; margin-bottom: 12px; text-align: center;">
@@ -492,72 +635,6 @@ export class ExportService {
         return section;
     }
 
-    createPathDisplay(strategy, currentItemId, startLevel, endLevel, dataService) {
-        const pathDisplay = document.createElement('div');
-        pathDisplay.style.cssText = `
-            display: flex;
-            align-items: stretch;
-            justify-content: space-between;
-            flex-wrap: nowrap;
-            width: 100%;
-            gap: 20px;
-            padding: 20px;
-            overflow-x: auto;
-        `;
-
-        const itemData = dataService.getItemById(currentItemId);
-        const fullWaypoints = strategy.markov.waypoints;
-
-        for (let level = 1; level <= endLevel; level++) {
-            const waypointValue = fullWaypoints[level - 1];
-
-            if (waypointValue > 0.01) {
-                const levelData = itemData[level.toString()] || { materials: {}, success_rate: 0 };
-
-                let upgradeType;
-                if (level > startLevel && level <= endLevel) {
-                    const pathIndex = level - startLevel - 1;
-                    upgradeType = strategy.path[pathIndex].name;
-                } else {
-                    upgradeType = level <= 4 ? "Parchemin de Guerre" : "Parchemin de bénédiction";
-                }
-
-                const rate = this.calculateSuccessRate(level, upgradeType, levelData.success_rate);
-
-                const stepDiv = this.createStepDiv(level, upgradeType, rate, waypointValue, level <= startLevel);
-                pathDisplay.appendChild(stepDiv);
-            }
-        }
-
-        return pathDisplay;
-    }
-
-    createStepDiv(level, upgradeType, rate, waypointValue, isBelowStart) {
-        const stepDiv = document.createElement('div');
-        stepDiv.style.cssText = `
-            background: #1a1f2e;
-            border: 2px solid ${isBelowStart ? '#f59e0b' : '#2d3748'};
-            border-radius: 8px;
-            padding: 12px 10px;
-            text-align: center;
-            width: 100px;
-            flex-shrink: 0;
-            white-space: normal;
-            overflow-wrap: break-word;
-            word-break: break-word;
-        `;
-
-        stepDiv.innerHTML = `
-            <div style="font-size: 12px; color: #6366f1; font-weight: bold; margin-bottom: 5px;">+${level}</div>
-            <img src="img/${this.getUpgradeIcon(upgradeType)}" style="width: 40px; height: 40px; margin: 0 auto 5px; display: block;">
-            <div style="font-size: 10px; color: #cbd5e1; margin-bottom: 3px;">${this.translator.t(upgradeType)}</div>
-            <div style="color: #48bb78; font-size: 14px; font-weight: bold;">${rate}%</div>
-            <div style="color: #6366f1; font-size: 12px; margin-top: 3px;">${waypointValue.toFixed(1)}x</div>
-        `;
-
-        return stepDiv;
-    }
-
     calculateSuccessRate(level, upgradeType, baseRate) {
         switch (upgradeType) {
             case "Parchemin de bénédiction":
@@ -574,14 +651,11 @@ export class ExportService {
         }
     }
 
-    getUpgradeIcon(upgradeType) {
-        const iconMap = {
-            "Parchemin de bénédiction": "Parchemin_de_bénédiction.png",
-            "Manuel de Forgeron": "Manuel_de_Forgeron.png",
-            "Parchemin du Dieu Dragon": "Parchemin_du_Dieu_Dragon.png",
-            "Parchemin de Guerre": "Parchemin_de_Guerre.png",
-            "Pierre magique": "Pierre_magique.png"
-        };
-        return iconMap[upgradeType] || "default.png";
+    calculateMaterialCost(materials, dataService) {
+        let cost = 0;
+        Object.entries(materials).forEach(([id, info]) => {
+            cost += dataService.getMaterialCost(id) * (info.qty || 0);
+        });
+        return cost; // Déjà en millions
     }
 }
