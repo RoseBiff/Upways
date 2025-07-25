@@ -1,6 +1,6 @@
 /**
- * Composant de configuration - Version 3.4
- * Réinitialisation des niveaux lors du changement d'objet
+ * Composant de configuration - Version 3.5
+ * Support des niveaux élevés (jusqu'à 255)
  */
 export class ConfigComponent {
     constructor(dataService, translator, onConfigChanged) {
@@ -132,13 +132,26 @@ export class ConfigComponent {
         
         // Mettre à jour le sélecteur de fin pour n'afficher que les options valides
         const endOptions = this.elements.endLevel.options;
+        let firstValidOption = null;
+        
         for (let i = 0; i < endOptions.length; i++) {
             const value = parseInt(endOptions[i].value);
             if (value <= currentStartLevel) {
                 endOptions[i].style.display = 'none';
+                endOptions[i].disabled = true;
             } else {
                 endOptions[i].style.display = '';
+                endOptions[i].disabled = false;
+                if (!firstValidOption) {
+                    firstValidOption = value;
+                }
             }
+        }
+        
+        // Si le niveau de fin actuel n'est pas valide, le corriger
+        if (this.endLevel <= currentStartLevel && firstValidOption !== null) {
+            this.endLevel = firstValidOption;
+            this.elements.endLevel.value = this.endLevel;
         }
     }
 
@@ -150,16 +163,34 @@ export class ConfigComponent {
         const end = parseInt(this.elements.endLevel.value);
         
         this.startLevel = start;
-        this.endLevel = end;
+        
+        // S'assurer que le niveau de fin est valide
+        if (end <= start) {
+            // Trouver le prochain niveau valide
+            const endOptions = this.elements.endLevel.options;
+            let nextValidLevel = null;
+            
+            for (let i = 0; i < endOptions.length; i++) {
+                const value = parseInt(endOptions[i].value);
+                if (value > start) {
+                    nextValidLevel = value;
+                    break;
+                }
+            }
+            
+            if (nextValidLevel !== null) {
+                this.endLevel = nextValidLevel;
+                this.elements.endLevel.value = this.endLevel;
+            } else {
+                // Cas extrême : pas de niveau valide après le début
+                this.endLevel = Math.min(start + 1, this.maxItemLevel);
+            }
+        } else {
+            this.endLevel = end;
+        }
         
         // Mettre à jour les options disponibles
         this.updateLevelSelectors();
-        
-        // Si le niveau de fin est invalide, le corriger
-        if (this.endLevel <= this.startLevel) {
-            this.endLevel = Math.min(this.startLevel + 1, this.maxItemLevel);
-            this.elements.endLevel.value = this.endLevel;
-        }
         
         // Mettre à jour l'affichage des matériaux si nécessaire
         if (this.currentItemId) {

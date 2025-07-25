@@ -1,6 +1,5 @@
 /**
- * Composant d'affichage des résultats d'analyse - Version 3.6
- * Utilisation des noms traduits pour les objets d'amélioration
+ * Composant d'affichage des résultats d'analyse - Version corrigée
  */
 export class AnalysisComponent {
     constructor(dataService, translator, formatters, onStrategyChanged) {
@@ -17,7 +16,7 @@ export class AnalysisComponent {
         this.currentItemId = null;
         this.showIntervals = true;
         this.tooltipInstances = [];
-        this.expandedGroups = new Set(); // Pour gérer l'expansion des groupes
+        this.expandedGroups = new Set();
         
         this.initElements();
         this.attachEvents();
@@ -133,39 +132,34 @@ export class AnalysisComponent {
             if (!card) return;
 
             // Données principales
-            const totalTrials = Math.round(strategy.markov.totalTrials);
-            const totalCost = this.formatters.formatCost(strategy.totalCost);
+            const totalTrials = Math.round(strategy.totalTrials || 0);
+            const totalCost = this.formatters.formatCost(strategy.totalCost || 0);
             
-            // Récupérer les points du graphique
-            const points = strategy.markov.calculateTrialsProbabilities();
-            
-            // Trouver les essais correspondant à 5% et 95% de probabilité
+            // Intervalles
             let trials5 = null;
             let trials95 = null;
             
-            for (let i = 0; i < points.length; i++) {
-                const point = points[i];
-                
-                if (trials5 === null && point.y >= 5) {
-                    trials5 = point.x;
+            if (strategy.intervals?.total?.ci95) {
+                trials5 = Math.round(strategy.intervals.total.ci95.lower);
+                trials95 = Math.round(strategy.intervals.total.ci95.upper);
+            } else if (strategy.calculateTrialsProbabilities) {
+                // Calculer à partir de la courbe de probabilité
+                const points = strategy.calculateTrialsProbabilities();
+                for (let i = 0; i < points.length; i++) {
+                    const point = points[i];
+                    if (trials5 === null && point.y >= 5) {
+                        trials5 = point.x;
+                    }
+                    if (trials95 === null && point.y >= 95) {
+                        trials95 = point.x;
+                        break;
+                    }
                 }
-                
-                if (trials95 === null && point.y >= 95) {
-                    trials95 = point.x;
-                    break;
-                }
             }
             
-            if (trials95 === null && points.length > 0) {
-                trials95 = points[points.length - 1].x;
-            }
-            
-            if (trials5 === null && points.length > 0) {
-                trials5 = points[0].x;
-            }
-            
-            trials5 = Math.round(trials5 || totalTrials * 0.5);
-            trials95 = Math.round(trials95 || totalTrials * 2);
+            // Valeurs par défaut si pas trouvé
+            if (trials5 === null) trials5 = Math.round(totalTrials * 0.5);
+            if (trials95 === null) trials95 = Math.round(totalTrials * 2);
             
             // Reconstruire le contenu de la carte avec traductions
             card.innerHTML = `
@@ -249,38 +243,120 @@ export class AnalysisComponent {
         const isCustom = this.currentStrategy === 'custom';
         const itemData = await this.dataService.getItemById(this.currentItemId);
         
-        // Utiliser les waypoints étendus si disponibles
-        const fullWaypoints = strategy.extendedWaypoints || strategy.markov.waypoints;
-        const fullIntervals = strategy.markov.intervals.byLevel;
+        const path = strategy.path || [];
+        const fullPath = strategy.fullPath || [];
+        const extendedWaypoints = strategy.extendedWaypoints || strategy.waypoints || [];
 
-        // Nettoyer les anciens tooltips
         this.cleanupTooltips();
 
-        // Construire le chemin complet
         const pathSteps = [];
         
-        for (let level = 1; level <= this.endLevel; level++) {
-            const waypointValue = fullWaypoints[level - 1] || 0;
+        // Déterminer le niveau minimum à afficher en fonction de la possibilité de rétrogradation
+        let displayStartLevel = 1; // Par défaut, on affiche depuis le niveau 1
         
-            if (waypointValue > 0.01 || (level >= this.startLevel && level <= this.endLevel)) {
+        // Analyser si on peut rétrograder depuis le niveau de départ
+        if (this.startLevel > 0) {
+            let canRetrograde = false;
+            let minReachableLevel = this.startLevel;
+            
+            // Vérifier le type d'amélioration au niveau de départ
+            let startUpgradeType = "Pierre magique";
+            
+            if (isCustom && this.customScenario[this.startLevel]) {
+                startUpgradeType = this.customScenario[this.startLevel];
+            } else if (path[0]) {
+                startUpgradeType = path[0].name;
+            }
+            
+            // Si c'est une Pierre magique au départ, pas de rétrogradation possible
+            if (startUpgradeType === "Pierre magique") {
+                displayStartLevel = this.startLevel + 1;
+            } else {
+                // Analyser jusqu'où on peut rétrograder
+                for (let level = this.startLevel; level > 0; level--) {
+                    let upgradeType;
+                    let rate;
+                    
+                    if (isCustom && this.customScenario[level - 1]) {
+                        upgradeType = this.customScenario[level - 1];
+                    } else if (fullPath && fullPath[level - 1]) {
+                        upgradeType = fullPath[level - 1];
+                    } else {
+                        // Valeurs par défaut
+                        if (level <= 4) {
+                            upgradeType = "Parchemin de Guerre";
+                        } else if (level <= 9) {
+                            upgradeType = "Parchemin du Dieu Dragon";
+                        } else {
+                            upgradeType = "Pierre magique";
+                        }
+                    }
+                    
+                    // Calculer le taux
+                    const levelData = itemData[level.toString()] || { success_rate: 0 };
+                    rate = this.calculateSuccessRate(level, upgradeType, levelData.success_rate);
+                    
+                    // Si taux 100% ou Pierre magique, on ne peut pas descendre en dessous
+                    if (rate === 100 || upgradeType === "Pierre magique") {
+                        minReachableLevel = level;
+                        break;
+                    }
+                    
+                    minReachableLevel = level - 1;
+                }
+                
+                displayStartLevel = Math.max(1, minReachableLevel);
+            }
+        }
+        
+        // Construire les steps pour tous les niveaux à afficher
+        for (let level = displayStartLevel; level <= this.endLevel; level++) {
+            const pathIndex = level - this.startLevel - 1;
+            const pathData = pathIndex >= 0 ? path[pathIndex] : null;
+            const waypointValue = extendedWaypoints[level - 1] || 0;
+        
+            if (waypointValue > 0.01 || (level >= displayStartLevel && level <= this.endLevel)) {
                 const levelData = itemData[level.toString()] || { materials: {}, success_rate: 0, yang_cost: 0 };
             
                 let upgradeType;
                 let isEditable = false;
                 let customIndex = level - 1;
+                const isBelowStart = level <= this.startLevel;
+                const isTarget = level > this.startLevel && level <= this.endLevel;
+                const isRetrogradePath = level >= displayStartLevel && level <= this.startLevel;
 
-                // Déterminer le type d'amélioration
-                if (isCustom) {
+                // Déterminer le type d'amélioration et l'éditabilité
+                if (level <= 4) {
+                    upgradeType = "Parchemin de Guerre";
+                    isEditable = false;
+                } else if (level > 9) {
+                    upgradeType = "Pierre magique";
+                    isEditable = false;
+                } else if (isCustom) {
                     upgradeType = this.customScenario[customIndex] || "Parchemin de bénédiction";
-                    // Éditable uniquement pour les niveaux 5-9
-                    isEditable = level >= 5 && level <= 9;
+                    // Permettre l'édition pour TOUS les niveaux 5-9, même ceux en dessous du départ
+                    isEditable = true;
                 } else {
-                    if (strategy.fullPath && strategy.fullPath[customIndex]) {
-                        upgradeType = strategy.fullPath[customIndex];
-                    } else if (level > this.startLevel && level <= this.endLevel) {
-                        const pathIndex = level - this.startLevel - 1;
-                        upgradeType = strategy.path[pathIndex].name;
+                    // Stratégie optimale
+                    if (isRetrogradePath && level < this.startLevel) {
+                        // Pour les niveaux de rétrogradation, utiliser les valeurs appropriées
+                        if (fullPath && fullPath[level - 1]) {
+                            upgradeType = fullPath[level - 1];
+                        } else if (level === 5 || level === 6) {
+                            upgradeType = "Manuel de Forgeron";
+                        } else if (level === 7 || level === 8) {
+                            upgradeType = "Parchemin du Dieu Dragon";
+                        } else if (level === 9) {
+                            upgradeType = "Pierre magique";
+                        } else {
+                            upgradeType = "Parchemin de bénédiction";
+                        }
+                    } else if (pathData?.name) {
+                        upgradeType = pathData.name;
+                    } else if (fullPath[level - 1]) {
+                        upgradeType = fullPath[level - 1];
                     } else {
+                        // Valeurs par défaut
                         if (level <= 4) {
                             upgradeType = "Parchemin de Guerre";
                         } else if (level <= 9) {
@@ -291,24 +367,26 @@ export class AnalysisComponent {
                     }
                 }
 
-                const rate = this.calculateSuccessRate(level, upgradeType, levelData.success_rate);
-                const levelInterval = fullIntervals[level - 1] || {
-                    mean: waypointValue,
-                    std: Math.sqrt(waypointValue),
+                const rate = pathData?.rate || this.calculateSuccessRate(level, upgradeType, levelData.success_rate);
+                
+                const safeWaypoint = Math.max(waypointValue, 0.01);
+                
+                const levelInterval = strategy.intervals?.byLevel?.[level - 1] || {
+                    mean: safeWaypoint,
+                    std: Math.sqrt(safeWaypoint),
                     ci95: {
-                        lower: Math.max(0, waypointValue - 1.96 * Math.sqrt(waypointValue)),
-                        upper: waypointValue + 1.96 * Math.sqrt(waypointValue)
+                        lower: Math.max(0, safeWaypoint - 1.96 * Math.sqrt(safeWaypoint)),
+                        upper: safeWaypoint + 1.96 * Math.sqrt(safeWaypoint)
                     }
                 };
 
-                // Calculer les coûts
-                const yangCost = levelData.yang_cost || 0;
-                const materialCost = this.calculateMaterialCost(levelData.materials || {});
-                const upgradeCost = this.dataService.getUpgradeCost(upgradeType);
+                const yangCost = pathData?.yangCost || levelData.yang_cost || 0;
+                const materialCost = pathData?.materialCost || await this.calculateMaterialCost(levelData.materials || {});
+                const upgradeCost = pathData?.upgradeCost || this.dataService.getUpgradeCost(upgradeType);
                 
                 const yangCostInMillions = yangCost / 1000000;
                 const totalLevelCostPerTrial = yangCostInMillions + materialCost + upgradeCost;
-                const avgCost = totalLevelCostPerTrial * waypointValue;
+                const avgCost = totalLevelCostPerTrial * safeWaypoint;
 
                 const itemInterval = {
                     lower: Math.ceil(levelInterval.ci95.lower),
@@ -319,11 +397,8 @@ export class AnalysisComponent {
                     upper: totalLevelCostPerTrial * levelInterval.ci95.upper
                 };
 
-                const isBelowStart = level <= this.startLevel;
-                const isTarget = level > this.startLevel && level <= this.endLevel;
                 const isMagicStoneOnly = level > 9;
 
-                // Récupérer les matériaux
                 const materials = await this.getMaterialsForLevel(levelData.materials || {}, waypointValue);
 
                 pathSteps.push({
@@ -331,11 +406,14 @@ export class AnalysisComponent {
                     upgradeType,
                     rate,
                     waypoint: waypointValue,
+                    safeWaypoint: safeWaypoint,
                     isEditable,
                     customIndex,
                     isBelowStart,
                     isTarget,
+                    isRetrogradePath,
                     isMagicStoneOnly,
+                    isStartLevel: level === this.startLevel && this.startLevel > 0,  // IMPORTANT
                     levelInterval,
                     itemInterval,
                     costInterval,
@@ -352,15 +430,81 @@ export class AnalysisComponent {
         }
 
         // Créer l'affichage
-        let pathHtml = '';
-        
-        if (this.endLevel > 20) {
-            pathHtml = this.createGroupedPathDisplay(pathSteps, isCustom);
-        } else {
-            pathHtml = '<div class="upgrade-path">';
-            pathSteps.forEach(step => {
+        let pathHtml = '<div class="upgrade-path">';
+        let magicStoneSeparatorAdded = false;
+
+        // Afficher les niveaux jusqu'à 19 normalement
+        const displayLimit = Math.min(this.endLevel, 19);
+
+        pathSteps.forEach(step => {
+            if (step.level <= displayLimit) {
+                // Ajouter le séparateur AVANT le niveau 10 si pas encore fait
+                if (!magicStoneSeparatorAdded && step.level === 10) {
+                    pathHtml += `
+                        <div class="magic-stone-separator">
+                            <div class="magic-stone-warning" title="${this.translator.t('magicStoneRestriction') || 'Restriction : utilisation de la Pierre magique à partir de +10 par absence d\'autres données statistiques'}"></div>
+                        </div>
+                    `;
+                    magicStoneSeparatorAdded = true;
+                }
+                
                 pathHtml += this.createPathStepHtml(step, isCustom);
+            }
+        });
+        
+        if (this.endLevel > 19) {
+            // Récupérer les stats pour les niveaux 10-19 pour la loop
+            const loopSteps = pathSteps.filter(s => s.level >= 10 && s.level <= 19);
+            
+            pathHtml += `</div><div class="upgrade-loop-section">
+                <div class="loop-preview">`;
+            
+            // Afficher un aperçu des niveaux 10-19
+            loopSteps.forEach(step => {
+                const miniStep = this.createMiniPathStepHtml(step);
+                pathHtml += miniStep;
             });
+            
+            pathHtml += `</div>
+                <div class="loop-indicator">
+                    <div class="loop-arrow">🔄</div>
+                    <div class="loop-text">
+                        ${this.translator.t('repeatPattern') || 'Répétition du motif'}<br>
+                        +20 → +${this.endLevel}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Résumé des totaux pour les niveaux > 19 -->
+            <div class="loop-summary">`;
+            
+            // Calculer les totaux pour chaque tranche de 10 niveaux
+            for (let rangeStart = 20; rangeStart <= this.endLevel; rangeStart += 10) {
+                const rangeEnd = Math.min(rangeStart + 9, this.endLevel);
+                let rangeTotalTrials = 0;
+                let rangeTotalCost = 0;
+                
+                for (let level = rangeStart; level <= rangeEnd; level++) {
+                    const stepData = pathSteps.find(s => s.level === level);
+                    if (stepData) {
+                        rangeTotalTrials += stepData.safeWaypoint;
+                        rangeTotalCost += stepData.avgCost;
+                    }
+                }
+                
+                pathHtml += `
+                    <div class="range-summary">
+                        <span class="range-label">+${rangeStart} → +${rangeEnd}:</span>
+                        <span class="range-stats">
+                            ${Math.round(rangeTotalTrials)} ${this.translator.t('trials')} • 
+                            ${this.formatters.formatCost(rangeTotalCost)}
+                        </span>
+                    </div>
+                `;
+            }
+            
+            pathHtml += `</div>`;
+        } else {
             pathHtml += '</div>';
         }
 
@@ -385,6 +529,26 @@ export class AnalysisComponent {
         setTimeout(() => this.updateStrategyConnection(), 100);
     }
 
+    createMiniPathStepHtml(step) {
+        // Pour les niveaux > 9, l'objet d'amélioration est toujours Pierre magique
+        const upgradeType = step.level > 9 ? "Pierre magique" : step.upgradeType;
+        const upgradeItemImage = this.dataService.getUpgradeItemImagePath(upgradeType);
+        
+        return `
+            <div class="path-step mini" data-level="${step.level}">
+                <div class="step-level">+${step.level}</div>
+                <img src="${upgradeItemImage}" 
+                    class="step-icon" 
+                    alt="${upgradeType}"
+                    onerror="this.style.display='none'">
+                <div class="step-stats">
+                    <span class="step-rate">${step.rate}%</span>
+                    <span class="step-trials">${step.waypoint.toFixed(1)}x</span>
+                </div>
+            </div>
+        `;
+    }
+
     /**
      * Crée un affichage groupé pour les chemins très longs
      */
@@ -401,7 +565,7 @@ export class AnalysisComponent {
         
         // Grouper les niveaux restants par dizaines
         const groupSize = 10;
-        let currentGroupStart = individualLimit + 1; // Commencer à 21
+        let currentGroupStart = individualLimit + 1;
         
         while (currentGroupStart <= this.endLevel) {
             const groupEnd = Math.min(currentGroupStart + groupSize - 1, this.endLevel);
@@ -418,8 +582,8 @@ export class AnalysisComponent {
                 const groupMaterials = new Map();
                 
                 groupSteps.forEach(step => {
-                    totalCost += step.avgCost;
-                    totalTrials += step.waypoint;
+                    totalCost += step.avgCost || 0; // Éviter NaN
+                    totalTrials += Math.max(step.waypoint, 0.01); // Éviter 0
                     
                     // Agréger les matériaux
                     step.materials.forEach(mat => {
@@ -499,19 +663,22 @@ export class AnalysisComponent {
         const upgradeOptions = this.dataService.getUpgradeOptions();
         let options = [];
         
-        if (step.level <= 4) {
-            options = ["Parchemin de Guerre"];
-        } else if (step.level > 9) {
+        // IMPORTANT : Permettre toutes les options pour tous les niveaux 1-9
+        if (step.level > 9) {
             options = ["Pierre magique"];
+        } else if (step.level <= 4) {
+            options = ["Parchemin de Guerre"];
         } else {
+            // Tous les niveaux 5-9 peuvent utiliser tous les parchemins
             options = ["Parchemin de bénédiction", "Manuel de Forgeron", "Parchemin du Dieu Dragon", "Pierre magique"];
         }
         
         let stepClass = 'path-step';
-        if (step.isBelowStart) stepClass += ' below-start';
+        if (step.isStartLevel) stepClass += ' start-level';  // IMPORTANT : Vérifiez que cette ligne est bien là !
+        //if (step.isBelowStart) stepClass += ' below-start';
+        if (step.isRetrogradePath && step.level < this.startLevel) stepClass += ' retrograde-path';
         if (step.isTarget) stepClass += ' target-level';
         if (step.isEditable) stepClass += ' editable';
-        if (step.isMagicStoneOnly) stepClass += ' magic-stone-only';
         
         // Créer la liste des matériaux requis avec images
         const materialsHtml = step.materials.length > 0 ? `
@@ -534,10 +701,15 @@ export class AnalysisComponent {
             </div>
         ` : '';
         
+        // Afficher le coût total moyen
+        const avgCostDisplay = `
+            <div class="step-cost">${this.formatters.formatCost(step.avgCost)}</div>
+        `;
+        
         // Obtenir l'image de l'objet d'amélioration
         const upgradeItemImage = this.dataService.getUpgradeItemImagePath(step.upgradeType);
         const upgradeItemDisplayName = this.dataService.getUpgradeItemName(step.upgradeType);
-        
+
         if (step.isEditable && step.customIndex >= 0) {
             if (this.customScenario[step.customIndex] !== step.upgradeType) {
                 this.customScenario[step.customIndex] = step.upgradeType;
@@ -564,9 +736,9 @@ export class AnalysisComponent {
                         </select>
                         <div class="step-stats">
                             <div class="step-rate">${step.rate}%</div>
-                            <div class="step-trials">${step.waypoint.toFixed(1)}x</div>
+                            <div class="step-trials">${Math.max(step.waypoint, 0.01).toFixed(1)}x</div>
                         </div>
-                        <div class="step-cost">${this.formatters.formatCost(step.avgCost)}</div>
+                        ${avgCostDisplay}
                         ${costBreakdown}
                     </div>
                     ${materialsHtml}
@@ -585,9 +757,9 @@ export class AnalysisComponent {
                         <div class="step-name">${upgradeItemDisplayName}</div>
                         <div class="step-stats">
                             <div class="step-rate">${step.rate}%</div>
-                            <div class="step-trials">${step.waypoint.toFixed(1)}x</div>
+                            <div class="step-trials">${Math.max(step.waypoint, 0.01).toFixed(1)}x</div>
                         </div>
-                        <div class="step-cost">${this.formatters.formatCost(step.avgCost)}</div>
+                        ${avgCostDisplay}
                         ${costBreakdown}
                     </div>
                     ${materialsHtml}
@@ -600,19 +772,11 @@ export class AnalysisComponent {
      * Met à jour le chemin personnalisé
      */
     updateCustomPath() {
-        // Récupérer les nouvelles valeurs
+        // Récupérer les nouvelles valeurs pour TOUS les niveaux
         this.elements.upgradePath.querySelectorAll('.step-select').forEach(select => {
             const index = parseInt(select.dataset.level);
             if (index >= 0) {
-                const level = index + 1;
-                if (level >= 5 && level <= 9) {
-                    // Permettre toutes les options pour les niveaux 5-9
-                    this.customScenario[index] = select.value;
-                } else if (level > 9) {
-                    // Forcer Pierre magique pour les niveaux > 9
-                    this.customScenario[index] = "Pierre magique";
-                    select.value = "Pierre magique";
-                }
+                this.customScenario[index] = select.value;
             }
         });
 
@@ -630,6 +794,7 @@ export class AnalysisComponent {
      */
     async getMaterialsForLevel(materials, waypoint) {
         const result = [];
+        const safeWaypoint = Math.max(waypoint, 0.01);
         for (const [id, info] of Object.entries(materials)) {
             const name = this.translator.getMaterialName(id);
             result.push({
@@ -637,7 +802,7 @@ export class AnalysisComponent {
                 name: name,
                 imgName: info.img_name,
                 qty: info.qty,
-                avgQty: Math.ceil(info.qty * waypoint),
+                avgQty: Math.ceil(info.qty * safeWaypoint),
                 imgPath: this.dataService.getItemImagePath(id)
             });
         }
@@ -702,11 +867,11 @@ export class AnalysisComponent {
                 
                 const tooltipContent = `
                     <div class="tooltip-title">${this.translator.t('level')} +${step.level}</div>
-                    ${step.isBelowStart ? `<div class="tooltip-warning">⚠️ ${this.translator.t('belowStartLevel')}</div>` : ''}
+                    ${step.isRetrogradePath && step.level < this.startLevel ? `<div class="tooltip-info">📊 ${this.translator.t('retrogradePossible')}</div>` : ''}
                     ${step.isMagicStoneOnly ? `<div class="tooltip-warning">✨ ${this.translator.t('magicStoneRecommended')}</div>` : ''}
                     <div class="tooltip-row">
                         <span>${this.translator.t('avgTrials')}:</span>
-                        <span>${step.waypoint.toFixed(1)}</span>
+                        <span>${Math.max(step.waypoint, 0.01).toFixed(1)}</span>
                     </div>
                     <div class="tooltip-row">
                         <span>${this.translator.t('avgCost')}:</span>
@@ -777,31 +942,38 @@ export class AnalysisComponent {
     }
 
     /**
-     * Helpers
+     * Calcule le taux de succès selon la nouvelle mécanique
+     * IMPORTANT : Pierre magique et Parchemin de bénédiction utilisent TOUJOURS le taux de l'item
      */
     calculateSuccessRate(level, upgradeType, baseRate) {
-        switch (upgradeType) {
-            case "Parchemin de bénédiction":
-            case "Pierre magique":
-                return baseRate || 0;
-            case "Manuel de Forgeron":
+        const itemId = this.dataService.getUpgradeItemId(upgradeType);
+        
+        switch (itemId) {
+            case 25040: // BLESSING_SCROLL
+            case 25041: // MAGIC_STONE
+                // Pour ces items, TOUJOURS utiliser le taux de base de l'item
+                return baseRate || 1;
+            case 39007: // BLACKSMITH_MANUAL
                 if (level <= 9) {
-                    return [100, 100, 90, 80, 70, 60, 50, 30, 20][level - 1] || 0;
+                    return [100, 100, 100, 100, 70, 60, 50, 30, 20][level - 1] || 20;
                 }
-                return baseRate || 0;
-            case "Parchemin du Dieu Dragon":
+                return baseRate || 1;
+            case 39022: // DRAGON_GOD_SCROLL
                 if (level <= 9) {
-                    return [100, 75, 65, 55, 45, 40, 35, 25, 20][level - 1] || 0;
+                    return [100, 100, 100, 100, 45, 40, 35, 25, 20][level - 1] || 20;
                 }
-                return baseRate || 0;
-            case "Parchemin de Guerre":
-                return 100;
+                return baseRate || 1;
+            case 39014: // WAR_SCROLL
+                if (level <= 4) {
+                    return 100;
+                }
+                return baseRate || 1;
             default:
-                return 0;
+                return baseRate || 1;
         }
     }
 
-    calculateMaterialCost(materials) {
+    async calculateMaterialCost(materials) {
         let cost = 0;
         Object.entries(materials).forEach(([id, info]) => {
             cost += this.dataService.getMaterialCost(id) * (info.qty || 0);
@@ -814,23 +986,34 @@ export class AnalysisComponent {
      */
     async displayRequiredItems(strategy) {
         const items = {};
-        const fullWaypoints = strategy.extendedWaypoints || strategy.markov.waypoints;
+        const path = strategy.path || [];
+        const fullPath = strategy.fullPath || [];
+        const extendedWaypoints = strategy.extendedWaypoints || strategy.waypoints || [];
         
-        for (let level = 1; level <= this.endLevel; level++) {
-            const waypointValue = fullWaypoints[level - 1] || 0;
+        // Commencer au niveau suivant le niveau de départ (startLevel + 1)
+        const startDisplayLevel = this.startLevel + 1;
+        
+        for (let level = startDisplayLevel; level <= this.endLevel; level++) {
+            const pathIndex = level - startDisplayLevel;
+            const pathData = path[pathIndex];
+            const waypointValue = pathData?.expectedTrials || extendedWaypoints[level - 1] || 0;
             
             if (waypointValue > 0.01) {
                 let upgradeType;
                 
-                if (this.currentStrategy === 'custom') {
+                // Forcer Pierre magique pour les niveaux > 9
+                if (level > 9) {
+                    upgradeType = "Pierre magique";
+                } else if (this.currentStrategy === 'custom') {
                     upgradeType = this.customScenario[level - 1] || "Parchemin de bénédiction";
                 } else {
-                    if (strategy.fullPath && strategy.fullPath[level - 1]) {
-                        upgradeType = strategy.fullPath[level - 1];
-                    } else if (level > this.startLevel && level <= this.endLevel) {
-                        const pathIndex = level - this.startLevel - 1;
-                        upgradeType = strategy.path[pathIndex].name;
+                    // Utiliser les données disponibles
+                    if (pathData?.name) {
+                        upgradeType = pathData.name;
+                    } else if (fullPath[level - 1]) {
+                        upgradeType = fullPath[level - 1];
                     } else {
+                        // Par défaut
                         if (level <= 4) {
                             upgradeType = "Parchemin de Guerre";
                         } else if (level <= 9) {
@@ -851,10 +1034,11 @@ export class AnalysisComponent {
                     };
                 }
                 
-                const levelInterval = strategy.markov.intervals.byLevel[level - 1];
-                items[upgradeType].quantity += Math.round(waypointValue);
+                const levelInterval = strategy.intervals?.byLevel?.[level - 1];
+                const safeWaypoint = Math.max(waypointValue, 0.01);
+                items[upgradeType].quantity += Math.round(safeWaypoint);
                 if (this.showIntervals && levelInterval) {
-                    items[upgradeType].quantityLower += Math.ceil(levelInterval.ci95.lower);
+                    items[upgradeType].quantityLower += Math.ceil(Math.max(levelInterval.ci95.lower, 0.01));
                     items[upgradeType].quantityUpper += Math.ceil(levelInterval.ci95.upper);
                 }
             }
@@ -879,13 +1063,19 @@ export class AnalysisComponent {
     async displayRequiredMaterials(strategy) {
         const itemData = await this.dataService.getItemById(this.currentItemId);
         const materials = {};
-        const fullWaypoints = strategy.extendedWaypoints || strategy.markov.waypoints;
+        const path = strategy.path || [];
+        const extendedWaypoints = strategy.extendedWaypoints || strategy.waypoints || [];
         
-        for (let level = 1; level <= this.endLevel; level++) {
+        // Commencer au niveau suivant le niveau de départ (startLevel + 1)
+        const startDisplayLevel = this.startLevel + 1;
+        
+        for (let level = startDisplayLevel; level <= this.endLevel; level++) {
             const levelData = itemData[level.toString()];
-            const waypointValue = fullWaypoints[level - 1] || 0;
+            const pathIndex = level - startDisplayLevel;
+            const pathData = path[pathIndex];
+            const waypointValue = pathData?.expectedTrials || extendedWaypoints[level - 1] || 0;
             
-            if (levelData?.materials && waypointValue > 0.01) {
+            if (levelData?.materials && waypointValue > 0.01 && level > this.startLevel) {
                 Object.entries(levelData.materials).forEach(([id, info]) => {
                     if (!materials[id]) {
                         materials[id] = {
@@ -896,7 +1086,7 @@ export class AnalysisComponent {
                             unitCost: this.dataService.getMaterialCost(id)
                         };
                     }
-                    materials[id].quantity += info.qty * Math.round(waypointValue);
+                    materials[id].quantity += info.qty * Math.round(Math.max(waypointValue, 0.01));
                 });
             }
         }

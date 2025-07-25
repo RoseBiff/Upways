@@ -56,11 +56,6 @@ export const translations = {
         xAxisLabel: "Nombre de tentatives",
         yAxisLabel: "Probabilité de succès (%)",
         probabilityAt: "Probabilité à",
-        // Dans chaque langue, ajoutez :
-        chartDetails: "Détails de probabilité",
-        ratio: "Ratio",
-        detailNote: "Les ratios sont calculés par rapport au nombre moyen d'essais",
-        estimatedCost: "Coût estimé",
         
         // Tooltips et décomposition des coûts
         trialInterval: "Essais",
@@ -71,12 +66,15 @@ export const translations = {
         itemsRequired: "Objets requis pour ce niveau",
         avgItemsRequired: "Nombre moyen d'objets nécessaires",
         belowStartLevel: "Niveau en dessous du départ",
-        magicStoneRecommended: "Pierre magique recommandée au-delà de +9",
+        magicStoneRecommended: "Restriction : utilisation de la Pierre Magique par absence d'autres données statistiques",
         costBreakdown: "Décomposition du coût",
         yangCost: "Coût en yang",
         materialCost: "Coût matériaux",
         upgradeCost: "Coût objet d'amélioration",
         totalCostPerTrial: "Coût total par essai",
+
+        magicStoneRestriction: "Restriction : utilisation de la Pierre magique à partir de +10 par absence d'autres données statistiques",
+        repeatPattern: "Répétition du motif",
         
         // Statistiques
         totalTrials: "Essais moyens",
@@ -106,6 +104,8 @@ export const translations = {
         noStrategySelected: "Aucune stratégie sélectionnée",
         exportFailed: "Échec de l'export",
         customStrategyError: "Erreur lors du calcul de la stratégie personnalisée",
+        invalidItem: "Cet objet ne peut pas être amélioré",
+        maxLevelExceeded: "Niveau maximum dépassé (max: {max})",
         
         // Modale de partage
         shareResultTitle: "Résultat de l'analyse",
@@ -118,7 +118,7 @@ export const translations = {
         
         // Export
         priceConfiguration: "Configuration des prix utilisés",
-        forcedMagicStone: "Pierre magique recommandée au-delà de +9",
+        forcedMagicStone: "Pierre magique forcée au-delà de +9",
         noMaterialsRequired: "Aucun matériau requis",
         
         // Reset
@@ -191,7 +191,7 @@ export const translations = {
         itemsRequired: "Items required for this level",
         avgItemsRequired: "Average number of items needed",
         belowStartLevel: "Level below start",
-        magicStoneRecommended: "Magic stone recommended beyond +9",
+        magicStoneRecommended: "", // A completer
         costBreakdown: "Cost breakdown",
         yangCost: "Yang cost",
         materialCost: "Materials cost",
@@ -219,6 +219,8 @@ export const translations = {
         noStrategySelected: "No strategy selected",
         exportFailed: "Export failed",
         customStrategyError: "Error calculating custom strategy",
+        invalidItem: "This item cannot be upgraded",
+        maxLevelExceeded: "Maximum level exceeded (max: {max})",
         
         // Share modal
         shareResultTitle: "Analysis Result",
@@ -231,7 +233,7 @@ export const translations = {
         
         // Export
         priceConfiguration: "Price configuration used",
-        forcedMagicStone: "Magic stone recommended beyond +9",
+        forcedMagicStone: "Magic stone forced beyond +9",
         noMaterialsRequired: "No materials required",
         
         // Reset
@@ -304,7 +306,7 @@ export const translations = {
         itemsRequired: "Obiecte necesare pentru acest nivel",
         avgItemsRequired: "Număr mediu de obiecte necesare",
         belowStartLevel: "Nivel sub start",
-        magicStoneRecommended: "Piatră magică recomandată peste +9",
+        magicStoneRecommended: "", // A completer
         costBreakdown: "Defalcare cost",
         yangCost: "Cost yang",
         materialCost: "Cost materiale",
@@ -332,6 +334,8 @@ export const translations = {
         noStrategySelected: "Nicio strategie selectată",
         exportFailed: "Export eșuat",
         customStrategyError: "Eroare la calcularea strategiei personalizate",
+        invalidItem: "Acest obiect nu poate fi îmbunătățit",
+        maxLevelExceeded: "Nivel maxim depășit (max: {max})",
         
         // Modal partajare
         shareResultTitle: "Rezultatul analizei",
@@ -344,7 +348,7 @@ export const translations = {
         
         // Export
         priceConfiguration: "Configurația prețurilor utilizate",
-        forcedMagicStone: "Piatră magică recomandată peste +9",
+        forcedMagicStone: "Piatră magică forțată peste +9",
         noMaterialsRequired: "Nu sunt necesare materiale",
         
         // Reset
@@ -417,7 +421,7 @@ export const translations = {
         itemsRequired: "Bu seviye için gerekli eşyalar",
         avgItemsRequired: "Ortalama gerekli eşya sayısı",
         belowStartLevel: "Başlangıç altı seviye",
-        magicStoneRecommended: "+9'dan sonra sihirli taş önerilir",
+        magicStoneRecommended: "", // A completer
         costBreakdown: "Maliyet dökümü",
         yangCost: "Yang maliyeti",
         materialCost: "Malzeme maliyeti",
@@ -445,6 +449,8 @@ export const translations = {
         noStrategySelected: "Strateji seçilmedi",
         exportFailed: "Dışa aktarma başarısız",
         customStrategyError: "Özel strateji hesaplama hatası",
+        invalidItem: "Bu eşya yükseltilemez",
+        maxLevelExceeded: "Maksimum seviye aşıldı (maks: {max})",
         
         // Paylaşım modali
         shareResultTitle: "Analiz Sonucu",
@@ -457,7 +463,7 @@ export const translations = {
         
         // Dışa aktarma
         priceConfiguration: "Kullanılan fiyat yapılandırması",
-        forcedMagicStone: "+9'dan sonra sihirli taş önerilir",
+        forcedMagicStone: "+9'dan sonra sihirli taş zorunlu",
         noMaterialsRequired: "Malzeme gerekmiyor",
         
         // Sıfırlama
@@ -530,7 +536,7 @@ export const translations = {
         itemsRequired: "Für diese Stufe erforderliche Gegenstände",
         avgItemsRequired: "Durchschnittliche Anzahl benötigter Gegenstände",
         belowStartLevel: "Stufe unter Start",
-        magicStoneRecommended: "Magischer Stein empfohlen über +9",
+        magicStoneRecommended: "", // A completer
         costBreakdown: "Kostenaufschlüsselung",
         yangCost: "Yang-Kosten",
         materialCost: "Materialkosten",
@@ -558,6 +564,8 @@ export const translations = {
         noStrategySelected: "Keine Strategie ausgewählt",
         exportFailed: "Export fehlgeschlagen",
         customStrategyError: "Fehler bei der Berechnung der benutzerdefinierten Strategie",
+        invalidItem: "Dieser Gegenstand kann nicht verbessert werden",
+        maxLevelExceeded: "Maximale Stufe überschritten (max: {max})",
         
         // Teilen-Modal
         shareResultTitle: "Analyseergebnis",
@@ -570,7 +578,7 @@ export const translations = {
         
         // Export
         priceConfiguration: "Verwendete Preiskonfiguration",
-        forcedMagicStone: "Magischer Stein empfohlen über +9",
+        forcedMagicStone: "Magischer Stein erzwungen über +9",
         noMaterialsRequired: "Keine Materialien erforderlich",
         
         // Zurücksetzen

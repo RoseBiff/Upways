@@ -7,16 +7,13 @@ import { SearchComponent } from './components/SearchComponent.js';
 import { ConfigComponent } from './components/ConfigComponent.js';
 import { AnalysisComponent } from './components/AnalysisComponent.js';
 import { ChartComponent } from './components/ChartComponent.js';
-import { SimulationComponent } from './components/SimulationComponent.js';
 
 import { Translator } from './utils/translator.js';
 import { Formatters } from './utils/formatters.js';
-import { Calculator } from './utils/calculations.js';
 import { UIState, showToast, confirm } from './utils/ui-helpers.js';
 
 /**
- * Application principale Upways - Version 3.1
- * Réinitialisation de l'onglet analyse lors du changement d'objet
+ * Application principale Upways - Version avec nouvelle mécanique
  */
 class UpwaysApp {
     constructor() {
@@ -24,7 +21,6 @@ class UpwaysApp {
         this.dataService = new DataService();
         this.translator = new Translator(this.dataService);
         this.formatters = new Formatters(this.translator);
-        this.calculator = new Calculator(this.dataService);
         this.strategyService = new StrategyService(this.dataService);
         this.exportService = new ExportService(this.formatters, this.translator);
         this.uiState = new UIState();
@@ -39,7 +35,13 @@ class UpwaysApp {
         this.currentItemId = null;
         this.currentItemName = null;
         this.strategies = {};
-        this.showIntervals = true;
+        
+        // Configuration
+        this.config = {
+            showIntervals: true,
+            maxLevel: 200,
+            enableDebugLogs: false
+        };
         
         // SEO multilingue
         this.seoData = {
@@ -75,23 +77,19 @@ class UpwaysApp {
     }
 
     async init() {
-        // Gérer les paramètres d'URL pour la langue
         this.handleUrlParams();
         
         try {
-            // Charger uniquement les paramètres sauvegardés
             this.dataService.loadSavedSettings();
-            
-            // Initialiser les composants
             this.initComponents();
-            
-            // Attacher les événements globaux
             this.attachGlobalEvents();
-            
-            // Mettre à jour la langue et le SEO
             this.updateLanguage();
             
-            console.log('Application initialized with optimized loading');
+            console.log('Application initialized with new upgrade mechanics');
+            
+            if (this.config.enableDebugLogs) {
+                console.log('Debug mode enabled');
+            }
         } catch (error) {
             console.error('Initialization error:', error);
             this.uiState.showToast('error', this.translator.t('errorAnalysis'));
@@ -104,6 +102,120 @@ class UpwaysApp {
         
         if (lang && this.translator.isLanguageAvailable(lang)) {
             this.translator.setLanguage(lang);
+        }
+        
+        // Activer le mode debug si présent dans l'URL
+        if (urlParams.get('debug') === 'true') {
+            this.config.enableDebugLogs = true;
+        }
+    }
+
+    initComponents() {
+        // Composant de recherche
+        this.searchComponent = new SearchComponent(
+            this.dataService,
+            this.translator,
+            (itemId, itemName) => this.onItemSelected(itemId, itemName)
+        );
+
+        // Composant de configuration
+        this.configComponent = new ConfigComponent(
+            this.dataService,
+            this.translator,
+            (change) => this.onConfigChanged(change)
+        );
+
+        // Composant d'analyse
+        this.analysisComponent = new AnalysisComponent(
+            this.dataService,
+            this.translator,
+            this.formatters,
+            (change) => this.onStrategyChanged(change)
+        );
+
+        // Composant de graphique
+        this.chartComponent = new ChartComponent(this.translator);
+        
+        // Configuration initiale
+        this.analysisComponent.setShowIntervals(this.config.showIntervals);
+    }
+
+    attachGlobalEvents() {
+        // Sélecteur de langue
+        this.initCustomLanguageSelector();
+
+        // Navigation
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+            btn.addEventListener('click', () => this.switchTab(btn.dataset.tab));
+        });
+
+        // Bouton d'analyse
+        document.getElementById('analyzeBtn').addEventListener('click', () => this.runAnalysis());
+
+        // Export
+        document.getElementById('exportBtn').addEventListener('click', () => this.exportResults());
+
+        // Reset
+        document.getElementById('resetBtn').addEventListener('click', () => this.resetAll());
+    }
+
+    initCustomLanguageSelector() {
+        const selector = document.getElementById('languageSelector');
+        const button = document.getElementById('languageSelectorButton');
+        const dropdown = document.getElementById('languageDropdown');
+        const options = dropdown.querySelectorAll('.language-option');
+
+        button.addEventListener('click', (e) => {
+            e.stopPropagation();
+            selector.classList.toggle('open');
+        });
+
+        options.forEach(option => {
+            option.addEventListener('click', async () => {
+                const lang = option.dataset.lang;
+                
+                this.uiState.showLoading(this.translator.t('calculating'));
+                
+                try {
+                    await this.translator.setLanguage(lang);
+                    this.updateLanguage();
+                } catch (error) {
+                    console.error('Error changing language:', error);
+                    this.uiState.showToast('error', 'Error changing language');
+                } finally {
+                    this.uiState.hideLoading();
+                }
+                
+                selector.classList.remove('open');
+            });
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!selector.contains(e.target)) {
+                selector.classList.remove('open');
+            }
+        });
+    }
+
+    updateLanguageSelector() {
+        const lang = this.translator.getLanguage();
+        const button = document.getElementById('languageSelectorButton');
+        const dropdown = document.getElementById('languageDropdown');
+        
+        const selectedOption = dropdown.querySelector(`[data-lang="${lang}"]`);
+        if (selectedOption) {
+            const flagSvg = selectedOption.querySelector('.language-flag').cloneNode(true);
+            const languageName = selectedOption.querySelector('span').textContent;
+            
+            const buttonFlag = button.querySelector('.language-flag');
+            const buttonName = button.querySelector('.language-name');
+            
+            buttonFlag.parentNode.replaceChild(flagSvg, buttonFlag);
+            buttonName.textContent = languageName;
+            
+            dropdown.querySelectorAll('.language-option').forEach(opt => {
+                opt.classList.toggle('active', opt.dataset.lang === lang);
+            });
         }
     }
 
@@ -136,144 +248,19 @@ class UpwaysApp {
         }
     }
 
-    initComponents() {
-    // Composant de recherche
-    this.searchComponent = new SearchComponent(
-        this.dataService,
-        this.translator,
-        (itemId, itemName) => this.onItemSelected(itemId, itemName)
-    );
-
-    // Composant de configuration
-    this.configComponent = new ConfigComponent(
-        this.dataService,
-        this.translator,
-        (change) => this.onConfigChanged(change)
-    );
-
-    // Composant d'analyse
-    this.analysisComponent = new AnalysisComponent(
-        this.dataService,
-        this.translator,
-        this.formatters,
-        (change) => this.onStrategyChanged(change)
-    );
-
-    // Composant de graphique
-    this.chartComponent = new ChartComponent(this.translator);
-    
-    // Configurer l'affichage des intervalles
-    this.analysisComponent.setShowIntervals(this.showIntervals);
-
-    // ========== AJOUTER ICI LE COMPOSANT DE SIMULATION ==========
-    
-    // Créer le composant de simulation
-    this.simulationComponent = new SimulationComponent(this.dataService);
-    
-    // Créer le bouton de simulation (mais ne pas l'afficher tout de suite)
-    this.createSimulationButton();
-}
-
-    attachGlobalEvents() {
-        // Sélecteur de langue personnalisé
-        this.initCustomLanguageSelector();
-
-        // Navigation
-        document.querySelectorAll('.nav-btn').forEach(btn => {
-            btn.addEventListener('click', () => this.switchTab(btn.dataset.tab));
-        });
-
-        // Bouton d'analyse
-        document.getElementById('analyzeBtn').addEventListener('click', () => this.runAnalysis());
-
-        // Export
-        document.getElementById('exportBtn').addEventListener('click', () => this.exportResults());
-
-        // Reset
-        document.getElementById('resetBtn').addEventListener('click', () => this.resetAll());
-    }
-
-    /**
-     * Initialise le sélecteur de langue personnalisé
-     */
-    initCustomLanguageSelector() {
-        const selector = document.getElementById('languageSelector');
-        const button = document.getElementById('languageSelectorButton');
-        const dropdown = document.getElementById('languageDropdown');
-        const options = dropdown.querySelectorAll('.language-option');
-
-        // Ouvrir/fermer le dropdown
-        button.addEventListener('click', (e) => {
-            e.stopPropagation();
-            selector.classList.toggle('open');
-        });
-
-        // Sélectionner une langue
-        options.forEach(option => {
-            option.addEventListener('click', async () => {
-                const lang = option.dataset.lang;
-                
-                // Attendre le changement de langue
-                this.uiState.showLoading(this.translator.t('calculating'));
-                
-                try {
-                    await this.translator.setLanguage(lang);
-                    this.updateLanguage();
-                } catch (error) {
-                    console.error('Error changing language:', error);
-                    this.uiState.showToast('error', 'Error changing language');
-                } finally {
-                    this.uiState.hideLoading();
-                }
-                
-                selector.classList.remove('open');
-            });
-        });
-
-        // Fermer le dropdown en cliquant ailleurs
-        document.addEventListener('click', (e) => {
-            if (!selector.contains(e.target)) {
-                selector.classList.remove('open');
-            }
-        });
-    }
-
-    /**
-     * Met à jour l'affichage du sélecteur de langue personnalisé
-     */
-    updateLanguageSelector() {
-        const lang = this.translator.getLanguage();
-        const button = document.getElementById('languageSelectorButton');
-        const dropdown = document.getElementById('languageDropdown');
-        
-        // Obtenir les informations de la langue sélectionnée
-        const selectedOption = dropdown.querySelector(`[data-lang="${lang}"]`);
-        if (selectedOption) {
-            // Copier le drapeau SVG
-            const flagSvg = selectedOption.querySelector('.language-flag').cloneNode(true);
-            const languageName = selectedOption.querySelector('span').textContent;
-            
-            // Mettre à jour le bouton
-            const buttonFlag = button.querySelector('.language-flag');
-            const buttonName = button.querySelector('.language-name');
-            
-            buttonFlag.parentNode.replaceChild(flagSvg, buttonFlag);
-            buttonName.textContent = languageName;
-            
-            // Marquer l'option active
-            dropdown.querySelectorAll('.language-option').forEach(opt => {
-                opt.classList.toggle('active', opt.dataset.lang === lang);
-            });
-        }
-    }
-
     /**
      * Gestion des événements
      */
     async onItemSelected(itemId, itemName) {
-        // Si on change d'objet et qu'une analyse avait été faite
+        // Valider que l'item peut être amélioré
+        const validation = await this.dataService.validateUpgradeRange(itemId, 0, 9);
+        if (!validation.valid) {
+            this.uiState.showToast('error', this.translator.t('invalidItem'));
+            return;
+        }
+        
+        // Réinitialiser si changement d'objet
         if (this.currentItemId && this.currentItemId !== itemId && Object.keys(this.strategies).length > 0) {
-            // Réinitialiser l'état de l'analyse
             this.resetAnalysisState();
         }
         
@@ -281,7 +268,7 @@ class UpwaysApp {
         this.currentItemName = itemName;
         await this.configComponent.setCurrentItem(itemId);
         
-        // Réinitialiser le scénario personnalisé dans le composant d'analyse
+        // Configurer le composant d'analyse
         const startLevel = this.configComponent.getStartLevel();
         const endLevel = this.configComponent.getEndLevel();
         this.analysisComponent.setAnalysisParams({
@@ -289,25 +276,22 @@ class UpwaysApp {
             endLevel,
             itemId
         });
+        
+        if (this.config.enableDebugLogs) {
+            console.log('Item selected:', { itemId, itemName, startLevel, endLevel });
+        }
     }
 
-    /**
-     * Réinitialise l'état de l'analyse
-     */
     resetAnalysisState() {
-        // Vider les stratégies
         this.strategies = {};
         
-        // Bloquer l'onglet analyse
         const analysisTabBtn = document.getElementById('analysisTabBtn');
         if (analysisTabBtn) {
             analysisTabBtn.classList.add('disabled');
         }
         
-        // Revenir à l'onglet configuration
         this.switchTab('config');
         
-        // Réinitialiser le graphique
         if (this.chartComponent) {
             this.chartComponent.reset();
         }
@@ -315,10 +299,8 @@ class UpwaysApp {
 
     onConfigChanged(change) {
         if (change.type === 'levels') {
-            // Les niveaux ont changé, réinitialiser les stratégies
             this.strategies = {};
             
-            // Mettre à jour le composant d'analyse avec les nouveaux niveaux
             if (this.currentItemId) {
                 this.analysisComponent.setAnalysisParams({
                     startLevel: change.startLevel,
@@ -327,25 +309,20 @@ class UpwaysApp {
                 });
             }
         } else if (change.type === 'price' && this.analysisComponent.getCurrentStrategy() === 'custom' && Object.keys(this.strategies).length > 0) {
-            // Un prix a changé et on est en stratégie personnalisée avec des stratégies calculées
             this.recalculateCustomStrategy();
         }
     }
 
     onStrategyChanged(change) {
         if (change.type === 'custom') {
-            // Le scénario personnalisé a changé
             this.recalculateCustomStrategy();
         }
     }
 
-    /**
-     * Met à jour la langue dans toute l'application
-     */
     updateLanguage() {
         const lang = this.translator.getLanguage();
         
-        // Mettre à jour l'URL sans recharger la page
+        // Mettre à jour l'URL
         const url = new URL(window.location);
         if (lang === 'fr') {
             url.searchParams.delete('lang');
@@ -357,30 +334,21 @@ class UpwaysApp {
         // Mettre à jour le SEO
         this.updateSEO();
         
-        // Mettre à jour le sélecteur de langue personnalisé
-        this.updateLanguageSelector();
-        
-        // Mettre à jour les traductions de la page
-        this.translator.updatePageTranslations();
-        
         // Mettre à jour les composants
+        this.updateLanguageSelector();
+        this.translator.updatePageTranslations();
         this.searchComponent.updateLanguage();
         this.configComponent.updateLanguage();
         
-        // Mettre à jour le composant d'analyse
         if (this.analysisComponent) {
             this.analysisComponent.updateLanguage();
         }
         
-        // Mettre à jour le graphique
         if (this.chartComponent) {
             this.chartComponent.updateLanguage();
         }
     }
 
-    /**
-     * Change d'onglet
-     */
     switchTab(tab) {
         document.querySelectorAll('.nav-btn').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.tab === tab);
@@ -392,166 +360,7 @@ class UpwaysApp {
     }
 
     /**
-     * Crée le bouton de simulation
-     */
-    createSimulationButton() {
-        // Attendre que le DOM soit prêt
-        setTimeout(() => {
-            const chartTitle = document.querySelector('.chart-section .chart-title');
-            if (!chartTitle) return;
-            
-            // Créer un conteneur pour les boutons si nécessaire
-            let buttonContainer = chartTitle.querySelector('.chart-buttons');
-            if (!buttonContainer) {
-                buttonContainer = document.createElement('div');
-                buttonContainer.className = 'chart-buttons';
-                chartTitle.appendChild(buttonContainer);
-            }
-            
-            // Créer le bouton de simulation
-            const simulateBtn = document.createElement('button');
-            simulateBtn.className = 'btn btn-secondary btn-small';
-            simulateBtn.innerHTML = '<span class="btn-icon">🎲</span> Simuler';
-            simulateBtn.style.display = 'none'; // Caché par défaut
-            simulateBtn.id = 'simulateBtn';
-            
-            simulateBtn.onclick = () => this.runSimulation();
-            
-            buttonContainer.appendChild(simulateBtn);
-        }, 100);
-    }
-
-    /**
-     * Lance la simulation Monte Carlo
-     */
-    /**
-     * Lance la simulation Monte Carlo
-     */
-    async runSimulation() {
-        // Récupérer la stratégie actuelle
-        const currentStrategyType = this.analysisComponent.getCurrentStrategy();
-        const strategy = this.strategies[currentStrategyType];
-
-        if (!strategy) {
-            this.uiState.showToast('error', 'Aucune stratégie sélectionnée');
-            return;
-        }
-
-        // Afficher le loading
-        this.uiState.showLoading('Simulation en cours...');
-
-        // Lancer la simulation avec un délai pour l'UI
-        setTimeout(async () => {
-            try {
-                // Nombre de simulations
-                const numSims = 10000;
-                
-                // Lancer la simulation
-                const results = this.simulationComponent.simulateUpgradeRuns(strategy, numSims);
-                
-                // Retirer l'ancienne courbe empirique si elle existe
-                this.chartComponent.removeEmpiricalCurve();
-                
-                // Ajouter la nouvelle courbe empirique
-                this.chartComponent.addEmpiricalCurve(
-                    results.empiricalCurve, 
-                    `Simulation (${numSims} essais)`
-                );
-                
-                // Activer la légende
-                this.chartComponent.toggleLegend(true);
-                
-                // Afficher les statistiques dans la console
-                console.log('=== Résultats de simulation ===');
-                console.log('Statistiques:', results.stats);
-                
-                // Comparer avec la théorie
-                if (this.chartComponent.chart) {
-                    const theoreticalCurve = this.chartComponent.chart.data.datasets[0].data;
-                    const comparison = this.simulationComponent.compareWithTheory(theoreticalCurve);
-                    
-                    if (comparison) {
-                        console.log('=== Comparaison théorie vs simulation ===');
-                        console.log(`Erreur moyenne: ${comparison.avgError.toFixed(2)}%`);
-                        console.log(`Erreur maximale: ${comparison.maxError.toFixed(2)}%`);
-                    }
-                }
-                
-                // Message de succès
-                this.uiState.showToast('success', 
-                    `Simulation terminée: ${results.stats.mean.toFixed(0)} essais en moyenne (5%: ${results.stats.percentile5}, 95%: ${results.stats.percentile95})`
-                );
-                
-                // ========== LOGS DE COMPARAISON DÉTAILLÉE ==========
-                console.log('\n=== Comparaison détaillée ===');
-                
-                // Récupérer la moyenne théorique
-                let theoreticalMean;
-                if (strategy.endLevel && strategy.endLevel > 9) {
-                    // Pour les niveaux > 9, utiliser les waypoints étendus ou calculer manuellement
-                    if (strategy.extendedWaypoints) {
-                        theoreticalMean = strategy.extendedWaypoints.reduce((sum, w) => sum + w, 0);
-                    } else {
-                        // Calculer manuellement : Markov jusqu'à 9 + somme des 1/p pour chaque niveau > 9
-                        theoreticalMean = strategy.markov ? strategy.markov.totalTrials : 0;
-                        for (let i = 0; i < strategy.path.length; i++) {
-                            const level = strategy.startLevel + i + 1;
-                            if (level > 9) {
-                                const rate = strategy.path[i].rate / 100;
-                                theoreticalMean += 1 / rate;
-                            }
-                        }
-                    }
-                } else {
-                    theoreticalMean = strategy.markov ? strategy.markov.totalTrials : 0;
-                }
-                const empiricalMean = results.stats.mean;
-                
-                console.log(`Moyenne théorique: ${theoreticalMean.toFixed(2)}`);
-                console.log(`Moyenne empirique: ${empiricalMean.toFixed(2)}`);
-                console.log(`Écart absolu: ${(empiricalMean - theoreticalMean).toFixed(2)}`);
-                console.log(`Écart relatif: ${((empiricalMean - theoreticalMean) / theoreticalMean * 100).toFixed(2)}%`);
-                
-                // Comparer les percentiles
-                if (this.chartComponent.chart && this.chartComponent.chart.data.datasets[0].data) {
-                    const theoreticalData = this.chartComponent.chart.data.datasets[0].data;
-                    
-                    // Trouver les percentiles théoriques
-                    const findPercentileTrials = (data, percentile) => {
-                        for (let i = 0; i < data.length; i++) {
-                            if (data[i].y >= percentile) {
-                                return data[i].x;
-                            }
-                        }
-                        return data[data.length - 1].x;
-                    };
-                    
-                    const theo5 = findPercentileTrials(theoreticalData, 5);
-                    const theo50 = findPercentileTrials(theoreticalData, 50);
-                    const theo95 = findPercentileTrials(theoreticalData, 95);
-                    
-                    console.log('\n=== Comparaison des percentiles ===');
-                    console.log(`5e percentile - Théorique: ${theo5}, Empirique: ${results.stats.percentile5}, Écart: ${((results.stats.percentile5 - theo5) / theo5 * 100).toFixed(1)}%`);
-                    console.log(`Médiane - Théorique: ${theo50}, Empirique: ${results.stats.median}, Écart: ${((results.stats.median - theo50) / theo50 * 100).toFixed(1)}%`);
-                    console.log(`95e percentile - Théorique: ${theo95}, Empirique: ${results.stats.percentile95}, Écart: ${((results.stats.percentile95 - theo95) / theo95 * 100).toFixed(1)}%`);
-                    
-                    console.log('\n=== Statistiques par niveau ===');
-                    results.stats.levelStats.forEach(levelStat => {
-                        console.log(`Niveau ${levelStat.level}: Moyenne=${levelStat.mean.toFixed(2)}, Min=${levelStat.min}, Max=${levelStat.max}`);
-                    });
-                }
-                // ==========================================================
-                
-            } catch (error) {
-                console.error('Erreur de simulation:', error);
-                this.uiState.showToast('error', 'Erreur lors de la simulation');
-            } finally {
-                this.uiState.hideLoading();
-            }
-        }, 100);
-    }
-    /**
-     * Lance l'analyse
+     * Lance l'analyse avec la nouvelle mécanique
      */
     async runAnalysis() {
         if (!this.searchComponent.hasSelectedItem()) {
@@ -567,17 +376,30 @@ class UpwaysApp {
             return;
         }
 
+        // Valider la plage
+        const validation = await this.dataService.validateUpgradeRange(this.currentItemId, startLevel, endLevel);
+        if (!validation.valid) {
+            let errorMsg = this.translator.t('invalidLevelRange');
+            if (validation.error === 'endLevelTooHigh') {
+                errorMsg = this.translator.t('maxLevelExceeded').replace('{max}', validation.maxLevel);
+            }
+            this.uiState.showToast('error', errorMsg);
+            return;
+        }
+
         this.uiState.showLoading(this.translator.t('calculating'));
         
+        const startTime = Date.now();
+        
         try {
-            // Configurer le composant d'analyse AVANT de calculer les stratégies
+            // Configurer le composant d'analyse
             this.analysisComponent.setAnalysisParams({
                 startLevel,
                 endLevel,
                 itemId: this.currentItemId
             });
             
-            // Calculer toutes les stratégies
+            // Calculer les stratégies
             await this.calculateAllStrategies();
             
             // Débloquer l'onglet analyse
@@ -589,28 +411,19 @@ class UpwaysApp {
             // Passer à l'onglet analyse
             this.switchTab('analysis');
             
-            // Définir les stratégies dans le composant
+            // Afficher les résultats
             this.analysisComponent.setStrategies(this.strategies);
-            
-            // Sélectionner la stratégie optimale par défaut
             this.analysisComponent.selectStrategy('optimal');
             
             // Dessiner le graphique
             this.chartComponent.drawTrialsProbabilityChart(this.strategies.optimal);
             
-            this.uiState.showToast('success', this.translator.t('analysisComplete'));
-
-            // Dessiner le graphique
-            this.chartComponent.drawTrialsProbabilityChart(this.strategies.optimal);
-            
-            // ========== AJOUTER ICI ==========
-            // Afficher le bouton de simulation
-            const simulateBtn = document.getElementById('simulateBtn');
-            if (simulateBtn) {
-                simulateBtn.style.display = '';
+            const elapsedTime = Date.now() - startTime;
+            if (this.config.enableDebugLogs) {
+                console.log(`Analysis completed in ${elapsedTime}ms`);
+                console.log('Strategies:', this.strategies);
             }
-            // =================================
-
+            
             this.uiState.showToast('success', this.translator.t('analysisComplete'));
         } catch (error) {
             console.error('Analysis error:', error);
@@ -621,26 +434,33 @@ class UpwaysApp {
     }
 
     /**
-     * Calcule toutes les stratégies
+     * Calcule toutes les stratégies avec la nouvelle mécanique
      */
     async calculateAllStrategies() {
         const startLevel = this.configComponent.getStartLevel();
         const endLevel = this.configComponent.getEndLevel();
-        
-        // Récupérer le scénario personnalisé du composant d'analyse
         const customScenario = this.analysisComponent.getCustomScenario();
 
-        const [optimal, custom] = await Promise.all([
-            this.strategyService.calculateOptimalStrategy(this.currentItemId, startLevel, endLevel),
-            this.strategyService.calculateCustomStrategy(
-                customScenario,
-                this.currentItemId,
-                startLevel,
-                endLevel
-            )
-        ]);
-        
-        this.strategies = { optimal, custom };
+        try {
+            if (this.config.enableDebugLogs) {
+                console.log('Calculating strategies:', { startLevel, endLevel, customScenario });
+            }
+            
+            const [optimal, custom] = await Promise.all([
+                this.strategyService.calculateOptimalStrategy(this.currentItemId, startLevel, endLevel),
+                this.strategyService.calculateCustomStrategy(customScenario, this.currentItemId, startLevel, endLevel)
+            ]);
+            
+            this.strategies = { optimal, custom };
+            
+            if (this.config.enableDebugLogs) {
+                console.log('Optimal strategy:', optimal);
+                console.log('Custom strategy:', custom);
+            }
+        } catch (error) {
+            console.error('Strategy calculation error:', error);
+            throw error;
+        }
     }
 
     /**
@@ -666,12 +486,14 @@ class UpwaysApp {
             this.strategies.custom = custom;
             this.analysisComponent.setStrategies(this.strategies);
             
-            // Forcer la mise à jour de l'affichage
             await this.analysisComponent.displayStrategyDetails();
             
-            // Mettre à jour le graphique si on est en stratégie personnalisée
             if (this.analysisComponent.getCurrentStrategy() === 'custom') {
                 this.chartComponent.update(custom);
+            }
+            
+            if (this.config.enableDebugLogs) {
+                console.log('Custom strategy recalculated:', custom);
             }
         } catch (error) {
             console.error('Custom strategy calculation error:', error);
@@ -696,7 +518,6 @@ class UpwaysApp {
 
             this.uiState.showLoading(this.translator.t('calculating'));
 
-            // Récupérer le nom traduit de l'objet
             const translatedItemName = this.dataService.itemNames[this.currentItemId] || `Item ${this.currentItemId}`;
 
             await this.exportService.exportResults(
@@ -733,27 +554,33 @@ class UpwaysApp {
 
         if (confirmed) {
             this.dataService.resetAll();
-            // Réactiver le blocage de l'onglet Analyse
             document.getElementById('analysisTabBtn').classList.add('disabled');
             location.reload();
         }
     }
-    
+
     /**
-     * Configure l'affichage des intervalles à 95%
+     * Configure l'affichage des intervalles
      */
     setShowIntervals(show) {
-        this.showIntervals = show;
+        this.config.showIntervals = show;
         if (this.analysisComponent) {
             this.analysisComponent.setShowIntervals(show);
         }
     }
 
     /**
-     * Nettoyage global de l'application
+     * Active/désactive le mode debug
+     */
+    setDebugMode(enabled) {
+        this.config.enableDebugLogs = enabled;
+        console.log('Debug mode:', enabled ? 'enabled' : 'disabled');
+    }
+
+    /**
+     * Nettoyage
      */
     destroy() {
-        // Nettoyer tous les composants
         if (this.searchComponent) this.searchComponent.destroy();
         if (this.configComponent) this.configComponent.destroy();
         if (this.analysisComponent) this.analysisComponent.destroy();
@@ -765,7 +592,6 @@ class UpwaysApp {
 document.addEventListener('DOMContentLoaded', () => {
     window.app = new UpwaysApp();
     
-    // Gérer le nettoyage lors de la fermeture
     window.addEventListener('beforeunload', () => {
         if (window.app) {
             window.app.destroy();
