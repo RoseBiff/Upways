@@ -1,6 +1,6 @@
 /**
- * Composant de gestion des graphiques - Version 8.1
- * Ajout de l'export image/JSON et amélioration des traductions
+ * Composant de gestion des graphiques - Version 8.2
+ * Ajout du zoom interactif et amélioration de l'interactivité
  */
 export class ChartComponent {
     constructor(translator) {
@@ -46,6 +46,31 @@ export class ChartComponent {
             this.chartControls.appendChild(toggleBtn);
         }
 
+        // Créer les boutons de zoom si nécessaires
+        if (!document.getElementById('zoomControls')) {
+            const zoomContainer = document.createElement('div');
+            zoomContainer.id = 'zoomControls';
+            zoomContainer.className = 'zoom-controls';
+            zoomContainer.innerHTML = `
+                <button id="zoomInBtn" class="btn btn-secondary btn-zoom" title="${this.translator.t('zoomIn') || 'Zoom In'}">
+                    <span class="btn-icon">🔍+</span>
+                </button>
+                <button id="zoomOutBtn" class="btn btn-secondary btn-zoom" title="${this.translator.t('zoomOut') || 'Zoom Out'}">
+                    <span class="btn-icon">🔍-</span>
+                </button>
+                <button id="resetZoomBtn" class="btn btn-secondary btn-zoom" title="${this.translator.t('resetZoom') || 'Reset Zoom'}">
+                    <span class="btn-icon">🔄</span>
+                </button>
+            `;
+            
+            // Ajouter les événements aux boutons de zoom
+            zoomContainer.querySelector('#zoomInBtn').addEventListener('click', () => this.zoomIn());
+            zoomContainer.querySelector('#zoomOutBtn').addEventListener('click', () => this.zoomOut());
+            zoomContainer.querySelector('#resetZoomBtn').addEventListener('click', () => this.resetZoom());
+            
+            this.chartControls.appendChild(zoomContainer);
+        }
+
         // Créer le bouton d'export si nécessaire
         if (!document.getElementById('exportChartBtn')) {
             const exportBtn = document.createElement('button');
@@ -61,6 +86,30 @@ export class ChartComponent {
             this.chartControls.appendChild(exportBtn);
             console.log('Export button created and added');
         }
+    }
+
+    /**
+     * Zoom avant
+     */
+    zoomIn() {
+        if (!this.chart) return;
+        this.chart.zoom(1.1);
+    }
+
+    /**
+     * Zoom arrière
+     */
+    zoomOut() {
+        if (!this.chart) return;
+        this.chart.zoom(0.9);
+    }
+
+    /**
+     * Réinitialise le zoom
+     */
+    resetZoom() {
+        if (!this.chart) return;
+        this.chart.resetZoom();
     }
 
     /**
@@ -474,7 +523,42 @@ export class ChartComponent {
                 plugins: {
                     legend: { display: false },
                     tooltip: this.createTooltipConfig(meanTrials),
-                    annotation: this.createAnnotationConfig(meanTrials, medianTrials, strategy)
+                    annotation: this.createAnnotationConfig(meanTrials, medianTrials, strategy),
+                    zoom: {
+                        zoom: {
+                            wheel: {
+                                enabled: true,
+                                speed: 0.1
+                            },
+                            pinch: {
+                                enabled: true
+                            },
+                            mode: 'xy',
+                            drag: {
+                                enabled: true,
+                                backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                                borderColor: '#6366f1',
+                                borderWidth: 1,
+                                threshold: 10
+                            }
+                        },
+                        pan: {
+                            enabled: true,
+                            mode: 'xy',
+                            speed: 10,
+                            threshold: 10
+                        },
+                        limits: {
+                            x: {
+                                min: 0,
+                                max: Math.max(...points.map(p => p.x)) * 1.5
+                            },
+                            y: {
+                                min: 0,
+                                max: maxY * 1.2
+                            }
+                        }
+                    }
                 },
                 scales: this.createScalesConfig(maxY),
                 interaction: {
@@ -906,6 +990,20 @@ export class ChartComponent {
         const exportBtn = document.getElementById('exportChartBtn');
         if (exportBtn) {
             exportBtn.innerHTML = `<span class="btn-icon">💾</span> ${this.translator.t('exportChart') || 'Export'}`;
+        }
+
+        // Mettre à jour les tooltips des boutons de zoom
+        const zoomInBtn = document.getElementById('zoomInBtn');
+        if (zoomInBtn) {
+            zoomInBtn.title = this.translator.t('zoomIn') || 'Zoom In';
+        }
+        const zoomOutBtn = document.getElementById('zoomOutBtn');
+        if (zoomOutBtn) {
+            zoomOutBtn.title = this.translator.t('zoomOut') || 'Zoom Out';
+        }
+        const resetZoomBtn = document.getElementById('resetZoomBtn');
+        if (resetZoomBtn) {
+            resetZoomBtn.title = this.translator.t('resetZoom') || 'Reset Zoom';
         }
         
         if (this.currentStrategy) {

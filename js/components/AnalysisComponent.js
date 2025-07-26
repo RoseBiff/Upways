@@ -1,5 +1,5 @@
 /**
- * Composant d'affichage des résultats d'analyse - Version 3.5
+ * Composant d'affichage des résultats d'analyse - Version 3.6
  * Suppression du CSS intégré et simplification de l'affichage
  */
 export class AnalysisComponent {
@@ -417,7 +417,7 @@ export class AnalysisComponent {
                     // Pour la stratégie personnalisée
                     upgradeType = this.customScenario[customIndex] || "Parchemin de bénédiction";
                     // Permettre l'édition pour les niveaux 5-9
-                    isEditable = level >= 5 && level <= 9;
+                    isEditable = level >= 1 && level <= 9;
                 } else {
                     // Pour la stratégie optimale - TOUJOURS utiliser fullPath si disponible
                     if (fullPath && fullPath[level - 1]) {
@@ -648,8 +648,8 @@ export class AnalysisComponent {
         // Permettre toutes les options pour les niveaux 5-9 en mode custom
         if (step.level > 9) {
             options = ["Pierre magique"];
-        } else if (step.level <= 4) {
-            options = ["Parchemin de Guerre"];
+        } else if (isCustom && step.level <  5) {
+            options = ["Parchemin de Guerre", "Parchemin de bénédiction", "Manuel de Forgeron", "Parchemin du Dieu Dragon", "Pierre magique"];
         } else if (isCustom) {
             // En mode custom, permettre toutes les options pour les niveaux 5-9
             options = ["Parchemin de bénédiction", "Manuel de Forgeron", "Parchemin du Dieu Dragon", "Pierre magique"];

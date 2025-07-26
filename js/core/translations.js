@@ -36,7 +36,7 @@ export const translations = {
         // Analyse
         analysisResults: "Résultats de l'analyse",
         optimal: "Optimal",
-        custom: "Personnalisé",
+        custom: "Personnalisée",
         avgCost: "Coût moyen",
         avgTrials: "Tentatives moyennes",
         avgTrialsShort: "Moyenne",
@@ -82,6 +82,11 @@ export const translations = {
         cumulativeView: "Cumulée",
         probability: "Probabilité (%)",
         trialsProbability: "Probabilité par tentative",
+        
+        // Zoom du graphique
+        zoomIn: "Zoom avant",
+        zoomOut: "Zoom arrière",
+        resetZoom: "Réinitialiser le zoom",
         
         // Tooltips et décomposition des coûts
         trialInterval: "Essais",
@@ -243,6 +248,11 @@ export const translations = {
         probability: "Probability (%)",
         trialsProbability: "Probability per trial",
         
+        // Chart zoom
+        zoomIn: "Zoom In",
+        zoomOut: "Zoom Out",
+        resetZoom: "Reset Zoom",
+        
         // Tooltips and cost breakdown
         trialInterval: "Trials",
         itemInterval: "Items",
@@ -395,6 +405,11 @@ export const translations = {
         cumulativeView: "Cumulativă",
         probability: "Probabilitate (%)",
         trialsProbability: "Probabilitate per încercare",
+        
+        // Zoom grafic
+        zoomIn: "Mărire",
+        zoomOut: "Micșorare",
+        resetZoom: "Resetare zoom",
         
         // Tooltips și defalcare costuri
         trialInterval: "Încercări",
@@ -549,6 +564,11 @@ export const translations = {
         probability: "Olasılık (%)",
         trialsProbability: "Deneme başına olasılık",
         
+        // Grafik zoom
+        zoomIn: "Yakınlaştır",
+        zoomOut: "Uzaklaştır",
+        resetZoom: "Zoom'u Sıfırla",
+        
         // Araç ipuçları ve maliyet dökümü
         trialInterval: "Deneme",
         itemInterval: "Eşya",
@@ -701,6 +721,11 @@ export const translations = {
         cumulativeView: "Kumulativ",
         probability: "Wahrscheinlichkeit (%)",
         trialsProbability: "Wahrscheinlichkeit pro Versuch",
+        
+        // Diagramm-Zoom
+        zoomIn: "Vergrößern",
+        zoomOut: "Verkleinern",
+        resetZoom: "Zoom zurücksetzen",
         
         // Tooltips und Kostenaufschlüsselung
         trialInterval: "Versuche",
