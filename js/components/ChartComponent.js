@@ -1,6 +1,6 @@
 /**
- * Composant de gestion des graphiques - Version 6.0
- * Utilisation des calculs de distribution précis avec FFT
+ * Composant de gestion des graphiques - Version 8.1
+ * Ajout de l'export image/JSON et amélioration des traductions
  */
 export class ChartComponent {
     constructor(translator) {
@@ -8,6 +8,8 @@ export class ChartComponent {
         this.chart = null;
         this.currentStrategy = null;
         this.currentMeanTrials = null;
+        this.currentMedianTrials = null;
+        this.showCumulative = true; // Toggle pour le type de courbe
         
         this.initElements();
         this.translator.addObserver(this);
@@ -17,6 +19,232 @@ export class ChartComponent {
         this.canvas = document.getElementById('probabilityChart');
         this.ctx = this.canvas.getContext('2d');
         this.chartLegend = document.getElementById('chartLegend');
+        this.chartControls = document.querySelector('.chart-controls');
+        
+        // Créer les boutons après avoir trouvé les éléments
+        this.createControls();
+    }
+
+    attachEvents() {
+        // Cette méthode peut être utilisée pour d'autres événements si nécessaire
+    }
+
+    createControls() {
+        // Attendre que le DOM soit prêt si nécessaire
+        if (!this.chartControls) {
+            setTimeout(() => this.createControls(), 100);
+            return;
+        }
+
+        // Créer le bouton de toggle si nécessaire
+        if (!document.getElementById('toggleCurveType')) {
+            const toggleBtn = document.createElement('button');
+            toggleBtn.id = 'toggleCurveType';
+            toggleBtn.className = 'btn btn-secondary';
+            toggleBtn.innerHTML = `<span class="btn-icon">📊</span> ${this.translator.t('distributionView')}`;
+            toggleBtn.addEventListener('click', () => this.toggleCurveType());
+            this.chartControls.appendChild(toggleBtn);
+        }
+
+        // Créer le bouton d'export si nécessaire
+        if (!document.getElementById('exportChartBtn')) {
+            const exportBtn = document.createElement('button');
+            exportBtn.id = 'exportChartBtn';
+            exportBtn.className = 'btn btn-secondary';
+            exportBtn.innerHTML = `<span class="btn-icon">💾</span> ${this.translator.t('exportChart') || 'Export'}`;
+            exportBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('Export button clicked');
+                this.showExportMenu();
+            });
+            this.chartControls.appendChild(exportBtn);
+            console.log('Export button created and added');
+        }
+    }
+
+    /**
+     * Affiche le menu d'export
+     */
+    showExportMenu() {
+        console.log('showExportMenu called');
+        
+        // Créer un menu dropdown pour les options d'export
+        const existingMenu = document.getElementById('chartExportMenu');
+        if (existingMenu) {
+            existingMenu.remove();
+        }
+
+        const menu = document.createElement('div');
+        menu.id = 'chartExportMenu';
+        menu.className = 'export-menu';
+        menu.innerHTML = `
+            <div class="export-menu-item" data-export="image">
+                <span class="export-icon">🖼️</span>
+                <span>${this.translator.t('exportAsImage') || 'Export as Image'}</span>
+            </div>
+            <div class="export-menu-item" data-export="json">
+                <span class="export-icon">📄</span>
+                <span>${this.translator.t('exportAsJSON') || 'Export as JSON'}</span>
+            </div>
+        `;
+
+        // Positionner le menu
+        const exportBtn = document.getElementById('exportChartBtn');
+        if (!exportBtn) {
+            console.error('Export button not found');
+            return;
+        }
+        
+        const rect = exportBtn.getBoundingClientRect();
+        menu.style.position = 'fixed';
+        menu.style.top = `${rect.bottom + 8}px`;
+        menu.style.left = `${rect.left}px`;
+        menu.style.minWidth = `${rect.width}px`;
+
+        document.body.appendChild(menu);
+        console.log('Export menu added to DOM');
+
+        // Gérer les clics sur les options
+        menu.addEventListener('click', (e) => {
+            console.log('Menu clicked', e.target);
+            const item = e.target.closest('.export-menu-item');
+            if (item) {
+                const type = item.dataset.export;
+                console.log('Export type:', type);
+                if (type === 'image') {
+                    this.exportAsImage();
+                } else if (type === 'json') {
+                    this.exportAsJSON();
+                }
+                menu.remove();
+            }
+        });
+
+        // Fermer le menu en cliquant ailleurs
+        setTimeout(() => {
+            document.addEventListener('click', function closeMenu(e) {
+                if (!menu.contains(e.target) && e.target.id !== 'exportChartBtn') {
+                    menu.remove();
+                    document.removeEventListener('click', closeMenu);
+                }
+            });
+        }, 0);
+    }
+
+    /**
+     * Exporte le graphique en image
+     */
+    async exportAsImage() {
+        if (!this.chart) return;
+
+        try {
+            const imageData = await this.exportChart();
+            const link = document.createElement('a');
+            link.download = `metin2-upgrade-chart-${Date.now()}.png`;
+            link.href = imageData;
+            link.click();
+
+            // Notification de succès
+            this.showToast(this.translator.t('chartExportedAsImage') || 'Chart exported as image', 'success');
+        } catch (error) {
+            console.error('Error exporting chart as image:', error);
+            this.showToast(this.translator.t('chartExportError') || 'Error exporting chart', 'error');
+        }
+    }
+
+    /**
+     * Exporte les données du graphique en JSON
+     */
+    exportAsJSON() {
+        if (!this.currentStrategy) return;
+
+        try {
+            const data = this.getChartData();
+            const exportData = {
+                timestamp: new Date().toISOString(),
+                item: this.currentStrategy.itemName || 'Unknown',
+                levels: {
+                    start: this.currentStrategy.startLevel,
+                    end: this.currentStrategy.endLevel
+                },
+                statistics: {
+                    mean: this.currentMeanTrials,
+                    median: this.currentMedianTrials,
+                    percentiles: this.currentStrategy.intervals?.total?.percentiles || null,
+                    standardDeviation: this.currentStrategy.intervals?.total?.std || null
+                },
+                chartType: data.type,
+                dataPoints: data.points
+            };
+
+            const jsonStr = JSON.stringify(exportData, null, 2);
+            const blob = new Blob([jsonStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            const link = document.createElement('a');
+            link.download = `metin2-upgrade-data-${Date.now()}.json`;
+            link.href = url;
+            link.click();
+            
+            URL.revokeObjectURL(url);
+
+            // Notification de succès
+            this.showToast(this.translator.t('dataExportedAsJSON') || 'Data exported as JSON', 'success');
+        } catch (error) {
+            console.error('Error exporting data as JSON:', error);
+            this.showToast(this.translator.t('dataExportError') || 'Error exporting data', 'error');
+        }
+    }
+
+    /**
+     * Affiche une notification toast
+     */
+    showToast(message, type = 'info') {
+        console.log(`Toast: [${type}] ${message}`);
+        
+        // Créer notre propre toast si le système global n'existe pas
+        const toastContainer = document.getElementById('toastContainer') || document.body;
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        toast.textContent = message;
+        toast.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 12px 24px;
+            background: ${type === 'success' ? '#10b981' : '#ef4444'};
+            color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            z-index: 9999;
+            animation: slideIn 0.3s ease-out;
+        `;
+        
+        toastContainer.appendChild(toast);
+        
+        // Retirer après 3 secondes
+        setTimeout(() => {
+            toast.style.animation = 'slideOut 0.3s ease-out';
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+
+    /**
+     * Bascule entre courbe cumulée et non cumulée
+     */
+    toggleCurveType() {
+        this.showCumulative = !this.showCumulative;
+        const toggleBtn = document.getElementById('toggleCurveType');
+        if (toggleBtn) {
+            toggleBtn.innerHTML = this.showCumulative ? 
+                `<span class="btn-icon">📊</span> ${this.translator.t('distributionView')}` :
+                `<span class="btn-icon">📈</span> ${this.translator.t('cumulativeView')}`;
+        }
+        
+        if (this.currentStrategy) {
+            this.drawTrialsProbabilityChart(this.currentStrategy);
+        }
     }
 
     /**
@@ -29,7 +257,7 @@ export class ChartComponent {
     }
 
     /**
-     * Dessine le graphique principal avec calculs de distribution précis
+     * Dessine le graphique principal
      */
     drawTrialsProbabilityChart(strategy) {
         if (!strategy) {
@@ -44,422 +272,200 @@ export class ChartComponent {
             this.chart.destroy();
         }
         
-        // Obtenir la distribution de probabilité
-        const distribution = this.calculateTrialsDistribution(strategy);
+        let points = [];
+        let meanTrials = strategy.totalTrials || 100;
+        let medianTrials = strategy.intervals?.total?.percentiles?.p50 || meanTrials;
         
-        // Convertir en points pour le graphique (probabilité cumulée)
-        const points = this.convertToCumulativeProbability(distribution);
+        // Générer les points selon le type de courbe
+        if (this.showCumulative) {
+            // Courbe cumulée (existante)
+            if (typeof strategy.calculateTrialsProbabilities === 'function') {
+                console.log('Using strategy.calculateTrialsProbabilities (cumulative)');
+                points = strategy.calculateTrialsProbabilities();
+            } else {
+                console.log('Using fallback probability calculation (cumulative)');
+                points = this.generateSimplePoints(strategy);
+            }
+        } else {
+            // Courbe non cumulée (distribution)
+            if (strategy.distribution && Array.isArray(strategy.distribution)) {
+                console.log('Using distribution array');
+                points = this.generateDistributionPoints(strategy);
+            } else {
+                console.log('Using fallback distribution calculation');
+                points = this.generateSimpleDistributionPoints(strategy);
+            }
+        }
         
-        // Calculer la moyenne depuis la distribution
-        const meanTrials = this.calculateMeanFromDistribution(distribution);
+        this.currentMeanTrials = meanTrials;
+        this.currentMedianTrials = medianTrials;
+        
+        // Vérifier que les points sont valides
+        if (!points || points.length === 0) {
+            console.error('No valid points generated');
+            const minRequired = (strategy.endLevel - strategy.startLevel) || 1;
+            points = this.showCumulative ? 
+                [{ x: 0, y: 0 }, { x: meanTrials, y: 50 }, { x: meanTrials * 2, y: 100 }] :
+                [{ x: Math.max(minRequired, meanTrials), y: 50 }];
+        }
         
         // Log pour debug
-        console.log('Distribution analysis:', {
-            mean: meanTrials,
-            strategyMean: strategy.totalTrials,
-            points: distribution.length,
-            method: strategy.method
+        console.log('Chart data:', {
+            type: this.showCumulative ? 'cumulative' : 'distribution',
+            strategyMean: meanTrials,
+            strategyMedian: medianTrials,
+            pointsCount: points.length,
+            firstPoint: points[0],
+            lastPoint: points[points.length - 1],
+            hasDistribution: !!strategy.distribution,
+            distributionLength: strategy.distribution?.length
         });
         
         // Créer le graphique
-        this.createChart(points, meanTrials);
+        this.createChart(points, meanTrials, medianTrials, strategy);
     }
 
     /**
-     * Calcule la distribution du nombre d'essais nécessaires
+     * Génère les points pour la distribution non cumulée
      */
-    calculateTrialsDistribution(strategy) {
-        // Déterminer les niveaux
-        const startLevel = this.getStartLevel(strategy);
-        const endLevel = this.getEndLevel(strategy);
-        
-        console.log(`Calculating distribution for levels ${startLevel} to ${endLevel}`);
-        
-        // Choisir la méthode selon les niveaux
-        if (endLevel <= 9) {
-            // Cas 1: Utiliser Markov directement
-            return this.getMarkovDistribution(strategy, startLevel, endLevel);
-        } else if (startLevel < 9) {
-            // Cas 2: Markov jusqu'à 9, puis géométrique
-            return this.getMixedDistribution(strategy, startLevel, endLevel);
-        } else {
-            // Cas 3: Purement géométrique
-            return this.getGeometricDistribution(strategy, startLevel, endLevel);
-        }
-    }
-
-    /**
-     * Détermine le niveau de départ
-     */
-    getStartLevel(strategy) {
-        if (strategy.startLevel !== undefined) return strategy.startLevel;
-        if (strategy.strategy && strategy.strategy.startLevel !== undefined) return strategy.strategy.startLevel;
-        return 0;
-    }
-
-    /**
-     * Détermine le niveau de fin
-     */
-    getEndLevel(strategy) {
-        if (strategy.endLevel !== undefined) return strategy.endLevel;
-        if (strategy.strategy && strategy.strategy.endLevel !== undefined) return strategy.strategy.endLevel;
-        if (strategy.path) return strategy.path.length + this.getStartLevel(strategy);
-        return 9;
-    }
-
-    /**
-     * Obtient la distribution depuis Markov
-     */
-    getMarkovDistribution(strategy, startLevel, endLevel) {
-        // Construire la matrice de transition
-        const transitionMatrix = this.buildTransitionMatrix(strategy, startLevel, endLevel);
-        
-        // Calculer la distribution par puissance de matrice
-        return this.calculateDistributionFromMatrix(transitionMatrix, startLevel, endLevel);
-    }
-
-    /**
-     * Construit la matrice de transition
-     */
-    buildTransitionMatrix(strategy, startLevel, endLevel) {
-        const size = endLevel + 1;
-        const matrix = Array(size).fill(null).map(() => Array(size).fill(0));
-        
-        // Remplir la matrice avec les taux de succès
-        for (let i = 0; i < endLevel; i++) {
-            let successRate = 0;
-            let noDowngrade = false;
-            
-            // Obtenir les données pour ce niveau
-            if (strategy.path && i >= startLevel && i - startLevel < strategy.path.length) {
-                const pathStep = strategy.path[i - startLevel];
-                successRate = (pathStep.rate || 0) / 100;
-                noDowngrade = pathStep.noDowngrade || false;
-            } else if (strategy.rates && i < strategy.rates.length) {
-                successRate = (strategy.rates[i] || 0) / 100;
-                noDowngrade = strategy.flags ? strategy.flags[i] : false;
-            } else if (i < 4) {
-                // Niveaux 1-4 : généralement 100% avec Parchemin de Guerre
-                successRate = 1;
-                noDowngrade = false;
-            }
-            
-            // Succès : passage au niveau suivant
-            matrix[i][i + 1] = successRate;
-            
-            // Échec : reste sur place ou descend
-            if (i === 0 || noDowngrade) {
-                matrix[i][i] = 1 - successRate;
-            } else {
-                matrix[i][i - 1] = 1 - successRate;
-            }
-        }
-        
-        // État absorbant (niveau final)
-        matrix[endLevel][endLevel] = 1;
-        
-        return matrix;
-    }
-
-    /**
-     * Calcule la distribution à partir de la matrice de transition
-     */
-    calculateDistributionFromMatrix(matrix, startLevel, endLevel, maxTrials = 10000) {
-        const distribution = [];
-        const size = matrix.length;
-        
-        // État initial
-        let currentState = Array(size).fill(0);
-        currentState[startLevel] = 1;
-        
-        // État précédent pour calculer la probabilité d'arriver à l'état final
-        let previousProbInFinal = 0;
-        
-        for (let trial = 1; trial <= maxTrials; trial++) {
-            // Multiplier par la matrice de transition
-            const nextState = Array(size).fill(0);
-            
-            for (let i = 0; i < size; i++) {
-                for (let j = 0; j < size; j++) {
-                    nextState[j] += currentState[i] * matrix[i][j];
-                }
-            }
-            
-            // Probabilité d'être dans l'état final
-            const probInFinal = nextState[endLevel];
-            
-            // Probabilité d'arriver EXACTEMENT en 'trial' essais
-            const probExactly = probInFinal - previousProbInFinal;
-            
-            if (probExactly > 1e-10) {
-                distribution.push({
-                    trials: trial,
-                    probability: probExactly
-                });
-            }
-            
-            // Si on a atteint 99.99% de probabilité cumulative
-            if (probInFinal > 0.9999) {
-                break;
-            }
-            
-            currentState = nextState;
-            previousProbInFinal = probInFinal;
-        }
-        
-        return distribution;
-    }
-
-    /**
-     * Calcule la distribution mixte (Markov + géométrique)
-     */
-    getMixedDistribution(strategy, startLevel, endLevel) {
-        // Partie 1: Distribution Markov jusqu'à 9
-        const markovEndLevel = 9;
-        const markovMatrix = this.buildTransitionMatrix(strategy, startLevel, markovEndLevel);
-        const markovDist = this.calculateDistributionFromMatrix(markovMatrix, startLevel, markovEndLevel);
-        
-        // Partie 2: Distributions géométriques de 10 à endLevel
-        const geometricDists = [];
-        
-        for (let level = 10; level <= endLevel; level++) {
-            const index = level - startLevel - 1;
-            let successRate = 0;
-            
-            if (strategy.path && index < strategy.path.length) {
-                successRate = (strategy.path[index].rate || 0) / 100;
-            } else if (strategy.rates && level - 1 < strategy.rates.length) {
-                successRate = (strategy.rates[level - 1] || 0) / 100;
-            } else {
-                // Taux par défaut pour Pierre magique aux niveaux élevés
-                successRate = 0.1; // 10%
-            }
-            
-            if (successRate > 0) {
-                geometricDists.push(this.createGeometricDistribution(successRate, 10000));
-            }
-        }
-        
-        // Convoluer toutes les distributions
-        let result = markovDist;
-        for (const geomDist of geometricDists) {
-            result = this.convolve(result, geomDist);
-        }
-        
-        return result;
-    }
-
-    /**
-     * Calcule la distribution purement géométrique
-     */
-    getGeometricDistribution(strategy, startLevel, endLevel) {
-        const distributions = [];
-        
-        // Créer une distribution géométrique pour chaque niveau
-        for (let level = startLevel; level < endLevel; level++) {
-            const index = level - startLevel;
-            let successRate = 0;
-            
-            if (strategy.path && index < strategy.path.length) {
-                successRate = (strategy.path[index].rate || 0) / 100;
-            } else if (strategy.rates && level < strategy.rates.length) {
-                successRate = (strategy.rates[level] || 0) / 100;
-            } else {
-                successRate = 0.1; // 10% par défaut
-            }
-            
-            if (successRate > 0) {
-                distributions.push(this.createGeometricDistribution(successRate, 10000));
-            }
-        }
-        
-        if (distributions.length === 0) {
-            // Fallback si aucune distribution
-            return this.getFallbackDistribution(strategy);
-        }
-        
-        // Convoluer toutes les distributions
-        let result = distributions[0];
-        for (let i = 1; i < distributions.length; i++) {
-            result = this.convolve(result, distributions[i]);
-        }
-        
-        return result;
-    }
-
-    /**
-     * Crée une distribution géométrique précise
-     */
-    createGeometricDistribution(p, maxTrials = 10000) {
-        const distribution = [];
-        let cumulativeProb = 0;
-        
-        // Calculer la masse de probabilité perdue si on tronque
-        const truncationProb = Math.pow(1 - p, maxTrials);
-        const normalizationFactor = 1 / (1 - truncationProb);
-        
-        for (let k = 1; k <= maxTrials && cumulativeProb < 0.9999; k++) {
-            const prob = Math.pow(1 - p, k - 1) * p * normalizationFactor;
-            if (prob > 1e-12) {
-                distribution.push({
-                    trials: k,
-                    probability: prob
-                });
-                cumulativeProb += prob;
-            }
-        }
-        
-        return distribution;
-    }
-
-    /**
-     * Effectue la convolution de deux distributions
-     */
-    convolve(dist1, dist2) {
-        const maxTrials = 10000;
-        const resultMap = new Map();
-        
-        // Effectuer la convolution
-        for (const d1 of dist1) {
-            for (const d2 of dist2) {
-                const trials = d1.trials + d2.trials;
-                if (trials <= maxTrials) {
-                    const prob = d1.probability * d2.probability;
-                    if (prob > 1e-12) {
-                        const currentProb = resultMap.get(trials) || 0;
-                        resultMap.set(trials, currentProb + prob);
-                    }
-                }
-            }
-        }
-        
-        // Convertir en tableau et trier
-        const result = Array.from(resultMap.entries())
-            .map(([trials, probability]) => ({ trials, probability }))
-            .sort((a, b) => a.trials - b.trials);
-        
-        // Normaliser si nécessaire
-        const totalProb = result.reduce((sum, d) => sum + d.probability, 0);
-        if (Math.abs(totalProb - 1) > 0.001) {
-            console.warn(`Normalizing distribution: total probability = ${totalProb}`);
-            result.forEach(d => d.probability /= totalProb);
-        }
-        
-        return result;
-    }
-
-    /**
-     * Convertit la distribution en probabilité cumulée
-     */
-    convertToCumulativeProbability(distribution) {
+    generateDistributionPoints(strategy) {
         const points = [];
-        let cumulative = 0;
         
-        // S'assurer que la distribution est triée
-        distribution.sort((a, b) => a.trials - b.trials);
+        // La distribution est un tableau, pas un objet avec des méthodes
+        const distribution = strategy.distribution;
+        if (!distribution || !Array.isArray(distribution)) {
+            console.error('Invalid distribution data');
+            return this.generateSimpleDistributionPoints(strategy);
+        }
         
-        // Toujours commencer à (0, 0)
-        points.push({ x: 0, y: 0 });
+        // IMPORTANT: Le nombre minimum de tentatives est le nombre de niveaux à franchir
+        const minTrialsRequired = (strategy.endLevel - strategy.startLevel);
         
-        // Convertir en cumulé
-        distribution.forEach(d => {
-            cumulative += d.probability;
-            points.push({
-                x: d.trials,
-                y: Math.min(cumulative * 100, 100)
-            });
-        });
+        // Parcourir la distribution en commençant au minimum requis
+        for (let i = minTrialsRequired; i < distribution.length; i++) {
+            const pmf = distribution[i];
+            if (pmf > 0.0001) { // Seuil minimal
+                points.push({ 
+                    x: i, 
+                    y: pmf * 100 // Convertir en pourcentage
+                });
+            }
+        }
         
-        // S'assurer que le dernier point est à 100%
-        if (points.length > 0 && cumulative > 0.999) {
-            points[points.length - 1].y = 100;
+        // Si aucun point trouvé, utiliser le fallback
+        if (points.length === 0) {
+            console.warn('No valid distribution points found, using fallback');
+            return this.generateSimpleDistributionPoints(strategy);
         }
         
         return points;
     }
 
     /**
-     * Calcule la moyenne depuis une distribution
+     * Génère une distribution simple (fallback)
      */
-    calculateMeanFromDistribution(distribution) {
-        let mean = 0;
-        let totalProb = 0;
-        
-        distribution.forEach(d => {
-            mean += d.trials * d.probability;
-            totalProb += d.probability;
-        });
-        
-        // Normaliser si nécessaire
-        if (Math.abs(totalProb - 1) > 0.01) {
-            console.warn(`Distribution not normalized: total probability = ${totalProb}`);
-            if (totalProb > 0) {
-                mean /= totalProb;
-            }
-        }
-        
-        return mean;
-    }
-
-    /**
-     * Distribution de secours si les autres méthodes échouent
-     */
-    getFallbackDistribution(strategy) {
-        const distribution = [];
+    generateSimpleDistributionPoints(strategy) {
+        const points = [];
         const totalTrials = strategy.totalTrials || 100;
         
-        // Utiliser une approximation normale
-        const mean = totalTrials;
-        const std = Math.sqrt(totalTrials) * 1.5; // Approximation
+        // IMPORTANT: Le nombre minimum de tentatives est le nombre de niveaux à franchir
+        const minTrialsRequired = (strategy.endLevel - strategy.startLevel);
         
-        const minTrials = Math.max(1, Math.floor(mean - 4 * std));
-        const maxTrials = Math.ceil(mean + 4 * std);
+        // Approximation avec une distribution normale-like
+        const mean = Math.max(totalTrials, minTrialsRequired);
+        const std = Math.sqrt(mean) * 2; // Approximation
         
-        for (let k = minTrials; k <= maxTrials; k++) {
-            const z = (k - mean) / std;
-            const prob = this.normalPDF(z) / std;
-            
-            if (prob > 1e-10) {
-                distribution.push({
-                    trials: k,
-                    probability: prob
-                });
-            }
+        const minX = Math.max(minTrialsRequired, Math.floor(mean - 3 * std));
+        const maxX = Math.ceil(mean + 3 * std);
+        
+        // Générer une courbe en cloche simple
+        for (let x = minX; x <= maxX; x++) {
+            const z = (x - mean) / std;
+            const pmf = Math.exp(-0.5 * z * z) / (std * Math.sqrt(2 * Math.PI));
+            points.push({ 
+                x: x, 
+                y: pmf * 100 // Convertir en pourcentage
+            });
         }
         
-        // Normaliser
-        const sum = distribution.reduce((s, d) => s + d.probability, 0);
-        if (sum > 0) {
-            distribution.forEach(d => d.probability /= sum);
-        }
-        
-        return distribution;
+        return points;
     }
 
     /**
-     * Densité de probabilité de la loi normale standard
+     * Génère des points simples basés sur les waypoints et les taux (fallback pour cumulée)
      */
-    normalPDF(z) {
-        return Math.exp(-z * z / 2) / Math.sqrt(2 * Math.PI);
+    generateSimplePoints(strategy) {
+        const points = [];
+        const totalTrials = strategy.totalTrials || 100;
+        
+        // Utiliser les waypoints pour une meilleure approximation
+        if (strategy.waypoints && strategy.waypoints.length > 0) {
+            // Calculer un taux effectif basé sur les waypoints
+            const effectiveRates = strategy.waypoints
+                .filter(w => w > 0)
+                .map(w => 1 / w);
+            
+            if (effectiveRates.length > 0) {
+                const harmonicMean = effectiveRates.length / effectiveRates.reduce((sum, r) => sum + 1/r, 0);
+                
+                console.log(`Using waypoints - Effective rate: ${(harmonicMean * 100).toFixed(1)}%`);
+                
+                // Générer la courbe
+                points.push({ x: 0, y: 0 });
+                
+                const numLevels = strategy.endLevel - strategy.startLevel;
+                const adjustedRate = harmonicMean / Math.sqrt(numLevels);
+                
+                for (let n = 1; n <= totalTrials * 5; n++) {
+                    const prob = 1 - Math.pow(1 - adjustedRate, n);
+                    points.push({ x: n, y: Math.min(prob * 100, 100) });
+                    
+                    if (prob > 0.999) break;
+                }
+                
+                return points;
+            }
+        }
+        
+        // Fallback: utiliser une approximation simple
+        console.log('Using simple fallback');
+        points.push({ x: 0, y: 0 });
+        
+        for (let n = 1; n <= totalTrials * 3; n++) {
+            const prob = 1 - Math.exp(-n / totalTrials);
+            points.push({ x: n, y: Math.min(prob * 100, 100) });
+            
+            if (prob > 0.999) break;
+        }
+        
+        return points;
     }
 
     /**
      * Crée la configuration du graphique
      */
-    createChartConfig(points, meanTrials) {
+    createChartConfig(points, meanTrials, medianTrials, strategy) {
+        const maxY = this.showCumulative ? 100 : Math.max(...points.map(p => p.y)) * 1.1;
+        
         return {
-            type: 'line',
+            type: this.showCumulative ? 'line' : 'bar',
             data: {
                 datasets: [{
-                    label: this.translator.t('successProb'),
+                    label: this.showCumulative ? 
+                        this.translator.t('successProb') : 
+                        this.translator.t('trialsProbability'),
                     data: points,
                     borderColor: '#6366f1',
-                    backgroundColor: 'rgba(99, 102, 241, 0.1)',
-                    fill: true,
-                    tension: 0.4,
-                    borderWidth: 3,
+                    backgroundColor: this.showCumulative ? 
+                        'rgba(99, 102, 241, 0.1)' : 
+                        'rgba(99, 102, 241, 0.6)',
+                    fill: this.showCumulative,
+                    tension: this.showCumulative ? 0.4 : 0,
+                    borderWidth: this.showCumulative ? 3 : 1,
                     pointRadius: 0,
-                    pointHoverRadius: 6
+                    pointHoverRadius: 6,
+                    barPercentage: 0.9,
+                    categoryPercentage: 1
                 }]
             },
             options: {
@@ -468,9 +474,9 @@ export class ChartComponent {
                 plugins: {
                     legend: { display: false },
                     tooltip: this.createTooltipConfig(meanTrials),
-                    annotation: this.createAnnotationConfig(meanTrials)
+                    annotation: this.createAnnotationConfig(meanTrials, medianTrials, strategy)
                 },
-                scales: this.createScalesConfig(),
+                scales: this.createScalesConfig(maxY),
                 interaction: {
                     mode: 'nearest',
                     axis: 'x',
@@ -506,7 +512,10 @@ export class ChartComponent {
                 },
                 label: (context) => {
                     const prob = context.parsed.y;
-                    return `${this.translator.t('successProb')}: ${prob.toFixed(1)}%`;
+                    const label = this.showCumulative ? 
+                        this.translator.t('successProb') : 
+                        this.translator.t('probability');
+                    return `${label}: ${prob.toFixed(2)}%`;
                 },
                 afterLabel: (context) => {
                     if (meanTrials && meanTrials > 0) {
@@ -521,40 +530,108 @@ export class ChartComponent {
     }
 
     /**
-     * Configuration des annotations
+     * Configuration des annotations avec percentiles et médiane
      */
-    createAnnotationConfig(meanTrials) {
-        if (!meanTrials || meanTrials <= 0) {
-            return { annotations: {} };
+    createAnnotationConfig(meanTrials, medianTrials, strategy) {
+        const annotations = {};
+        
+        // Ligne de la moyenne
+        if (meanTrials && meanTrials > 0) {
+            annotations.averageLine = {
+                type: 'line',
+                xMin: meanTrials,
+                xMax: meanTrials,
+                borderColor: '#f59e0b',
+                borderWidth: 2,
+                borderDash: [5, 5],
+                label: {
+                    enabled: true,
+                    content: this.translator.t('avgTrials'),
+                    position: 'start',
+                    backgroundColor: 'rgba(245, 158, 11, 0.8)',
+                    color: 'white',
+                    font: { size: 11, weight: 'bold' },
+                    padding: 4
+                }
+            };
         }
         
-        return {
-            annotations: {
-                averageLine: {
+        // Ligne de la médiane (P50) - plus visible pour la distribution
+        if (medianTrials && medianTrials > 0 && (Math.abs(medianTrials - meanTrials) > 5 || !this.showCumulative)) {
+            annotations.medianLine = {
+                type: 'line',
+                xMin: medianTrials,
+                xMax: medianTrials,
+                borderColor: '#8b5cf6',
+                borderWidth: 2,
+                borderDash: [5, 5],
+                label: {
+                    enabled: true,
+                    content: this.translator.t('percentile50'),
+                    position: 'start',
+                    backgroundColor: 'rgba(139, 92, 246, 0.8)',
+                    color: 'white',
+                    font: { size: 11, weight: 'bold' },
+                    padding: 4,
+                    yAdjust: -20 // Décaler pour éviter le chevauchement
+                }
+            };
+        }
+        
+        // Ajouter les percentiles si disponibles (seulement pour la vue cumulée)
+        if (this.showCumulative && strategy.intervals?.total?.percentiles) {
+            const percentiles = strategy.intervals.total.percentiles;
+            
+            // P5 - 5e percentile
+            if (percentiles.p5) {
+                annotations.p5Line = {
                     type: 'line',
-                    xMin: meanTrials,
-                    xMax: meanTrials,
-                    borderColor: '#f59e0b',
-                    borderWidth: 2,
-                    borderDash: [5, 5],
+                    xMin: percentiles.p5,
+                    xMax: percentiles.p5,
+                    borderColor: '#10b981',
+                    borderWidth: 1,
+                    borderDash: [3, 3],
                     label: {
                         enabled: true,
-                        content: this.translator.t('avgTrials'),
-                        position: 'start',
-                        backgroundColor: 'rgba(245, 158, 11, 0.8)',
+                        content: '5%',
+                        position: 'end',
+                        backgroundColor: 'rgba(16, 185, 129, 0.8)',
                         color: 'white',
-                        font: { size: 11, weight: 'bold' },
-                        padding: 4
+                        font: { size: 10 },
+                        padding: 2
                     }
-                }
+                };
             }
-        };
+            
+            // P95 - 95e percentile
+            if (percentiles.p95) {
+                annotations.p95Line = {
+                    type: 'line',
+                    xMin: percentiles.p95,
+                    xMax: percentiles.p95,
+                    borderColor: '#ef4444',
+                    borderWidth: 1,
+                    borderDash: [3, 3],
+                    label: {
+                        enabled: true,
+                        content: '95%',
+                        position: 'end',
+                        backgroundColor: 'rgba(239, 68, 68, 0.8)',
+                        color: 'white',
+                        font: { size: 10 },
+                        padding: 2
+                    }
+                };
+            }
+        }
+        
+        return { annotations };
     }
 
     /**
      * Configuration des échelles
      */
-    createScalesConfig() {
+    createScalesConfig(maxY = 100) {
         return {
             x: {
                 type: 'linear',
@@ -577,17 +654,19 @@ export class ChartComponent {
             y: {
                 title: {
                     display: true,
-                    text: this.translator.t('yAxisLabel'),
+                    text: this.showCumulative ? 
+                        this.translator.t('yAxisLabel') : 
+                        this.translator.t('probability'),
                     color: '#94a3b8',
                     font: { size: 14, weight: 'bold' }
                 },
                 min: 0,
-                max: 100,
+                max: maxY,
                 ticks: {
-                    callback: (value) => `${value}%`,
+                    callback: (value) => `${value.toFixed(this.showCumulative ? 0 : 1)}%`,
                     color: '#94a3b8',
                     font: { size: 12 },
-                    stepSize: 10
+                    stepSize: this.showCumulative ? 10 : undefined
                 },
                 grid: {
                     color: 'rgba(148, 163, 184, 0.1)',
@@ -600,75 +679,171 @@ export class ChartComponent {
     /**
      * Crée le graphique avec les points calculés
      */
-    createChart(points, meanTrials) {
-        this.currentMeanTrials = meanTrials;
-        
+    createChart(points, meanTrials, medianTrials, strategy) {
         // Configuration du graphique
-        const config = this.createChartConfig(points, meanTrials);
+        const config = this.createChartConfig(points, meanTrials, medianTrials, strategy);
         
         // Créer le graphique
         this.chart = new Chart(this.ctx, config);
         
         // Mettre à jour la légende
-        this.updateLegend(points, meanTrials);
+        this.updateLegend(points, meanTrials, medianTrials, strategy);
     }
 
     /**
-     * Met à jour la légende
+     * Met à jour la légende avec les percentiles et statistiques claires
      */
-    updateLegend(points, meanTrials) {
+    updateLegend(points, meanTrials, medianTrials, strategy) {
         if (!this.chartLegend) return;
         
-        // Points clés pour la légende
-        const keyPoints = [
-            { x: Math.round(meanTrials * 0.5), label: '50%' },
-            { x: Math.round(meanTrials), label: this.translator.t('avgTrials') },
-            { x: Math.round(meanTrials * 1.5), label: '150%' },
-            { x: Math.round(meanTrials * 2), label: '200%' }
-        ];
-        
-        // Filtrer les points valides
-        const maxX = Math.max(...points.map(p => p.x));
-        const validKeyPoints = keyPoints.filter(kp => kp.x <= maxX * 1.1);
-        
-        // Si pas assez de points, créer des points basés sur les données
-        if (validKeyPoints.length < 2) {
-            validKeyPoints.length = 0;
-            const steps = [0.25, 0.5, 0.75, 1];
-            steps.forEach((ratio, i) => {
-                const x = Math.round(maxX * ratio);
-                if (x > 0) {
-                    validKeyPoints.push({
-                        x: x,
-                        label: i === 3 ? this.translator.t('avgTrials') : `${(ratio * 100).toFixed(0)}%`
-                    });
-                }
-            });
+        // Pour la vue distribution, afficher des statistiques différentes
+        if (!this.showCumulative) {
+            const mode = this.findMode(points);
+            const std = strategy.intervals?.total?.std || null;
+            
+            this.chartLegend.innerHTML = `
+                <div class="legend-grid">
+                    <div class="legend-item mean">
+                        <span class="legend-label">${this.translator.t('avgTrials')}:</span>
+                        <span class="legend-value">${Math.round(meanTrials)}</span>
+                    </div>
+                    ${medianTrials ? `
+                    <div class="legend-item median">
+                        <span class="legend-label">${this.translator.t('median')}:</span>
+                        <span class="legend-value">${Math.round(medianTrials)}</span>
+                    </div>
+                    ` : ''}
+                    ${mode ? `
+                    <div class="legend-item mode">
+                        <span class="legend-label">${this.translator.t('mode')}:</span>
+                        <span class="legend-value">${mode.x} (${mode.y.toFixed(1)}%)</span>
+                    </div>
+                    ` : ''}
+                    ${std ? `
+                    <div class="legend-item std">
+                        <span class="legend-label">${this.translator.t('standardDeviation')}:</span>
+                        <span class="legend-value">${Math.round(std)}</span>
+                    </div>
+                    ` : ''}
+                </div>
+            `;
+            return;
         }
         
-        // Trouver les probabilités pour chaque point
-        const legendData = validKeyPoints.map(kp => {
-            const prob = this.getProbabilityAtTrials(points, kp.x);
-            return {
-                trials: kp.x,
-                label: kp.label,
-                probability: prob
-            };
-        });
+        // Vue cumulée (code existant)
+        const keyPoints = [];
         
-        // Générer le HTML
+        if (strategy.intervals?.total?.percentiles) {
+            const p = strategy.intervals.total.percentiles;
+            
+            if (p.p5) keyPoints.push({ 
+                x: Math.round(p.p5), 
+                label: '5%',
+                description: `(${this.translator.t('percentile5')})`,
+                type: 'percentile' 
+            });
+            
+            if (p.p50) keyPoints.push({ 
+                x: Math.round(p.p50), 
+                label: '50%',
+                description: `(${this.translator.t('percentile50')})`,
+                type: 'median' 
+            });
+            
+            keyPoints.push({ 
+                x: Math.round(meanTrials), 
+                label: `${Math.round((meanTrials / p.p50) * 50)}%`,
+                description: `(${this.translator.t('avgTrials')})`,
+                type: 'mean' 
+            });
+            
+            if (p.p95) keyPoints.push({ 
+                x: Math.round(p.p95), 
+                label: '95%',
+                description: `(${this.translator.t('percentile95')})`,
+                type: 'percentile' 
+            });
+        } else {
+            // Fallback si pas de percentiles
+            keyPoints.push(
+                { x: Math.round(meanTrials * 0.5), label: '50%', description: '', type: 'estimate' },
+                { x: Math.round(meanTrials), label: '100%', description: `(${this.translator.t('avgTrials')})`, type: 'mean' },
+                { x: Math.round(meanTrials * 1.5), label: '150%', description: '', type: 'estimate' },
+                { x: Math.round(meanTrials * 2), label: '200%', description: '', type: 'estimate' }
+            );
+        }
+        
+        // Filtrer les points valides et trouver les probabilités
+        const legendData = keyPoints
+            .filter(kp => kp.x > 0 && kp.x <= Math.max(...points.map(p => p.x)))
+            .map(kp => {
+                const prob = this.getProbabilityAtTrials(points, kp.x);
+                return {
+                    trials: kp.x,
+                    label: kp.label,
+                    description: kp.description,
+                    probability: prob,
+                    type: kp.type
+                };
+            });
+        
+        // Générer le HTML avec des styles différents selon le type
         this.chartLegend.innerHTML = `
             <div class="legend-grid">
-                ${legendData.map(item => `
-                    <div class="legend-item">
+                ${legendData.map(item => {
+                    let displayLabel = '';
+                    let displayClass = item.type;
+                    
+                    // Déterminer le label selon le type
+                    switch(item.type) {
+                        case 'percentile':
+                            if (item.label === '5%') {
+                                displayLabel = this.translator.t('percentile5');
+                            } else if (item.label === '95%') {
+                                displayLabel = this.translator.t('percentile95');
+                            } else {
+                                displayLabel = item.description.replace(/[()]/g, '');
+                            }
+                            break;
+                        case 'median':
+                            displayLabel = this.translator.t('median');
+                            displayClass = 'median';
+                            break;
+                        case 'mean':
+                            displayLabel = this.translator.t('avgTrials');
+                            displayClass = 'mean';
+                            break;
+                        default:
+                            displayLabel = item.description || item.label;
+                    }
+                    
+                    return `
+                    <div class="legend-item ${displayClass}">
                         <span class="legend-budget">${item.trials}</span>
                         <span class="legend-arrow">→</span>
                         <span class="legend-prob">${item.probability.toFixed(0)}%</span>
-                        <span class="legend-label">(${item.label})</span>
+                        <span class="legend-label">${displayLabel}</span>
                     </div>
-                `).join('')}
+                `;
+                }).join('')}
             </div>
         `;
+    }
+
+    /**
+     * Trouve le mode dans la distribution
+     */
+    findMode(points) {
+        if (!points || points.length === 0) return null;
+        
+        let maxPoint = points[0];
+        for (const point of points) {
+            if (point.y > maxPoint.y) {
+                maxPoint = point;
+            }
+        }
+        
+        return maxPoint;
     }
 
     /**
@@ -677,7 +852,13 @@ export class ChartComponent {
     getProbabilityAtTrials(points, trials) {
         if (!points || points.length === 0) return 0;
         
-        // Trouver le point exact ou interpoler
+        // Pour la distribution non cumulée, retourner la valeur exacte ou 0
+        if (!this.showCumulative) {
+            const point = points.find(p => Math.round(p.x) === Math.round(trials));
+            return point ? point.y : 0;
+        }
+        
+        // Pour la cumulée, interpoler
         let before = null;
         let after = null;
         
@@ -713,6 +894,20 @@ export class ChartComponent {
      * Met à jour lors d'un changement de langue
      */
     updateLanguage() {
+        // Mettre à jour le bouton de toggle
+        const toggleBtn = document.getElementById('toggleCurveType');
+        if (toggleBtn) {
+            toggleBtn.innerHTML = this.showCumulative ? 
+                `<span class="btn-icon">📊</span> ${this.translator.t('distributionView')}` :
+                `<span class="btn-icon">📈</span> ${this.translator.t('cumulativeView')}`;
+        }
+
+        // Mettre à jour le bouton d'export
+        const exportBtn = document.getElementById('exportChartBtn');
+        if (exportBtn) {
+            exportBtn.innerHTML = `<span class="btn-icon">💾</span> ${this.translator.t('exportChart') || 'Export'}`;
+        }
+        
         if (this.currentStrategy) {
             this.drawTrialsProbabilityChart(this.currentStrategy);
         }
@@ -728,9 +923,17 @@ export class ChartComponent {
         }
         this.currentStrategy = null;
         this.currentMeanTrials = null;
+        this.currentMedianTrials = null;
+        this.showCumulative = true; // Réinitialiser à la vue cumulée
         
         if (this.chartLegend) {
             this.chartLegend.innerHTML = '';
+        }
+
+        // Retirer le menu d'export s'il existe
+        const exportMenu = document.getElementById('chartExportMenu');
+        if (exportMenu) {
+            exportMenu.remove();
         }
     }
 
@@ -748,13 +951,18 @@ export class ChartComponent {
     getChartData() {
         if (!this.currentStrategy) return null;
         
-        const distribution = this.calculateTrialsDistribution(this.currentStrategy);
-        const points = this.convertToCumulativeProbability(distribution);
+        const points = this.showCumulative ?
+            (this.currentStrategy.calculateTrialsProbabilities ? 
+                this.currentStrategy.calculateTrialsProbabilities() : []) :
+            this.generateDistributionPoints(this.currentStrategy);
         
         return {
             points: points,
             meanTrials: this.currentMeanTrials,
-            distribution: distribution
+            medianTrials: this.currentMedianTrials,
+            distribution: this.currentStrategy.distribution || null,
+            percentiles: this.currentStrategy.intervals?.total?.percentiles || null,
+            type: this.showCumulative ? 'cumulative' : 'distribution'
         };
     }
 
@@ -818,6 +1026,18 @@ export class ChartComponent {
     }
 
     /**
+     * Définit le type de courbe à afficher
+     */
+    setCurveType(cumulative) {
+        if (this.showCumulative !== cumulative) {
+            this.showCumulative = cumulative;
+            if (this.currentStrategy) {
+                this.drawTrialsProbabilityChart(this.currentStrategy);
+            }
+        }
+    }
+
+    /**
      * Nettoie les ressources
      */
     destroy() {
@@ -825,5 +1045,11 @@ export class ChartComponent {
             this.chart.destroy();
         }
         this.translator.removeObserver(this);
+        
+        // Retirer le menu d'export s'il existe
+        const exportMenu = document.getElementById('chartExportMenu');
+        if (exportMenu) {
+            exportMenu.remove();
+        }
     }
 }

@@ -1,12 +1,12 @@
 /**
- * Service de calcul des stratégies - Version 2.0
- * Utilise la nouvelle architecture modulaire
+ * Service de calcul des stratégies - Version 3.3
+ * Intégration de DistributionCalculator pour les intervalles de confiance précis
  */
 
-import { UpgradeCalculator } from '../core/UpgradeCalculator.js';
-import { SCROLL_IDS, SCROLLS, SCROLL_LIMIT } from '../core/Constants.js';
+import { Calculator, DistributionCalculator } from '../core/Calculator.js';
 import { Strategy } from '../core/Strategy.js';
-import { getAvailableScrollsForLevel, getSuccessRate, convertPathToNames } from '../core/utils.js';
+import { FindBestStrategy } from '../core/Calculator.js';
+import { SCROLL_IDS, SCROLLS, SCROLL_LIMIT } from '../core/Constants.js';
 
 /**
  * Service de calcul des stratégies d'amélioration
@@ -14,7 +14,19 @@ import { getAvailableScrollsForLevel, getSuccessRate, convertPathToNames } from 
 export class StrategyService {
   constructor(dataService) {
     this.dataService = dataService;
-    this.calculator = new UpgradeCalculator();
+    // Configuration pour les limites de calcul
+    this.config = {
+      maxTrials: 50000, // Limite configurable pour les calculs de distribution
+      cumulativeSumLimit: 0.999 // Arrêter quand on atteint 99.9% de probabilité cumulative
+    };
+  }
+
+  /**
+   * Configure les limites de calcul
+   */
+  setCalculationLimits(maxTrials, cumulativeSumLimit) {
+    this.config.maxTrials = maxTrials;
+    this.config.cumulativeSumLimit = cumulativeSumLimit;
   }
 
   /**
@@ -23,28 +35,29 @@ export class StrategyService {
   async calculateOptimalStrategy(itemId, startLevel, endLevel) {
     const itemData = await this.dataService.getItemById(itemId);
     
-    // Préparer les coûts
-    const costs = await this.prepareCosts(itemData, endLevel);
+    // Préparer les données au format attendu par FindBestStrategy
+    const { scrollCosts, otherCosts, baseRates } = await this.prepareCosts(itemData, Math.max(endLevel, SCROLL_LIMIT + 1));
     
-    // Extraire les taux de base
-    const baseRates = this.extractBaseRates(itemData, endLevel);
+    // Debug des coûts
+    console.log('Optimal strategy - Scroll costs:', scrollCosts);
+    console.log('Optimal strategy - Start:', startLevel, 'End:', endLevel);
     
-    // Trouver la meilleure stratégie
+    // Utiliser FindBestStrategy pour trouver la meilleure stratégie
     const finder = new FindBestStrategy(
       startLevel,
       endLevel,
-      costs.scrollCosts,
-      costs.otherCosts,
-      baseRates,
-      itemData,
-      this.calculator
+      scrollCosts,
+      otherCosts,
+      baseRates
     );
     
     const bestStrategy = finder.findBest();
-    const result = this.calculator.calculate(bestStrategy);
     
-    // Convertir en format attendu par l'application
-    return await this.formatResult(result, itemData, startLevel, endLevel, costs);
+    // Calculer avec Calculator
+    const calculator = new Calculator(bestStrategy);
+    
+    // Convertir au format attendu par l'application
+    return await this.formatResult(bestStrategy, calculator, itemData, startLevel, endLevel, 'optimal');
   }
 
   /**
@@ -53,57 +66,43 @@ export class StrategyService {
   async calculateCustomStrategy(customScenario, itemId, startLevel, endLevel) {
     const itemData = await this.dataService.getItemById(itemId);
     
-    // Valider et corriger le scénario
-    const validatedPath = this.validateCustomPath(customScenario, startLevel, endLevel);
+    // Préparer les données
+    const { scrollCosts, otherCosts, baseRates } = await this.prepareCosts(itemData, Math.max(endLevel, SCROLL_LIMIT + 1));
     
-    // Convertir les noms en objets scroll
-    const scrollPath = [];
-    for (let i = 0; i < endLevel; i++) {
-      const scrollName = validatedPath[i];
-      const scroll = Object.values(SCROLLS).find(s => s.internalName === scrollName);
-      if (scroll) {
-        scrollPath[i] = scroll;
-      }
-    }
+    // Debug des coûts
+    console.log('Custom strategy - Scroll costs:', scrollCosts);
+    console.log('Custom strategy - Scenario:', customScenario);
+    console.log('Custom strategy - Start:', startLevel, 'End:', endLevel);
     
-    // Préparer les coûts
-    const costs = await this.prepareCosts(itemData, endLevel);
-    const baseRates = this.extractBaseRates(itemData, endLevel);
+    // Convertir le scénario personnalisé en path d'objets scroll
+    const path = this.buildCustomPath(customScenario, startLevel, endLevel);
     
     // Créer la stratégie
     const strategy = new Strategy({
       startLevel,
       endLevel,
-      scrollCosts: costs.scrollCosts,
-      otherCosts: costs.otherCosts,
-      path: scrollPath,
-      baseRates,
-      itemData
+      scrollCosts,
+      otherCosts,
+      path,
+      baseRates
     });
     
+    // Debug la stratégie créée
+    console.log('Custom strategy costs:', strategy.costs);
+    console.log('Custom strategy path:', path.map(s => s.name));
+    
     // Calculer
-    const result = this.calculator.calculate(strategy);
+    const calculator = new Calculator(strategy);
     
     // Formater
-    return await this.formatResult(result, itemData, startLevel, endLevel, costs);
+    return await this.formatResult(strategy, calculator, itemData, startLevel, endLevel, 'custom');
   }
 
   /**
-   * Extrait les taux de base depuis itemData
+   * Prépare les données de coûts au format attendu par les nouvelles classes
    */
-  extractBaseRates(itemData, maxLevel) {
-    const rates = [];
-    for (let level = 0; level < maxLevel; level++) {
-      const levelData = itemData[(level + 1).toString()];
-      rates[level] = levelData?.success_rate || 100;
-    }
-    return rates;
-  }
-
-  /**
-   * Prépare les données de coûts
-   */
-  async prepareCosts(itemData, endLevel) {
+  async prepareCosts(itemData, maxLevel) {
+    // scrollCosts : objet avec les coûts par ID de parchemin
     const scrollCosts = {
       [SCROLL_IDS.BLESSING_SCROLL]: this.dataService.getUpgradeCost("Parchemin de bénédiction"),
       [SCROLL_IDS.BLACKSMITH_MANUAL]: this.dataService.getUpgradeCost("Manuel de Forgeron"),
@@ -112,10 +111,16 @@ export class StrategyService {
       [SCROLL_IDS.MAGIC_STONE]: this.dataService.getUpgradeCost("Pierre magique")
     };
 
-    const otherCosts = [];
-    const levelCosts = [];
+    // otherCosts : objet avec les autres coûts par niveau (0-indexed)
+    const otherCosts = {};
     
-    for (let level = 0; level < endLevel; level++) {
+    // baseRates : objet avec les taux de base par niveau (0-indexed)
+    const baseRates = {};
+    
+    // IMPORTANT: Préparer les coûts pour TOUS les niveaux possibles (0 à maxLevel)
+    // même si on ne les utilise pas tous, car le Calculator peut avoir besoin
+    // des coûts pour des niveaux inférieurs au startLevel (régressions)
+    for (let level = 0; level < maxLevel; level++) {
       const levelData = itemData[(level + 1).toString()] || {};
       
       // Coût en yang (en millions)
@@ -127,15 +132,313 @@ export class StrategyService {
       // Coût total hors objet d'amélioration
       otherCosts[level] = yangCost + matCost;
       
-      // Coût total du niveau (sera complété avec l'objet d'amélioration)
-      levelCosts[level] = otherCosts[level];
+      // Taux de base de l'item - IMPORTANT: Ne jamais avoir 0
+      let rate = levelData.success_rate || 1;
+      // S'assurer que le taux n'est jamais 0 pour éviter des divisions par zéro
+      if (rate <= 0) {
+        console.warn(`Level ${level + 1} has invalid success rate: ${rate}, using 1`);
+        rate = 1;
+      }
+      baseRates[level] = rate;
     }
+
+    console.log('Prepared baseRates:', baseRates);
 
     return {
       scrollCosts,
       otherCosts,
-      levelCosts
+      baseRates
     };
+  }
+
+  /**
+   * Construit le path pour une stratégie personnalisée
+   */
+  buildCustomPath(customScenario, startLevel, endLevel) {
+    const path = [];
+    
+    console.log('Building custom path with scenario:', customScenario);
+    
+    // IMPORTANT: Construire le path pour TOUS les niveaux de 0 à endLevel
+    // même si on commence à un niveau plus élevé, car le Calculator peut
+    // avoir besoin de calculer des coûts pour des niveaux inférieurs (régressions)
+    for (let level = 0; level < endLevel; level++) {
+      let scrollName;
+      
+      // Utiliser customScenario pour tous les niveaux disponibles
+      if (customScenario[level] !== undefined) {
+        scrollName = customScenario[level];
+      } else if (level > 9) {
+        scrollName = "Pierre magique";
+      } else if (level <= 3) {
+        scrollName = "Parchemin de Guerre";
+      } else {
+        // Pour les niveaux 4-9 non définis dans customScenario
+        scrollName = "Parchemin du Dieu Dragon";
+      }
+      
+      // Convertir le nom en objet scroll
+      const scrollId = this.dataService.UPGRADE_ITEM_IDS[scrollName];
+      console.log(`Level ${level}: "${scrollName}" -> ID: ${scrollId}`);
+      
+      if (scrollId && SCROLLS[scrollId]) {
+        path[level] = SCROLLS[scrollId];
+      } else {
+        // Fallback sur Pierre magique si introuvable
+        console.warn(`Unknown scroll name: "${scrollName}" at level ${level}, using Magic Stone as fallback`);
+        path[level] = SCROLLS[SCROLL_IDS.MAGIC_STONE];
+      }
+    }
+    
+    console.log('Built path:', path.map(s => s ? s.name : 'null'));
+    
+    return path;
+  }
+
+  /**
+   * Calcule les percentiles à partir de la distribution
+   */
+  calculatePercentilesFromDistribution(distribution) {
+    let cumulative = 0;
+    let p5 = null, p25 = null, p50 = null, p75 = null, p95 = null;
+    
+    for (let i = 0; i < distribution.length; i++) {
+      cumulative += distribution[i];
+      
+      if (p5 === null && cumulative >= 0.05) p5 = i;
+      if (p25 === null && cumulative >= 0.25) p25 = i;
+      if (p50 === null && cumulative >= 0.50) p50 = i;
+      if (p75 === null && cumulative >= 0.75) p75 = i;
+      if (p95 === null && cumulative >= 0.95) p95 = i;
+      
+      if (p95 !== null) break;
+    }
+    
+    // Calculer la moyenne et l'écart-type depuis la distribution
+    let mean = 0;
+    let variance = 0;
+    
+    for (let i = 0; i < distribution.length; i++) {
+      mean += i * distribution[i];
+    }
+    
+    for (let i = 0; i < distribution.length; i++) {
+      variance += Math.pow(i - mean, 2) * distribution[i];
+    }
+    
+    const std = Math.sqrt(variance);
+    
+    return {
+      p5: p5 || 0,
+      p25: p25 || 0,
+      p50: p50 || 0,
+      p75: p75 || 0,
+      p95: p95 || 0,
+      mean,
+      std
+    };
+  }
+
+  /**
+   * Calcule les intervalles basés sur la distribution réelle
+   */
+  calculateIntervalsFromDistribution(distribution, waypoints) {
+    const stats = this.calculatePercentilesFromDistribution(distribution);
+    
+    return {
+      total: {
+        mean: stats.mean,
+        std: stats.std,
+        ci95: {
+          lower: stats.p5,
+          upper: stats.p95
+        },
+        percentiles: {
+          p5: stats.p5,
+          p25: stats.p25,
+          p50: stats.p50,
+          p75: stats.p75,
+          p95: stats.p95
+        }
+      },
+      // Pour les niveaux individuels, on utilise une approximation
+      byLevel: waypoints.map(mean => ({
+        mean,
+        std: Math.sqrt(mean),
+        ci95: {
+          lower: Math.max(0, mean - 1.96 * Math.sqrt(mean)),
+          upper: mean + 1.96 * Math.sqrt(mean)
+        }
+      }))
+    };
+  }
+
+  /**
+   * Formate le résultat pour l'application
+   */
+  async formatResult(strategy, calculator, itemData, startLevel, endLevel, strategyType) {
+    const expectedVisits = calculator.expectedVisits;
+    let expectedTotalCost = calculator.expectedTotalCost;
+    
+    // Vérifier si le coût est NaN ou invalide
+    if (isNaN(expectedTotalCost) || expectedTotalCost === null || expectedTotalCost === undefined) {
+      console.error(`ERROR: expectedTotalCost is invalid (${expectedTotalCost}) for ${strategyType} strategy`);
+      expectedTotalCost = 0;
+    }
+    
+    // Calculer la distribution pour des intervalles précis
+    console.log(`Calculating distribution for ${strategyType} strategy...`);
+    const distributionCalculator = new DistributionCalculator(
+      strategy, 
+      this.config.maxTrials, 
+      this.config.cumulativeSumLimit
+    );
+    const distribution = distributionCalculator.calculateExpectedVisitsDistribution();
+    console.log(`Distribution calculated: ${distribution.length} points`);
+    
+    // Convertir expectedVisits (objet) en waypoints (tableau)
+    const waypoints = [];
+    const extendedWaypoints = [];
+    
+    // S'assurer que extendedWaypoints a la bonne taille
+    for (let level = 0; level < endLevel; level++) {
+      const visits = expectedVisits[level] || 0;
+      extendedWaypoints[level] = visits;
+      if (level >= startLevel && level < endLevel) {
+        waypoints.push(visits);
+      }
+    }
+    
+    // Construire le chemin détaillé avec les noms internes
+    const path = [];
+    const fullPath = [];
+    
+    // IMPORTANT: fullPath doit contenir les noms réels utilisés par la stratégie
+    for (let level = 0; level < endLevel; level++) {
+      const scroll = strategy.path[level];
+      if (!scroll) continue;
+      
+      // Nom interne pour l'UI
+      const internalName = this.dataService.idToInternalName[scroll.id] || scroll.name;
+      fullPath.push(internalName);
+      
+      if (level >= startLevel && level < endLevel) {
+        const levelData = itemData[(level + 1).toString()] || {};
+        const yangCost = levelData.yang_cost || 0;
+        const yangCostInMillions = yangCost / 1000000;
+        const materialCost = await this.calculateMaterialCost(levelData.materials || {});
+        const upgradeCost = this.dataService.getUpgradeCost(internalName);
+        const totalLevelCost = yangCostInMillions + materialCost + upgradeCost;
+        
+        path.push({
+          level: level + 1,
+          name: internalName,
+          rate: strategy.successRates[level] || 1,
+          noDowngrade: !strategy.canRetroFlags[level], // Inverser la logique
+          expectedTrials: expectedVisits[level] || 0,
+          yangCost: yangCost,
+          yangCostInMillions: yangCostInMillions,
+          materialCost: materialCost,
+          upgradeCost: upgradeCost,
+          totalCost: totalLevelCost
+        });
+      }
+    }
+    
+    // Calculer les intervalles basés sur la distribution réelle
+    const intervals = this.calculateIntervalsFromDistribution(distribution, waypoints);
+    
+    // Debug et recalcul si nécessaire
+    if ((expectedTotalCost === 0 || isNaN(expectedTotalCost)) && waypoints.length > 0) {
+      console.warn(`Warning: Total cost is ${expectedTotalCost} for ${strategyType} strategy, debugging...`);
+      console.log('Strategy costs:', strategy.costs);
+      console.log('Expected visits:', expectedVisits);
+      console.log('Calculator expectedVisits:', calculator.expectedVisits);
+      console.log('Calculator expectedTotalCost:', calculator.expectedTotalCost);
+      console.log('StartLevel:', startLevel, 'EndLevel:', endLevel);
+      
+      // Recalculer manuellement
+      let manualTotalCost = 0;
+      let hasValidCosts = false;
+      
+      for (let level = 0; level < endLevel; level++) {
+        const visits = expectedVisits[level] || 0;
+        if (visits > 0 && strategy.costs[level] !== undefined && !isNaN(strategy.costs[level])) {
+          const levelCost = strategy.costs[level];
+          const levelTotal = visits * levelCost;
+          console.log(`Level ${level}: ${visits} visits * ${levelCost} cost = ${levelTotal}`);
+          if (!isNaN(levelTotal)) {
+            manualTotalCost += levelTotal;
+            hasValidCosts = true;
+          }
+        }
+      }
+      
+      console.log('Manual total cost:', manualTotalCost);
+      
+      // Si le calcul manuel donne un résultat valide, l'utiliser
+      if (hasValidCosts && !isNaN(manualTotalCost) && manualTotalCost > 0) {
+        expectedTotalCost = manualTotalCost;
+        console.log('Using manual calculation:', expectedTotalCost);
+      }
+    }
+    
+    // Créer le résultat final
+    const result = {
+      method: this.determineMethod(startLevel, endLevel),
+      path,
+      fullPath,
+      rates: Object.values(strategy.successRates),
+      flags: Object.values(strategy.canRetroFlags).map(canRetro => !canRetro), // Inverser pour compatibility
+      // Ajouter les rates et flags complets pour le graphique
+      fullRates: Object.keys(strategy.successRates).sort((a, b) => parseInt(a) - parseInt(b)).map(k => strategy.successRates[k]),
+      fullFlags: Object.keys(strategy.canRetroFlags).sort((a, b) => parseInt(a) - parseInt(b)).map(k => !strategy.canRetroFlags[k]),
+      waypoints,
+      extendedWaypoints,
+      totalTrials: waypoints.reduce((sum, w) => sum + w, 0),
+      totalCost: expectedTotalCost || 0, // S'assurer que ce n'est jamais NaN
+      intervals,
+      riskLevel: this.calculateRiskLevel(intervals.total.std / intervals.total.mean), // CV = coefficient de variation
+      startLevel,
+      endLevel,
+      // Ajouter la stratégie originale pour debug
+      strategy: strategy,
+      calculator: calculator,
+      // Ajouter la distribution pour le graphique
+      distribution: distribution,
+      // Pour le graphique - utiliser la distribution cumulative
+      calculateTrialsProbabilities: () => this.convertDistributionToCumulative(distribution)
+    };
+
+    console.log(`${strategyType} strategy result:`, {
+      totalCost: result.totalCost,
+      totalTrials: result.totalTrials,
+      path: result.fullPath.slice(startLevel, endLevel),
+      intervalP5: result.intervals.total.ci95.lower,
+      intervalP95: result.intervals.total.ci95.upper
+    });
+
+    return result;
+  }
+
+  /**
+   * Convertit la distribution en probabilité cumulative pour le graphique
+   */
+  convertDistributionToCumulative(distribution) {
+    const points = [];
+    let cumulative = 0;
+    
+    points.push({ x: 0, y: 0 });
+    
+    for (let i = 0; i < distribution.length; i++) {
+      cumulative += distribution[i];
+      points.push({ x: i, y: cumulative * 100 });
+      
+      // Arrêter à 99.99% pour éviter trop de points
+      if (cumulative > 0.9999) break;
+    }
+    
+    return points;
   }
 
   /**
@@ -150,276 +453,20 @@ export class StrategyService {
   }
 
   /**
-   * Valide et corrige un chemin personnalisé
+   * Détermine la méthode utilisée
    */
-  validateCustomPath(customScenario, startLevel, endLevel) {
-    const path = [];
-    
-    for (let i = 0; i < endLevel; i++) {
-      const level = i + 1;
-      
-      if (level > 9) {
-        // Forcer Pierre magique après le niveau 9
-        path.push("Pierre magique");
-      } else if (customScenario && customScenario[i]) {
-        // Utiliser le choix personnalisé
-        path.push(customScenario[i]);
-      } else {
-        // Par défaut selon le niveau
-        if (level <= 4) {
-          path.push("Parchemin de Guerre");
-        } else {
-          path.push("Parchemin du Dieu Dragon");
-        }
-      }
-    }
-    
-    return path;
+  determineMethod(startLevel, endLevel) {
+    if (endLevel <= SCROLL_LIMIT) return 'markov';
+    if (startLevel >= SCROLL_LIMIT) return 'direct';
+    return 'mixed';
   }
 
   /**
-   * Formate le résultat pour l'application
-   */
-  async formatResult(calculatorResult, itemData, startLevel, endLevel, costs) {
-    const { strategy, expectedVisits, expectedTotalCost, intervals } = calculatorResult;
-    
-    // Convertir les IDs en noms
-    const fullPath = strategy.path.map(id => SCROLLS[id]?.internalName || 'Unknown');
-    
-    // Construire le chemin détaillé
-    const path = [];
-    const extendedWaypoints = new Array(endLevel).fill(0);
-    
-    // Copier les waypoints
-    for (let level = 0; level < endLevel; level++) {
-      extendedWaypoints[level] = expectedVisits[level] || 0;
-      
-      if (level >= startLevel && level < endLevel) {
-        const scrollId = strategy.path[level] || SCROLL_IDS.MAGIC_STONE;
-        const scroll = SCROLLS[scrollId];
-        const scrollName = scroll?.internalName || 'Unknown';
-        const levelData = itemData[(level + 1).toString()] || {};
-        
-        // Utiliser le taux de la stratégie
-        let rate = strategy.successRates[level] || 1;
-        
-        // Calculer les coûts détaillés
-        const yangCost = levelData.yang_cost || 0;
-        const yangCostInMillions = yangCost / 1000000;
-        const materialCost = await this.calculateMaterialCost(levelData.materials || {});
-        const upgradeCost = this.dataService.getUpgradeCost(scrollName);
-        const totalLevelCost = yangCostInMillions + materialCost + upgradeCost;
-        
-        path.push({
-          level: level + 1,
-          name: scrollName,
-          rate: rate,
-          noDowngrade: strategy.noRetroFlags[level] || false,
-          expectedTrials: expectedVisits[level] || 0,
-          yangCost: yangCost,
-          yangCostInMillions: yangCostInMillions,
-          materialCost: materialCost,
-          upgradeCost: upgradeCost,
-          totalCost: totalLevelCost
-        });
-      }
-    }
-
-    // Créer le résultat final
-    const result = {
-      method: calculatorResult.method,
-      path,
-      fullPath,
-      rates: strategy.successRates,
-      flags: strategy.noRetroFlags,
-      waypoints: extendedWaypoints.slice(startLevel, endLevel),
-      extendedWaypoints,
-      totalTrials: calculatorResult.totalTrials,
-      totalCost: expectedTotalCost,
-      intervals,
-      riskLevel: this.calculateRiskLevel(intervals.total.std / calculatorResult.totalTrials),
-      startLevel,
-      endLevel,
-      // Garder une référence au calculator pour les probabilités
-      _calculator: calculatorResult
-    };
-
-    // Ajouter la méthode de calcul des probabilités
-    result.calculateTrialsProbabilities = () => {
-      return this.calculator.calculateTrialsProbabilities(calculatorResult);
-    };
-
-    return result;
-  }
-
-  /**
-   * Calcule le niveau de risque
+   * Calcule le niveau de risque basé sur le coefficient de variation
    */
   calculateRiskLevel(cv) {
     if (cv < 0.20) return 'low';
     if (cv < 0.35) return 'medium';
     return 'high';
-  }
-}
-
-/**
- * Classe pour trouver la meilleure stratégie
- */
-class FindBestStrategy {
-  constructor(startLevel, endLevel, scrollCosts, otherCosts, baseRates, itemData, calculator) {
-    this.startLevel = startLevel;
-    this.endLevel = endLevel;
-    this.maxLevel = Math.min(endLevel, SCROLL_LIMIT);
-    this.scrollCosts = scrollCosts;
-    this.otherCosts = otherCosts;
-    this.baseRates = baseRates;
-    this.itemData = itemData;
-    this.calculator = calculator;
-    this.strategies = this.generateStrategies();
-  }
-
-  findBest() {
-    let bestStrategy = null;
-    let lowestCost = Infinity;
-
-    console.log(`Finding best strategy among ${this.strategies.length} candidates...`);
-
-    for (const strategy of this.strategies) {
-      const result = this.calculator.calculate(strategy);
-      const cost = result.expectedTotalCost;
-
-      if (cost < lowestCost) {
-        lowestCost = cost;
-        bestStrategy = strategy;
-      }
-    }
-
-    return this.buildFinalStrategy(bestStrategy);
-  }
-
-  /**
-   * Filtre les items dominés
-   * Version améliorée qui permet Pierre magique dans plus de cas
-   */
-  filterDominatedItems(level, items) {
-    // Pour les derniers niveaux, garder toutes les options
-    if (level >= 7) {
-      console.log(`Level ${level + 1}: Keeping all options for better optimization`);
-      return items;
-    }
-    
-    const seen = new Set();
-    const result = [];
-
-    for (const itemA of items) {
-      const pA = getSuccessRate(level, itemA.fixedRates, this.baseRates);
-      const cA = this.scrollCosts[itemA.id] || 0;
-
-      const key = `${pA}-${cA}`;
-      if (seen.has(key)) continue;
-
-      let isDominated = false;
-      
-      // Un item est dominé seulement si STRICTEMENT inférieur
-      for (const itemB of items) {
-        if (itemB === itemA) continue;
-        
-        const pB = getSuccessRate(level, itemB.fixedRates, this.baseRates);
-        const cB = this.scrollCosts[itemB.id] || 0;
-        
-        // Domination stricte seulement
-        if (pB > pA && cB < cA) {
-          isDominated = true;
-          break;
-        }
-      }
-
-      if (!isDominated) {
-        seen.add(key);
-        result.push(itemA);
-      }
-    }
-
-    // Toujours inclure Pierre magique si elle a un coût raisonnable
-    const magicStone = items.find(item => item.id === SCROLL_IDS.MAGIC_STONE);
-    if (magicStone && !result.includes(magicStone)) {
-      const magicStoneCost = this.scrollCosts[magicStone.id] || 0;
-      // L'inclure si son coût n'est pas excessif
-      const avgCost = Object.values(this.scrollCosts).reduce((a, b) => a + b, 0) / Object.keys(this.scrollCosts).length;
-      if (magicStoneCost <= avgCost * 3) {
-        result.push(magicStone);
-      }
-    }
-
-    return result;
-  }
-
-  /**
-   * Génère toutes les stratégies possibles
-   */
-  generateStrategies() {
-    const results = [];
-    
-    // Permettre Pierre magique à tous les niveaux pour l'optimisation
-    const allowMagicStone = true;
-
-    const backtrack = (level = 0, path = []) => {
-      if (level === this.maxLevel) {
-        const strategy = new Strategy({
-          startLevel: this.startLevel,
-          endLevel: this.maxLevel,
-          scrollCosts: this.scrollCosts,
-          otherCosts: this.otherCosts,
-          path: [...path],
-          baseRates: this.baseRates,
-          itemData: this.itemData
-        });
-        results.push(strategy);
-        return;
-      }
-
-      const availableScrolls = getAvailableScrollsForLevel(level + 1, allowMagicStone);
-      const filteredItems = this.filterDominatedItems(level, availableScrolls);
-
-      for (const item of filteredItems) {
-        path.push(item);
-        backtrack(level + 1, path);
-        path.pop();
-      }
-    };
-
-    backtrack();
-    
-    console.log(`Generated ${results.length} strategies from level ${this.startLevel} to ${this.endLevel}.`);
-    
-    return results;
-  }
-
-  /**
-   * Construit la stratégie finale avec extension si nécessaire
-   */
-  buildFinalStrategy(strategy) {
-    if (!strategy || this.endLevel <= this.maxLevel) {
-      return strategy;
-    }
-
-    // Étendre la stratégie pour les niveaux > 9
-    const extendedPath = [...strategy.path];
-    
-    // Ajouter Pierre magique pour tous les niveaux > 9
-    for (let level = this.maxLevel; level < this.endLevel; level++) {
-      extendedPath.push(SCROLLS[SCROLL_IDS.MAGIC_STONE]);
-    }
-    
-    // Créer la stratégie étendue
-    return new Strategy({
-      startLevel: strategy.startLevel,
-      endLevel: this.endLevel,
-      scrollCosts: this.scrollCosts,
-      otherCosts: this.otherCosts,
-      path: extendedPath,
-      baseRates: this.baseRates,
-      itemData: this.itemData
-    });
   }
 }

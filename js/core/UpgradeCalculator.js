@@ -318,18 +318,40 @@ export class UpgradeCalculator {
   /**
    * Construit une stratégie à partir d'un chemin (pour compatibilité)
    */
-  buildStrategy(path, itemData, startLevel, endLevel, costs) {
-    const scrollPath = path.map(id => SCROLLS[id]).filter(s => s);
-    
-    return new Strategy({
-      startLevel,
-      endLevel,
-      scrollCosts: costs.scrollCosts || {},
-      otherCosts: costs.otherCosts || costs.levelCosts || [],
-      path: scrollPath,
-      baseRates: this.extractBaseRates(itemData),
-      itemData
-    });
+  buildStrategy(result) {
+      const strategy = {
+          startLevel: result.startLevel,
+          endLevel: result.endLevel,
+          successRates: {},
+          canRetroFlags: {},
+          waypoints: [],
+          path: result.path || [],
+      };
+
+      let currentLevel = result.startLevel;
+
+      for (const step of result.path || []) {
+          const nextLevel = step.targetLevel;
+          const rate = step.successRate;
+          const canRetro = step.canRetro || false;
+
+          for (let i = currentLevel; i < nextLevel; i++) {
+              strategy.successRates[i] = rate;
+              strategy.canRetroFlags[i] = canRetro;
+          }
+
+          currentLevel = nextLevel;
+      }
+
+      strategy.totalTrials = result.totalTrials || 100;
+
+      // 🔁 Ajout de la fonction analytique théorique
+      strategy.calculateTrialsProbabilities = () => {
+          console.log("[DEBUG] Hooked analytical probability curve into strategy object ✅");
+          return MarkovChain.calculateProbabilityCurve(strategy);
+      };
+
+      return strategy;
   }
 
   /**

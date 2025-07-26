@@ -12,8 +12,13 @@ import { Translator } from './utils/translator.js';
 import { Formatters } from './utils/formatters.js';
 import { UIState, showToast, confirm } from './utils/ui-helpers.js';
 
+// Import des nouvelles classes de calcul
+import { Calculator } from './core/Calculator.js';
+import { Strategy } from './core/Strategy.js';
+import { FindBestStrategy } from './core/Calculator.js';
+
 /**
- * Application principale Upways - Version avec nouvelle mécanique
+ * Application principale Upways - Version 3.0 avec nouvelles mécaniques
  */
 class UpwaysApp {
     constructor() {
@@ -85,10 +90,11 @@ class UpwaysApp {
             this.attachGlobalEvents();
             this.updateLanguage();
             
-            console.log('Application initialized with new upgrade mechanics');
+            console.log('Application initialized with new Calculator/Strategy classes');
             
             if (this.config.enableDebugLogs) {
                 console.log('Debug mode enabled');
+                console.log('Available classes:', { Calculator, Strategy, FindBestStrategy });
             }
         } catch (error) {
             console.error('Initialization error:', error);
@@ -360,7 +366,7 @@ class UpwaysApp {
     }
 
     /**
-     * Lance l'analyse avec la nouvelle mécanique
+     * Lance l'analyse avec les nouvelles classes Calculator et Strategy
      */
     async runAnalysis() {
         if (!this.searchComponent.hasSelectedItem()) {
@@ -434,7 +440,7 @@ class UpwaysApp {
     }
 
     /**
-     * Calcule toutes les stratégies avec la nouvelle mécanique
+     * Calcule toutes les stratégies avec les nouvelles classes
      */
     async calculateAllStrategies() {
         const startLevel = this.configComponent.getStartLevel();
@@ -527,7 +533,10 @@ class UpwaysApp {
                 this.configComponent.getStartLevel(),
                 this.configComponent.getEndLevel(),
                 this.dataService,
-                { mode: 'share' }
+                { 
+                    mode: 'share',
+                    strategyType: currentStrategy // Ajout du type de stratégie
+                }
             );
 
             this.uiState.showToast('success', this.translator.t('exportSuccess'));

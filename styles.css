@@ -742,7 +742,7 @@ body {
     transform: translateY(0) scale(1);
 }
 
-/* Strategies summary - REFONTE COMPLÈTE */
+/* Strategies summary - VERSION AMELIORÉE */
 .strategies-summary {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
@@ -866,98 +866,321 @@ body {
     gap: 0.5rem;
 }
 
-.detail-item {
+/* Section de statistiques améliorée */
+.stats-section {
+    background: rgba(99, 102, 241, 0.05);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 12px;
+}
+
+.strategy-card.active .stats-section {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.section-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.section-icon {
+    font-size: 16px;
+}
+
+.section-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #94a3b8;
+}
+
+.strategy-card.active .section-title {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.stat-item {
+    text-align: center;
+    padding: 8px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 6px;
+}
+
+.strategy-card.active .stat-item {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.stat-item.highlight {
+    background: rgba(99, 102, 241, 0.1);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+}
+
+.strategy-card.active .stat-item.highlight {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.stat-label {
+    font-size: 11px;
+    color: #94a3b8;
+    margin-bottom: 4px;
+}
+
+.strategy-card.active .stat-label {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.stat-value {
+    font-size: 20px;
+    font-weight: bold;
+    color: #f1f5f9;
+}
+
+/* Section intervalles avec visualisation améliorée */
+.intervals-section {
+    background: rgba(139, 92, 246, 0.08);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+    border: 1px solid rgba(139, 92, 246, 0.15);
+}
+
+.strategy-card.active .intervals-section {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.interval-display {
+    margin: 24px 0;
+    position: relative;
+    padding: 0 15px;
+}
+
+.interval-bar {
+    position: relative;
+    height: 50px;
+    background: linear-gradient(90deg, 
+        rgba(255, 255, 255, 0.03) 0%, 
+        rgba(255, 255, 255, 0.08) 50%, 
+        rgba(255, 255, 255, 0.03) 100%);
+    border-radius: 25px;
+    margin: 15px 0;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.interval-line {
+    position: absolute;
+    top: 50%;
+    left: 5%;
+    right: 5%;
+    height: 3px;
+    background: linear-gradient(90deg, #6366f1, #8b5cf6);
+    transform: translateY(-50%);
+    border-radius: 2px;
+    box-shadow: 0 0 10px rgba(99, 102, 241, 0.3);
+    background-size: 200% 100%;
+    animation: shimmer-line 3s linear infinite;
+}
+
+.strategy-card.active .interval-line {
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.9));
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
+}
+
+.interval-marker {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    z-index: 2;
+}
+
+.marker-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #6366f1;
+    border: 3px solid var(--bg-card);
+    position: relative;
+    z-index: 3;
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.4);
+    transition: all var(--transition-base);
+}
+
+.strategy-card.active .marker-dot {
+    background: white;
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow: 0 2px 10px rgba(255, 255, 255, 0.5);
+}
+
+.marker-dot.primary {
+    width: 20px;
+    height: 20px;
+    background: linear-gradient(135deg, #8b5cf6, #6366f1);
+    box-shadow: 0 3px 12px rgba(139, 92, 246, 0.6);
+    animation: pulse-marker 2s ease-in-out infinite;
+}
+
+.strategy-card.active .marker-dot.primary {
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    box-shadow: 0 3px 15px rgba(251, 191, 36, 0.6);
+}
+
+.marker-dot.secondary {
+    background: #94a3b8;
+    width: 12px;
+    height: 12px;
+}
+
+.strategy-card.active .marker-dot.secondary {
+    background: rgba(255, 255, 255, 0.8);
+}
+
+/* Animation au survol */
+.interval-marker:hover .marker-dot {
+    transform: scale(1.2);
+}
+
+.interval-marker:hover .marker-label {
+    font-weight: 700;
+    transform: translateY(-2px);
+}
+
+.marker-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-top: 4px;
+    background: var(--bg-card);
+    padding: 2px 8px;
+    border-radius: 6px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: all var(--transition-base);
+}
+
+.strategy-card.active .marker-label {
+    background: rgba(30, 41, 59, 0.9);
+    color: white;
+}
+
+.marker-percentile {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 500;
+    opacity: 0.8;
+}
+
+.strategy-card.active .marker-percentile {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.interval-info {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-top: 20px;
+    padding: 12px;
+    background: linear-gradient(135deg, 
+        rgba(255, 255, 255, 0.03), 
+        rgba(255, 255, 255, 0.06));
+    border-radius: 8px;
+    border: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.strategy-card.active .interval-info {
+    background: linear-gradient(135deg, 
+        rgba(255, 255, 255, 0.08), 
+        rgba(255, 255, 255, 0.12));
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+.interval-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.4rem 0;
-    border-bottom: 1px solid rgba(148, 163, 184, 0.05);
+    font-size: 13px;
+    padding: 4px 0;
 }
 
-.strategy-card.active .detail-item {
-    border-bottom-color: rgba(255, 255, 255, 0.1);
-}
-
-.detail-item:last-of-type {
-    border-bottom: none;
-}
-
-.detail-label {
-    font-size: 0.8rem;
+.interval-label {
+    color: var(--text-muted);
     font-weight: 500;
-    opacity: 0.9;
 }
 
-.strategy-card:not(.active) .detail-label {
-    color: var(--text-secondary);
+.strategy-card.active .interval-label {
+    color: rgba(255, 255, 255, 0.85);
 }
 
-.detail-value {
-    font-size: 0.8rem;
+.interval-value {
+    color: var(--text-primary);
     font-weight: 600;
+    font-size: 14px;
 }
 
-.detail-value.highlight {
-    font-size: 0.875rem;
-    color: var(--secondary);
+.strategy-card.active .interval-value {
+    color: white;
 }
 
-.strategy-card.active .detail-value.highlight {
-    color: var(--secondary-light);
+/* Animations pour les intervalles */
+@keyframes pulse-marker {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.1);
+        opacity: 0.9;
+    }
 }
 
-/* Indicateur de probabilité */
-.probability-indicator {
-    margin-top: 0.75rem;
-    padding-top: 0.75rem;
-    border-top: 1px solid rgba(148, 163, 184, 0.1);
+/* Effet de brillance sur la ligne */
+@keyframes shimmer-line {
+    0% {
+        background-position: -200px center;
+    }
+    100% {
+        background-position: 200px center;
+    }
 }
 
-.strategy-card.active .probability-indicator {
-    border-top-color: rgba(255, 255, 255, 0.1);
-}
-
-.probability-bar {
-    position: relative;
-    height: 6px;
-    background: rgba(148, 163, 184, 0.1);
-    border-radius: 999px;
-    overflow: hidden;
-    margin-bottom: 0.5rem;
-}
-
-.strategy-card.active .probability-bar {
-    background: rgba(255, 255, 255, 0.2);
-}
-
-.probability-fill {
-    position: absolute;
-    top: 0;
-    left: 5%;
-    height: 100%;
-    background: linear-gradient(90deg, var(--success), var(--primary));
-    border-radius: 999px;
-    transition: width var(--transition-slow);
-}
-
-.probability-label {
-    position: absolute;
-    top: -18px;
-    font-size: 0.6rem;
-    font-weight: 600;
-    opacity: 0.7;
-}
-
-.probability-label:first-of-type {
-    left: 5%;
-}
-
-.probability-range {
+/* Indicateur de risque */
+.risk-indicator {
     display: flex;
-    justify-content: space-between;
-    font-size: 0.7rem;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+    padding: 8px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 6px;
+}
+
+.strategy-card.active .risk-indicator {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.risk-label {
+    font-size: 12px;
+    color: #94a3b8;
+}
+
+.strategy-card.active .risk-label {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.risk-badge {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 11px;
     font-weight: 600;
-    opacity: 0.8;
 }
 
 /* Strategy details section */
@@ -2115,6 +2338,39 @@ body {
         padding: 1rem;
     }
     
+    /* Intervalles sur mobile */
+    .interval-display {
+        padding: 0 10px;
+    }
+
+    .interval-bar {
+        height: 40px;
+    }
+
+    .marker-label {
+        font-size: 12px;
+        padding: 1px 6px;
+    }
+
+    .marker-percentile {
+        font-size: 10px;
+    }
+
+    .marker-dot {
+        width: 12px;
+        height: 12px;
+    }
+
+    .marker-dot.primary {
+        width: 16px;
+        height: 16px;
+    }
+
+    .interval-info {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+    
     /* Modale de partage */
     .share-modal .modal-content {
         max-height: 100vh;
@@ -2253,8 +2509,12 @@ body {
         font-size: 1.5rem;
     }
     
-    .probability-indicator {
-        display: none;
+    .interval-display {
+        display: none; /* Masquer la visualisation complexe sur mobile */
+    }
+    
+    .interval-info {
+        margin-top: 0;
     }
 }
 
@@ -3487,4 +3747,118 @@ select:focus-visible {
         --bg-secondary: #1a1a1a;
         --border-color: rgba(255, 255, 255, 0.2);
     }
+}
+
+/* Menu d'export du graphique */
+.export-menu {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 4px;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+    min-width: 200px;
+    backdrop-filter: blur(10px);
+    background-color: rgba(30, 41, 59, 0.98);
+}
+
+.export-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px;
+    margin: 2px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: #e2e8f0;
+    font-size: 14px;
+    white-space: nowrap;
+}
+
+.export-menu-item:hover {
+    background-color: #334155;
+    transform: translateX(2px);
+}
+
+.export-menu-item:active {
+    background-color: #475569;
+}
+
+.export-icon {
+    font-size: 16px;
+    width: 20px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+/* Style cohérent avec vos boutons existants */
+.btn.btn-secondary {
+    gap: 8px;
+}
+
+/* Animation du menu */
+.export-menu {
+    animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* S'assurer que le menu est au-dessus de tout */
+.chart-controls {
+    position: relative;
+    z-index: 10;
+}
+
+/* Tooltip personnalisé pour l'avertissement Pierre magique */
+.magic-stone-warning .warning-tooltip {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%) translateY(-10px);
+    background: rgba(30, 41, 59, 0.98);
+    border: 1px solid #ef4444;
+    border-radius: 8px;
+    padding: 10px 14px;
+    box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.3);
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.2s ease;
+    pointer-events: none;
+    font-size: 13px;
+    color: #f1f5f9;
+    margin-bottom: 8px;
+    
+    /* Gérer le retour à la ligne */
+    white-space: normal;
+    width: 280px;
+    text-align: center;
+    line-height: 1.4;
+}
+
+/* Flèche du tooltip */
+.magic-stone-warning .warning-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: #ef4444;
+}
+
+/* Afficher au survol */
+.magic-stone-warning:hover .warning-tooltip {
+    opacity: 1;
+    visibility: visible;
 }

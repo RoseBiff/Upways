@@ -35,10 +35,13 @@ export const translations = {
         
         // Analyse
         analysisResults: "Résultats de l'analyse",
-        optimal: "Optimale",
+        optimal: "Optimal",
         custom: "Personnalisée",
         avgCost: "Coût moyen",
         avgTrials: "Tentatives moyennes",
+        avgTrialsShort: "Moyenne",
+        medianTrials: "Tentatives médianes",
+        medianShort: "Médiane",
         avgTrialsTotal: "Tentatives totales moyennes",
         level: "Niveau",
         trialsPerLevel: "Tentatives par niveau",
@@ -50,12 +53,35 @@ export const translations = {
         trialsProbability: "Tentatives vs Probabilité de succès",
         trialsProbabilityDesc: "Ce graphique montre la probabilité de réussir l'amélioration en fonction du nombre de tentatives",
         
+        // Statistiques détaillées
+        trialsStatistics: "Statistiques des tentatives",
+        
+        // Percentiles et statistiques
+        percentiles: "Percentiles",
+        percentile5: "5e percentile",
+        percentile25: "25e percentile (Q1)",
+        percentile50: "Médiane",
+        percentile75: "75e percentile (Q3)",
+        percentile95: "95e percentile",
+        confidenceInterval: "Intervalle de confiance",
+        interval95short: "95% d'intervalle",
+        quartiles: "Quartiles",
+        distribution: "Distribution",
+        median: "Médiane",
+        mean: "Moyenne",
+        mode: "Mode",
+        standardDeviation: "Écart-type",
+        
         // Graphique
         chartTitle: "Analyse de probabilité d'amélioration",
         chartSubtitle: "Evolution de la probabilité de succès selon le nombre de tentatives",
         xAxisLabel: "Nombre de tentatives",
         yAxisLabel: "Probabilité de succès (%)",
         probabilityAt: "Probabilité à",
+        distributionView: "Distribution",
+        cumulativeView: "Cumulée",
+        probability: "Probabilité (%)",
+        trialsProbability: "Probabilité par tentative",
         
         // Tooltips et décomposition des coûts
         trialInterval: "Essais",
@@ -66,14 +92,14 @@ export const translations = {
         itemsRequired: "Objets requis pour ce niveau",
         avgItemsRequired: "Nombre moyen d'objets nécessaires",
         belowStartLevel: "Niveau en dessous du départ",
-        magicStoneRecommended: "Restriction : utilisation de la Pierre Magique par absence d'autres données statistiques",
+        magicStoneRecommended: "Restriction : utilisation de la Pierre Magique en l'absence d'autres données statistiques",
+        magicStoneRestriction: "Restriction : utilisation de la Pierre magique à partir de +9 en l'absence d'autres données statistiques",
+        retrogradePossible: "Régression possible depuis ce niveau",
         costBreakdown: "Décomposition du coût",
         yangCost: "Coût en yang",
         materialCost: "Coût matériaux",
         upgradeCost: "Coût objet d'amélioration",
         totalCostPerTrial: "Coût total par essai",
-
-        magicStoneRestriction: "Restriction : utilisation de la Pierre magique à partir de +10 par absence d'autres données statistiques",
         repeatPattern: "Répétition du motif",
         
         // Statistiques
@@ -118,14 +144,23 @@ export const translations = {
         
         // Export
         priceConfiguration: "Configuration des prix utilisés",
-        forcedMagicStone: "Pierre magique forcée au-delà de +9",
+        forcedMagicStone: "Utilisation de la Pierre magique à partir de +9 en l'absence d'autres données statistiques",
         noMaterialsRequired: "Aucun matériau requis",
         
         // Reset
         resetConfirm: "Réinitialiser tous les paramètres ?",
         resetConfirmTitle: "Réinitialisation",
         resetConfirmButton: "Réinitialiser",
-        cancelButton: "Annuler"
+        cancelButton: "Annuler",
+        
+        // Export graphique
+        exportChart: "Exporter",
+        exportAsImage: "Exporter en image",
+        exportAsJSON: "Exporter en JSON",
+        chartExportedAsImage: "Graphique exporté en image",
+        dataExportedAsJSON: "Données exportées en JSON",
+        chartExportError: "Erreur lors de l'export du graphique",
+        dataExportError: "Erreur lors de l'export des données"
     },
     
     en: {
@@ -164,16 +199,38 @@ export const translations = {
         custom: "Custom",
         avgCost: "Average Cost",
         avgTrials: "Average Trials",
+        avgTrialsShort: "Average",
+        medianTrials: "Median Trials",
+        medianShort: "Median",
         avgTrialsTotal: "Total Average Trials",
         level: "Level",
         trialsPerLevel: "Trials per level",
         successProb: "P(success)",
-        interval95: "95% Interval",
+        interval95: "5% - 95% Interval",
         upgradePath: "Upgrade Path",
         requiredItems: "Required Items",
         requiredMaterials: "Required Materials",
         trialsProbability: "Trials vs Success Probability",
         trialsProbabilityDesc: "This graph shows the probability of successfully upgrading based on number of trials",
+        
+        // Detailed statistics
+        trialsStatistics: "Trials Statistics",
+        
+        // Percentiles and statistics
+        percentiles: "Percentiles",
+        percentile5: "5th percentile",
+        percentile25: "25th percentile (Q1)",
+        percentile50: "Median",
+        percentile75: "75th percentile (Q3)",
+        percentile95: "95th percentile",
+        confidenceInterval: "Confidence interval",
+        interval95short: "95% interval",
+        quartiles: "Quartiles",
+        distribution: "Distribution",
+        median: "Median",
+        mean: "Mean",
+        mode: "Mode",
+        standardDeviation: "Standard deviation",
         
         // Chart
         chartTitle: "Upgrade Probability Analysis",
@@ -181,6 +238,10 @@ export const translations = {
         xAxisLabel: "Number of attempts",
         yAxisLabel: "Success probability (%)",
         probabilityAt: "Probability at",
+        distributionView: "Distribution",
+        cumulativeView: "Cumulative",
+        probability: "Probability (%)",
+        trialsProbability: "Probability per trial",
         
         // Tooltips and cost breakdown
         trialInterval: "Trials",
@@ -191,12 +252,15 @@ export const translations = {
         itemsRequired: "Items required for this level",
         avgItemsRequired: "Average number of items needed",
         belowStartLevel: "Level below start",
-        magicStoneRecommended: "", // A completer
+        magicStoneRecommended: "Restriction: Magic Stone usage due to lack of other statistical data",
+        magicStoneRestriction: "Restriction: Magic Stone usage from +10 due to lack of other statistical data",
+        retrogradePossible: "Regression possible from this level",
         costBreakdown: "Cost breakdown",
         yangCost: "Yang cost",
         materialCost: "Materials cost",
         upgradeCost: "Upgrade item cost",
         totalCostPerTrial: "Total cost per trial",
+        repeatPattern: "Pattern repetition",
         
         totalTrials: "Average Trials",
         costRange95: "95% Interval",
@@ -233,14 +297,23 @@ export const translations = {
         
         // Export
         priceConfiguration: "Price configuration used",
-        forcedMagicStone: "Magic stone forced beyond +9",
+        forcedMagicStone: "Use of the Magic Stone from +9 onward in the absence of other statistical data",
         noMaterialsRequired: "No materials required",
         
         // Reset
         resetConfirm: "Reset all settings?",
         resetConfirmTitle: "Reset",
         resetConfirmButton: "Reset",
-        cancelButton: "Cancel"
+        cancelButton: "Cancel",
+        
+        // Chart export
+        exportChart: "Export",
+        exportAsImage: "Export as image",
+        exportAsJSON: "Export as JSON",
+        chartExportedAsImage: "Chart exported as image",
+        dataExportedAsJSON: "Data exported as JSON",
+        chartExportError: "Error exporting chart",
+        dataExportError: "Error exporting data"
     },
     
     ro: {
@@ -279,16 +352,38 @@ export const translations = {
         custom: "Personalizată",
         avgCost: "Cost mediu",
         avgTrials: "Încercări medii",
+        avgTrialsShort: "Medie",
+        medianTrials: "Încercări mediane",
+        medianShort: "Mediană",
         avgTrialsTotal: "Încercări totale medii",
         level: "Nivel",
         trialsPerLevel: "Încercări per nivel",
         successProb: "P(succes)",
-        interval95: "Interval 95%",
+        interval95: "Interval 5% - 95%",
         upgradePath: "Calea de upgrade",
         requiredItems: "Obiecte necesare",
         requiredMaterials: "Materiale necesare",
         trialsProbability: "Încercări vs Probabilitate de succes",
         trialsProbabilityDesc: "Acest grafic arată probabilitatea de a reuși upgrade-ul în funcție de numărul de încercări",
+        
+        // Statistici detaliate
+        trialsStatistics: "Statistici încercări",
+        
+        // Percentile și statistici
+        percentiles: "Percentile",
+        percentile5: "Percentila 5",
+        percentile25: "Percentila 25 (Q1)",
+        percentile50: "Mediană",
+        percentile75: "Percentila 75 (Q3)",
+        percentile95: "Percentila 95",
+        confidenceInterval: "Interval de încredere",
+        interval95short: "Interval 95%",
+        quartiles: "Cuartile",
+        distribution: "Distribuție",
+        median: "Mediană",
+        mean: "Medie",
+        mode: "Mod",
+        standardDeviation: "Deviație standard",
         
         // Grafic
         chartTitle: "Analiza probabilității de upgrade",
@@ -296,6 +391,10 @@ export const translations = {
         xAxisLabel: "Număr de încercări",
         yAxisLabel: "Probabilitate de succes (%)",
         probabilityAt: "Probabilitate la",
+        distributionView: "Distribuție",
+        cumulativeView: "Cumulativă",
+        probability: "Probabilitate (%)",
+        trialsProbability: "Probabilitate per încercare",
         
         // Tooltips și defalcare costuri
         trialInterval: "Încercări",
@@ -306,12 +405,15 @@ export const translations = {
         itemsRequired: "Obiecte necesare pentru acest nivel",
         avgItemsRequired: "Număr mediu de obiecte necesare",
         belowStartLevel: "Nivel sub start",
-        magicStoneRecommended: "", // A completer
+        magicStoneRecommended: "Restricție: utilizare Piatră Magică din lipsă de alte date statistice",
+        magicStoneRestriction: "Restricție: utilizare Piatră Magică de la +10 din lipsă de alte date statistice",
+        retrogradePossible: "Regresie posibilă de la acest nivel",
         costBreakdown: "Defalcare cost",
         yangCost: "Cost yang",
         materialCost: "Cost materiale",
         upgradeCost: "Cost obiect upgrade",
         totalCostPerTrial: "Cost total per încercare",
+        repeatPattern: "Repetare model",
         
         totalTrials: "Încercări medii",
         costRange95: "Interval 95%",
@@ -348,14 +450,23 @@ export const translations = {
         
         // Export
         priceConfiguration: "Configurația prețurilor utilizate",
-        forcedMagicStone: "Piatră magică forțată peste +9",
+        forcedMagicStone: "Utilizarea Pietrei Magice de la +9 în sus în lipsa altor date statistice",
         noMaterialsRequired: "Nu sunt necesare materiale",
         
         // Reset
         resetConfirm: "Resetați toate setările?",
         resetConfirmTitle: "Resetare",
         resetConfirmButton: "Resetează",
-        cancelButton: "Anulează"
+        cancelButton: "Anulează",
+        
+        // Export grafic
+        exportChart: "Export",
+        exportAsImage: "Exportă ca imagine",
+        exportAsJSON: "Exportă ca JSON",
+        chartExportedAsImage: "Grafic exportat ca imagine",
+        dataExportedAsJSON: "Date exportate ca JSON",
+        chartExportError: "Eroare la exportul graficului",
+        dataExportError: "Eroare la exportul datelor"
     },
     
     tr: {
@@ -394,16 +505,38 @@ export const translations = {
         custom: "Özel",
         avgCost: "Ortalama Maliyet",
         avgTrials: "Ortalama Deneme",
+        avgTrialsShort: "Ortalama",
+        medianTrials: "Medyan Deneme",
+        medianShort: "Medyan",
         avgTrialsTotal: "Toplam Ortalama Deneme",
         level: "Seviye",
         trialsPerLevel: "Seviye başına deneme",
         successProb: "P(başarı)",
-        interval95: "%95 Aralık",
+        interval95: "%5 - %95 Aralık",
         upgradePath: "Yükseltme Yolu",
         requiredItems: "Gerekli Eşyalar",
         requiredMaterials: "Gerekli Malzemeler",
         trialsProbability: "Deneme vs Başarı Olasılığı",
         trialsProbabilityDesc: "Bu grafik, deneme sayısına göre başarıyla yükseltme olasılığını gösterir",
+        
+        // Detaylı istatistikler
+        trialsStatistics: "Deneme İstatistikleri",
+        
+        // Yüzdelikler ve istatistikler
+        percentiles: "Yüzdelikler",
+        percentile5: "5. yüzdelik",
+        percentile25: "25. yüzdelik (Q1)",
+        percentile50: "Medyan",
+        percentile75: "75. yüzdelik (Q3)",
+        percentile95: "95. yüzdelik",
+        confidenceInterval: "Güven aralığı",
+        interval95short: "%95 aralık",
+        quartiles: "Çeyrekler",
+        distribution: "Dağılım",
+        median: "Medyan",
+        mean: "Ortalama",
+        mode: "Mod",
+        standardDeviation: "Standart sapma",
         
         // Grafik
         chartTitle: "Yükseltme Olasılık Analizi",
@@ -411,6 +544,10 @@ export const translations = {
         xAxisLabel: "Deneme sayısı",
         yAxisLabel: "Başarı olasılığı (%)",
         probabilityAt: "Olasılık",
+        distributionView: "Dağılım",
+        cumulativeView: "Kümülatif",
+        probability: "Olasılık (%)",
+        trialsProbability: "Deneme başına olasılık",
         
         // Araç ipuçları ve maliyet dökümü
         trialInterval: "Deneme",
@@ -421,12 +558,15 @@ export const translations = {
         itemsRequired: "Bu seviye için gerekli eşyalar",
         avgItemsRequired: "Ortalama gerekli eşya sayısı",
         belowStartLevel: "Başlangıç altı seviye",
-        magicStoneRecommended: "", // A completer
+        magicStoneRecommended: "Kısıtlama: Diğer istatistiksel veri eksikliğinden Sihirli Taş kullanımı",
+        magicStoneRestriction: "Kısıtlama: +10'dan itibaren diğer istatistiksel veri eksikliğinden Sihirli Taş kullanımı",
+        retrogradePossible: "Bu seviyeden gerileme mümkün",
         costBreakdown: "Maliyet dökümü",
         yangCost: "Yang maliyeti",
         materialCost: "Malzeme maliyeti",
         upgradeCost: "Yükseltme eşyası maliyeti",
         totalCostPerTrial: "Deneme başına toplam maliyet",
+        repeatPattern: "Desen tekrarı",
         
         totalTrials: "Ortalama Deneme",
         costRange95: "%95 Aralık",
@@ -463,14 +603,23 @@ export const translations = {
         
         // Dışa aktarma
         priceConfiguration: "Kullanılan fiyat yapılandırması",
-        forcedMagicStone: "+9'dan sonra sihirli taş zorunlu",
+        forcedMagicStone: "Diğer istatistiksel veriler olmadığında +9'dan itibaren Sihirli Taş kullanımı",
         noMaterialsRequired: "Malzeme gerekmiyor",
         
         // Sıfırlama
         resetConfirm: "Tüm ayarlar sıfırlansın mı?",
         resetConfirmTitle: "Sıfırlama",
         resetConfirmButton: "Sıfırla",
-        cancelButton: "İptal"
+        cancelButton: "İptal",
+        
+        // Grafik dışa aktarma
+        exportChart: "Dışa Aktar",
+        exportAsImage: "Resim olarak dışa aktar",
+        exportAsJSON: "JSON olarak dışa aktar",
+        chartExportedAsImage: "Grafik resim olarak dışa aktarıldı",
+        dataExportedAsJSON: "Veriler JSON olarak dışa aktarıldı",
+        chartExportError: "Grafik dışa aktarılırken hata",
+        dataExportError: "Veriler dışa aktarılırken hata"
     },
     
     de: {
@@ -509,16 +658,38 @@ export const translations = {
         custom: "Benutzerdefiniert",
         avgCost: "Durchschnittskosten",
         avgTrials: "Durchschn. Versuche",
+        avgTrialsShort: "Durchschnitt",
+        medianTrials: "Median Versuche",
+        medianShort: "Median",
         avgTrialsTotal: "Gesamt Durchschn. Versuche",
         level: "Stufe",
         trialsPerLevel: "Versuche pro Stufe",
         successProb: "P(Erfolg)",
-        interval95: "95% Intervall",
+        interval95: "5% - 95% Intervall",
         upgradePath: "Verbesserungspfad",
         requiredItems: "Benötigte Gegenstände",
         requiredMaterials: "Benötigte Materialien",
         trialsProbability: "Versuche vs Erfolgswahrscheinlichkeit",
         trialsProbabilityDesc: "Dieses Diagramm zeigt die Wahrscheinlichkeit einer erfolgreichen Verbesserung basierend auf der Anzahl der Versuche",
+        
+        // Detaillierte Statistiken
+        trialsStatistics: "Versuchsstatistiken",
+        
+        // Perzentile und Statistiken
+        percentiles: "Perzentile",
+        percentile5: "5. Perzentil",
+        percentile25: "25. Perzentil (Q1)",
+        percentile50: "Median",
+        percentile75: "75. Perzentil (Q3)",
+        percentile95: "95. Perzentil",
+        confidenceInterval: "Konfidenzintervall",
+        interval95short: "95% Intervall",
+        quartiles: "Quartile",
+        distribution: "Verteilung",
+        median: "Median",
+        mean: "Mittelwert",
+        mode: "Modalwert",
+        standardDeviation: "Standardabweichung",
         
         // Diagramm
         chartTitle: "Verbesserungswahrscheinlichkeitsanalyse",
@@ -526,6 +697,10 @@ export const translations = {
         xAxisLabel: "Anzahl der Versuche",
         yAxisLabel: "Erfolgswahrscheinlichkeit (%)",
         probabilityAt: "Wahrscheinlichkeit bei",
+        distributionView: "Verteilung",
+        cumulativeView: "Kumulativ",
+        probability: "Wahrscheinlichkeit (%)",
+        trialsProbability: "Wahrscheinlichkeit pro Versuch",
         
         // Tooltips und Kostenaufschlüsselung
         trialInterval: "Versuche",
@@ -536,12 +711,15 @@ export const translations = {
         itemsRequired: "Für diese Stufe erforderliche Gegenstände",
         avgItemsRequired: "Durchschnittliche Anzahl benötigter Gegenstände",
         belowStartLevel: "Stufe unter Start",
-        magicStoneRecommended: "", // A completer
+        magicStoneRecommended: "Einschränkung: Magischer Stein Nutzung mangels anderer statistischer Daten",
+        magicStoneRestriction: "Einschränkung: Magischer Stein Nutzung ab +10 mangels anderer statistischer Daten",
+        retrogradePossible: "Rückstufung von dieser Stufe möglich",
         costBreakdown: "Kostenaufschlüsselung",
         yangCost: "Yang-Kosten",
         materialCost: "Materialkosten",
         upgradeCost: "Verbesserungsgegenstand-Kosten",
         totalCostPerTrial: "Gesamtkosten pro Versuch",
+        repeatPattern: "Musterwiederholung",
         
         totalTrials: "Durchschn. Versuche",
         costRange95: "95% Intervall",
@@ -578,13 +756,22 @@ export const translations = {
         
         // Export
         priceConfiguration: "Verwendete Preiskonfiguration",
-        forcedMagicStone: "Magischer Stein erzwungen über +9",
+        forcedMagicStone: "Verwendung des Magischen Steins ab +9 bei fehlenden weiteren statistischen Daten",
         noMaterialsRequired: "Keine Materialien erforderlich",
         
         // Zurücksetzen
         resetConfirm: "Alle Einstellungen zurücksetzen?",
         resetConfirmTitle: "Zurücksetzen",
         resetConfirmButton: "Zurücksetzen",
-        cancelButton: "Abbrechen"
+        cancelButton: "Abbrechen",
+        
+        // Diagramm-Export
+        exportChart: "Exportieren",
+        exportAsImage: "Als Bild exportieren",
+        exportAsJSON: "Als JSON exportieren",
+        chartExportedAsImage: "Diagramm als Bild exportiert",
+        dataExportedAsJSON: "Daten als JSON exportiert",
+        chartExportError: "Fehler beim Export des Diagramms",
+        dataExportError: "Fehler beim Export der Daten"
     }
 };

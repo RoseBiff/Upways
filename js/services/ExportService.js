@@ -1,6 +1,6 @@
 /**
- * Service d'export des résultats avec options de partage - Version 3.7
- * Utilisation du logo externe
+ * Service d'export des résultats avec options de partage - Version 4.1
+ * Mise à jour pour correspondre à l'affichage actuel du site
  */
 export class ExportService {
     constructor(formatters, translator) {
@@ -31,12 +31,18 @@ export class ExportService {
             // Retirer le +0 du nom de l'item pour l'affichage
             const displayItemName = this.removeUpgradeLevel(currentItem);
 
+            // Déterminer le type de stratégie
+            const isOptimal = options.strategyType === 'optimal' || !options.strategyType;
+            const strategyName = isOptimal ? 
+                this.translator.t('optimal') : 
+                this.translator.t('custom');
+
             // Créer le header
             const header = this.createHeader();
             captureContainer.appendChild(header);
 
-            // Créer la section du chemin d'amélioration
-            const pathSection = this.createPathSection(strategy, displayItemName, selectedImgSrc);
+            // Créer la section du chemin d'amélioration avec le bon nom
+            const pathSection = this.createPathSection(strategy, displayItemName, selectedImgSrc, strategyName);
             captureContainer.appendChild(pathSection);
 
             // Attendre la création de l'affichage du chemin
@@ -239,24 +245,23 @@ export class ExportService {
         `;
 
         const itemData = await dataService.getItemById(currentItemId);
-        const fullWaypoints = strategy.extendedWaypoints || strategy.markov.waypoints;
+        const fullWaypoints = strategy.extendedWaypoints || strategy.waypoints || [];
 
         let hasLevelsAbove9 = false;
 
         // Pour l'export, on affiche tous les niveaux jusqu'à 30, puis on groupe
-        const individualDisplayLimit = 30;
-        const maxDisplayLevel = Math.min(endLevel, 100); // Limiter l'affichage à 100 max
+        const individualDisplayLimit = 19;
 
         // Afficher les niveaux individuels
         for (let level = 1; level <= Math.min(endLevel, individualDisplayLimit); level++) {
             const waypointValue = fullWaypoints[level - 1] || 0;
-        
+
             if (waypointValue > 0.01) {
                 const levelData = itemData[level.toString()] || { materials: {}, success_rate: 0, yang_cost: 0 };
             
                 let upgradeType;
                 
-                // Utiliser fullPath si disponible (stratégie optimale)
+                // Utiliser fullPath si disponible
                 if (strategy.fullPath && strategy.fullPath[level - 1]) {
                     upgradeType = strategy.fullPath[level - 1];
                 } else if (level > startLevel && level <= endLevel) {
@@ -265,13 +270,13 @@ export class ExportService {
                         upgradeType = strategy.path[pathIndex].name;
                     } else {
                         upgradeType = level <= 4 ? "Parchemin de Guerre" : 
-                                     level <= 9 ? "Parchemin de bénédiction" : 
-                                     "Pierre magique";
+                                    level <= 9 ? "Parchemin de bénédiction" : 
+                                    "Pierre magique";
                     }
                 } else {
                     upgradeType = level <= 4 ? "Parchemin de Guerre" : 
-                                 level <= 9 ? "Parchemin de bénédiction" : 
-                                 "Pierre magique";
+                                level <= 9 ? "Parchemin de bénédiction" : 
+                                "Pierre magique";
                 }
             
                 const rate = this.calculateSuccessRate(level, upgradeType, levelData.success_rate);
@@ -286,16 +291,21 @@ export class ExportService {
                 const totalLevelCost = yangCostInMillions + materialCost + upgradeCost;
                 const avgCost = totalLevelCost * waypointValue;
                 
+                // Déterminer les états du niveau
+                const isStartLevel = (level === startLevel);
+                const isBelowStart = (level < startLevel);
+                
                 const stepDiv = this.createCompactStepDiv(
                     level, 
                     upgradeType, 
                     rate, 
                     waypointValue, 
-                    level <= startLevel, 
+                    isStartLevel,
                     level > 9, 
                     yangCost, 
                     avgCost,
-                    dataService
+                    dataService,
+                    isBelowStart
                 );
                 pathDisplay.appendChild(stepDiv);
             }
@@ -312,14 +322,78 @@ export class ExportService {
                 display: flex;
                 flex-wrap: wrap;
                 gap: 8px;
-                margin-top: 10px;
-                padding: 10px;
-                background: rgba(99, 102, 241, 0.1);
-                border: 1px solid #6366f1;
-                border-radius: 6px;
+                margin-top: 15px;
+                padding: 12px;
+                background: linear-gradient(135deg, rgba(147, 51, 234, 0.05), rgba(99, 102, 241, 0.05));
+                border: 1.5px solid rgba(147, 51, 234, 0.3);
+                border-radius: 10px;
+                position: relative;
+                overflow: hidden;
             `;
             
+            // Ajouter un effet de brillance
+            const shimmer = document.createElement('div');
+            shimmer.style.cssText = `
+                position: absolute;
+                top: 0;
+                left: -100%;
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(
+                    90deg,
+                    transparent 0%,
+                    rgba(255, 255, 255, 0.05) 50%,
+                    transparent 100%
+                );
+                animation: shimmer 3s infinite;
+            `;
+            summaryDiv.appendChild(shimmer);
+            
+            // Ajouter le style pour l'animation
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes shimmer {
+                    0% { left: -100%; }
+                    100% { left: 200%; }
+                }
+            `;
+            summaryDiv.appendChild(style);
+            
+            // Ajouter le texte de répétition
+            const loopIndicator = document.createElement('div');
+            loopIndicator.style.cssText = `
+                width: 100%;
+                text-align: center;
+                padding: 10px;
+                margin-bottom: 10px;
+                z-index: 1;
+                position: relative;
+            `;
+            loopIndicator.innerHTML = `
+                <div style="display: inline-flex; align-items: center; gap: 15px; background: rgba(30, 41, 59, 0.8); padding: 8px 20px; border-radius: 8px; border: 1px solid rgba(147, 51, 234, 0.4);">
+                    <span style="font-size: 2rem; color: #9333ea;">🔄</span>
+                    <div style="text-align: left;">
+                        <div style="font-size: 14px; font-weight: 700; color: #e0aaff; margin-bottom: 2px;">
+                            ${this.translator.t('repeatPattern') || 'Répétition du motif'}
+                        </div>
+                        <div style="font-size: 16px; color: #f1f5f9; font-weight: 600;">
+                            +${individualDisplayLimit + 1} → +${endLevel}
+                        </div>
+                    </div>
+                </div>
+            `;
+            summaryDiv.appendChild(loopIndicator);
+            
             // Afficher les groupes de 10 en commençant à 31
+            const groupsContainer = document.createElement('div');
+            groupsContainer.style.cssText = `
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                position: relative;
+                z-index: 1;
+            `;
+            
             for (let groupStart = individualDisplayLimit + 1; groupStart <= endLevel; groupStart += 10) {
                 const groupEnd = Math.min(groupStart + 9, endLevel);
                 
@@ -344,33 +418,54 @@ export class ExportService {
                 
                 const groupDiv = document.createElement('div');
                 groupDiv.style.cssText = `
-                    background: #1a1f2e;
-                    border: 2px solid #9333ea;
-                    border-radius: 6px;
-                    padding: 10px;
+                    background: #252d3d;
+                    border: 1.5px solid #475569;
+                    border-radius: 8px;
+                    padding: 12px;
                     text-align: center;
                     font-size: 11px;
-                    width: 120px;
+                    width: 140px;
+                    position: relative;
+                    overflow: hidden;
                 `;
                 
-                const magicStoneName = dataService.getUpgradeItemName('Pierre magique');
+                // Ajouter une étoile pour marquer les niveaux élevés
+                //const star = document.createElement('div');
+                //star.style.cssText = `
+                //    position: absolute;
+                //    top: -6px;
+                //    right: -6px;
+                //    background: linear-gradient(135deg, #9333ea, #7c3aed);
+                //    color: white;
+                //    width: 20px;
+                //    height: 20px;
+                //    border-radius: 50%;
+                //    display: flex;
+                //    align-items: center;
+                //    justify-content: center;
+                //    font-size: 10px;
+                //    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+                //`;
+                //star.innerHTML = '✨';
+                //groupDiv.appendChild(star);
                 
-                groupDiv.innerHTML = `
-                    <div style="font-size: 12px; color: #e0aaff; font-weight: bold; margin-bottom: 5px;">
+                groupDiv.innerHTML += `
+                    <div style="font-size: 13px; color: #e0aaff; font-weight: bold; margin-bottom: 5px;">
                         +${groupStart} → +${groupEnd}
                     </div>
-                    <img src="${dataService.getUpgradeItemImagePath('Pierre magique')}" style="width: 32px; height: 32px; display: block; margin: 5px auto;">
-                    <div style="color: #e0aaff; font-size: 10px; margin: 5px 0;">
+                    <img src="${dataService.getUpgradeItemImagePath('Pierre magique')}" style="width: 36px; height: 36px; display: block; margin: 5px auto;">
+                    <div style="color: #e0aaff; font-size: 11px; margin: 5px 0;">
                         ${Math.round(groupTrials)} ${this.translator.t('trials')}
                     </div>
-                    <div style="font-size: 10px; color: #6366f1; font-weight: bold;">
+                    <div style="font-size: 11px; color: #6366f1; font-weight: bold;">
                         ${this.formatters.formatCost(groupCost)}
                     </div>
                 `;
                 
-                summaryDiv.appendChild(groupDiv);
+                groupsContainer.appendChild(groupDiv);
             }
             
+            summaryDiv.appendChild(groupsContainer);
             pathDisplay.appendChild(summaryDiv);
         }
 
@@ -380,13 +475,14 @@ export class ExportService {
             noteDiv.style.cssText = `
                 width: 100%;
                 text-align: center;
-                margin-top: 10px;
-                padding: 10px;
+                margin-top: 15px;
+                padding: 12px;
                 background: rgba(245, 158, 11, 0.1);
                 border: 1px solid #f59e0b;
-                border-radius: 6px;
-                font-size: 11px;
+                border-radius: 8px;
+                font-size: 12px;
                 color: #f59e0b;
+                font-weight: 600;
             `;
             noteDiv.innerHTML = `⚠️ ${this.translator.t('forcedMagicStone')}`;
             pathDisplay.appendChild(noteDiv);
@@ -436,13 +532,28 @@ export class ExportService {
         upgradeOptions.forEach(option => {
             const cost = dataService.getUpgradeCost(option.internalName);
             const row = document.createElement('div');
-            row.style.cssText = 'display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 12px;';
-            row.innerHTML = `
-                <span style="color: #94a3b8;">${option.displayName}:</span>
-                <span style="color: ${cost > 0 ? '#6366f1' : '#6B7280'}; font-weight: bold;">
-                    ${this.formatters.formatCost(cost)}
-                </span>
-            `;
+            row.style.cssText = 'display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; padding: 4px 0;';
+            
+            const itemInfo = document.createElement('div');
+            itemInfo.style.cssText = 'display: flex; align-items: center; gap: 8px; flex: 1;';
+            
+            const img = document.createElement('img');
+            img.src = dataService.getUpgradeItemImagePath(option.internalName);
+            img.style.cssText = 'width: 24px; height: 24px; object-fit: contain;';
+            
+            const name = document.createElement('span');
+            name.style.cssText = 'color: #94a3b8; font-size: 12px;';
+            name.textContent = option.displayName;
+            
+            itemInfo.appendChild(img);
+            itemInfo.appendChild(name);
+            
+            const price = document.createElement('span');
+            price.style.cssText = `color: ${cost > 0 ? '#6366f1' : '#6B7280'}; font-weight: bold; font-size: 12px;`;
+            price.textContent = this.formatters.formatCost(cost);
+            
+            row.appendChild(itemInfo);
+            row.appendChild(price);
             upgradeColumn.appendChild(row);
         });
 
@@ -465,7 +576,8 @@ export class ExportService {
                     if (!allMaterials.has(id)) {
                         allMaterials.set(id, {
                             id,
-                            name: dataService.getMaterialName(id)
+                            name: dataService.getMaterialName(id),
+                            imgPath: dataService.getItemImagePath(id)
                         });
                     }
                 });
@@ -477,21 +589,35 @@ export class ExportService {
             a.name.localeCompare(b.name)
         );
 
-        sortedMaterials.forEach(mat => {
-            const cost = dataService.getMaterialCost(mat.id);
-            const row = document.createElement('div');
-            row.style.cssText = 'display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 12px;';
-            row.innerHTML = `
-                <span style="color: #94a3b8;">${mat.name}:</span>
-                <span style="color: ${cost > 0 ? '#6366f1' : '#6B7280'}; font-weight: bold;">
-                    ${this.formatters.formatCost(cost)}
-                </span>
-            `;
-            materialsColumn.appendChild(row);
-        });
-
-        // Si aucun matériau
-        if (sortedMaterials.length === 0) {
+        if (sortedMaterials.length > 0) {
+            sortedMaterials.forEach(mat => {
+                const cost = dataService.getMaterialCost(mat.id);
+                const row = document.createElement('div');
+                row.style.cssText = 'display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; padding: 4px 0;';
+                
+                const itemInfo = document.createElement('div');
+                itemInfo.style.cssText = 'display: flex; align-items: center; gap: 8px; flex: 1;';
+                
+                const img = document.createElement('img');
+                img.src = mat.imgPath;
+                img.style.cssText = 'width: 24px; height: 24px; object-fit: contain;';
+                
+                const name = document.createElement('span');
+                name.style.cssText = 'color: #94a3b8; font-size: 12px;';
+                name.textContent = mat.name;
+                
+                itemInfo.appendChild(img);
+                itemInfo.appendChild(name);
+                
+                const price = document.createElement('span');
+                price.style.cssText = `color: ${cost > 0 ? '#6366f1' : '#6B7280'}; font-weight: bold; font-size: 12px;`;
+                price.textContent = this.formatters.formatCost(cost);
+                
+                row.appendChild(itemInfo);
+                row.appendChild(price);
+                materialsColumn.appendChild(row);
+            });
+        } else {
             const noMaterials = document.createElement('div');
             noMaterials.style.cssText = 'color: #6B7280; font-size: 12px; font-style: italic;';
             noMaterials.textContent = this.translator.t('noMaterialsRequired');
@@ -506,49 +632,109 @@ export class ExportService {
     }
 
     // Version compacte du stepDiv pour l'export avec affichage du coût en yang
-    createCompactStepDiv(level, upgradeType, rate, waypointValue, isBelowStart, isHighLevel, yangCost, avgCost, dataService) {
+    createCompactStepDiv(level, upgradeType, rate, waypointValue, isStartLevel, isHighLevel, yangCost, avgCost, dataService, isBelowStart = false) {
         const stepDiv = document.createElement('div');
+        
+        // Style adapté pour correspondre au site avec meilleur contraste
+        let backgroundStyle = '#252d3d'; // Fond plus clair pour meilleur contraste
+        let borderColor = '#475569';
+        let borderWidth = '1.5px';
+        let textColorPrimary = '#f1f5f9'; // Texte plus clair
+        let textColorSecondary = '#e2e8f0';
+        
+        if (isStartLevel) {
+            // Style spécial UNIQUEMENT pour le niveau de départ
+            borderColor = '#FFD700';
+            borderWidth = '3px';
+            backgroundStyle = '#252d3d';
+        } else if (isBelowStart && !isStartLevel) {
+            // Style atténué pour les niveaux sous le départ
+            backgroundStyle = '#1a1f2e';
+            textColorPrimary = '#94a3b8';
+            textColorSecondary = '#64748b';
+        }
+        
         stepDiv.style.cssText = `
-            background: ${isHighLevel ? 'linear-gradient(135deg, #4a3c5a, #362847)' : 
-                         isBelowStart ? 'linear-gradient(135deg, #3f2b1a, #2d1f14)' : 
-                         '#1a1f2e'};
-            border: 2px solid ${isHighLevel ? '#9333ea' :
-                               isBelowStart ? '#f59e0b' : 
-                               '#2d3748'};
-            border-radius: 6px;
+            background: ${backgroundStyle};
+            border: ${borderWidth} solid ${borderColor};
+            border-radius: 8px;
             padding: 10px 8px;
             text-align: center;
             font-size: 10px;
-            width: 100px;
-            min-height: 140px;
+            width: 110px;
+            min-height: 150px;
             position: relative;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
+            ${isStartLevel ? 'box-shadow: 0 0 0 1px #FFD700, 0 0 15px rgba(255, 215, 0, 0.3);' : ''}
         `;
 
-        // Ajouter l'indicateur visuel pour les niveaux > 9
-        if (isHighLevel) {
-            const sparkle = document.createElement('div');
-            sparkle.style.cssText = `
+        // Ajouter un indicateur "DÉPART" pour le niveau de départ
+        if (isStartLevel) {
+            const startIndicator = document.createElement('div');
+            startIndicator.style.cssText = `
                 position: absolute;
-                top: -6px;
-                right: -6px;
-                background: linear-gradient(135deg, #9333ea, #7c3aed);
-                color: white;
-                width: 20px;
-                height: 20px;
+                top: -12px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: #FFD700;
+                color: #000;
+                padding: 2px 8px;
+                border-radius: 10px;
+                font-size: 9px;
+                font-weight: 700;
+                letter-spacing: 0.05em;
+                white-space: nowrap;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            `;
+            startIndicator.textContent = 'DÉPART';
+            stepDiv.appendChild(startIndicator);
+
+            // Ajouter la flèche indicatrice
+            const arrow = document.createElement('div');
+            arrow.style.cssText = `
+                position: absolute;
+                top: -8px;
+                right: -8px;
+                width: 24px;
+                height: 24px;
+                background: #FFD700;
+                color: #000;
                 border-radius: 50%;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                font-size: 10px;
+                font-size: 12px;
                 font-weight: bold;
-                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+                box-shadow: 0 2px 6px rgba(255, 215, 0, 0.4);
             `;
-            sparkle.innerHTML = '✨';
-            stepDiv.appendChild(sparkle);
+            arrow.innerHTML = '▶';
+            stepDiv.appendChild(arrow);
         }
+
+        // Ajouter l'indicateur visuel pour les niveaux > 9
+        //if (isHighLevel) {
+        //    const sparkle = document.createElement('div');
+        //    sparkle.style.cssText = `
+        //        position: absolute;
+        //        top: -6px;
+        //        right: -6px;
+        //        background: linear-gradient(135deg, #9333ea, #7c3aed);
+        //        color: white;
+        //        width: 20px;
+        //        height: 20px;
+        //        border-radius: 50%;
+        //        display: flex;
+        //        align-items: center;
+        //        justify-content: center;
+        //        font-size: 10px;
+        //        font-weight: bold;
+        //        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        //    `;
+        //    sparkle.innerHTML = '✨';
+        //    stepDiv.appendChild(sparkle);
+        //}
 
         // Créer le contenu interne avec structure flex
         const content = document.createElement('div');
@@ -561,16 +747,17 @@ export class ExportService {
             justify-content: center;
         `;
 
-        // Afficher le coût en yang si > 0
+        // Afficher le coût en yang avec l'icône money.png
         const yangDisplay = yangCost > 0 ? `
-            <div style="font-size: 8px; color: #fbbf24; margin-top: 2px;">
-                ${this.formatters.formatNumber(yangCost)} yang
+            <div style="display: flex; align-items: center; gap: 3px; font-size: 8px; color: #fbbf24; margin-top: 2px;">
+                <img src="money.png" style="width: 12px; height: 12px;">
+                <span>${this.formatters.formatNumber(yangCost)}</span>
             </div>
         ` : '';
 
         // Afficher le coût total moyen
         const avgCostDisplay = `
-            <div style="font-size: 9px; color: #6366f1; font-weight: bold;">
+            <div style="font-size: 9px; color: ${isStartLevel ? '#FFD700' : '#10b981'}; font-weight: bold;">
                 ${this.formatters.formatCost(avgCost)}
             </div>
         `;
@@ -579,12 +766,15 @@ export class ExportService {
         const upgradeItemImage = dataService.getUpgradeItemImagePath(upgradeType);
         const upgradeItemName = dataService.getUpgradeItemName(upgradeType);
 
+        // Ajuster l'opacité pour les niveaux sous le départ
+        const imageOpacity = (isBelowStart && !isStartLevel) ? '0.6' : '1';
+
         content.innerHTML = `
-            <div style="font-size: 11px; color: ${isHighLevel ? '#e0aaff' : '#6366f1'}; font-weight: bold;">+${level}</div>
-            <img src="${upgradeItemImage}" style="width: 32px; height: 32px; display: block;">
-            <div style="font-size: 9px; color: #cbd5e1; line-height: 1.2;">${upgradeItemName}</div>
-            <div style="color: #48bb78; font-size: 11px; font-weight: bold;">${rate}%</div>
-            <div style="color: ${isHighLevel ? '#e0aaff' : '#6366f1'}; font-size: 10px;">${waypointValue.toFixed(1)}x</div>
+            <div style="font-size: 11px; color: ${isStartLevel ? '#FFD700' : '#10b981'}; font-weight: bold;">+${level}</div>
+            <img src="${upgradeItemImage}" style="width: 36px; height: 36px; display: block; opacity: ${imageOpacity};">
+            <div style="font-size: 9px; color: ${textColorPrimary}; line-height: 1.2;">${upgradeItemName}</div>
+            <div style="color: #10b981; font-size: 11px; font-weight: bold;">${rate}%</div>
+            <div style="color: ${isStartLevel ? '#FFD700' : '#818cf8'}; font-size: 10px; font-weight: 600;">${waypointValue.toFixed(1)}x</div>
             ${avgCostDisplay}
             ${yangDisplay}
         `;
@@ -594,7 +784,7 @@ export class ExportService {
         return stepDiv;
     }
 
-    createPathSection(strategy, currentItem, itemImgSrc) {
+    createPathSection(strategy, currentItem, itemImgSrc, strategyName) {
         const section = document.createElement('div');
         section.style.cssText = `
             background: #0f1419;
@@ -607,7 +797,7 @@ export class ExportService {
 
         section.innerHTML = `
             <h2 style="color: #ffffff; font-size: 22px; margin-bottom: 12px; text-align: center;">
-                ${this.translator.t('upgradePath')} ${this.translator.t('optimal').toLowerCase()}
+                ${this.translator.t('upgradePath')} ${strategyName.toLowerCase()}
             </h2>
             <div style="color: #ffffff; font-size: 18px; text-align: center; margin-bottom: 8px;">
                 ${currentItem}
@@ -623,6 +813,13 @@ export class ExportService {
                         display: inline-block;
                     "
                 />
+            </div>
+            <div style="text-align: center; margin-bottom: 15px;">
+                <div style="display: inline-flex; align-items: center; gap: 10px; background: rgba(99, 102, 241, 0.1); padding: 8px 20px; border-radius: 20px; border: 1px solid rgba(99, 102, 241, 0.3);">
+                    <span style="color: #FFD700; font-size: 18px; font-weight: bold;">+${strategy.startLevel}</span>
+                    <span style="color: #6366f1; font-size: 20px;">→</span>
+                    <span style="color: #10b981; font-size: 18px; font-weight: bold;">+${strategy.endLevel}</span>
+                </div>
             </div>
             <div style="text-align: center; margin-bottom: 25px;">
                 <div style="color: #6B7280; font-size: 16px;">${this.translator.t('avgCost')}</div>
@@ -641,9 +838,9 @@ export class ExportService {
             case "Pierre magique":
                 return baseRate || 0;
             case "Manuel de Forgeron":
-                return [100, 100, 90, 80, 70, 60, 50, 30, 20][level - 1] || 0;
+                return [100, 100, 100, 100, 70, 60, 50, 30, 20][level - 1] || 0;
             case "Parchemin du Dieu Dragon":
-                return [100, 75, 65, 55, 45, 40, 35, 25, 20][level - 1] || 0;
+                return [100, 100, 100, 100, 45, 40, 35, 25, 20][level - 1] || 0;
             case "Parchemin de Guerre":
                 return 100;
             default:

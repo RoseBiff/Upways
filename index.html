@@ -328,10 +328,17 @@
 
                 <!-- Graphique Tentatives vs Probabilité -->
                 <div class="chart-section">
-                    <h3 class="chart-title" data-i18n="chartTitle">Analyse de probabilité d'amélioration</h3>
-                    <p class="chart-subtitle" data-i18n="chartSubtitle">
-                        Evolution de la probabilité de succès selon le nombre de tentatives
-                    </p>
+                    <div class="chart-header">
+                        <div>
+                            <h3 class="chart-title" data-i18n="chartTitle">Analyse de probabilité d'amélioration</h3>
+                            <p class="chart-subtitle" data-i18n="chartSubtitle">
+                                Evolution de la probabilité de succès selon le nombre de tentatives
+                            </p>
+                        </div>
+                        <div class="chart-controls">
+                            <!-- Le bouton de toggle sera ajouté ici dynamiquement -->
+                        </div>
+                    </div>
                     <div class="chart-container">
                         <canvas id="probabilityChart"></canvas>
                     </div>

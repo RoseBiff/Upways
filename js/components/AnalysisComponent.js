@@ -1,5 +1,6 @@
 /**
- * Composant d'affichage des résultats d'analyse - Version corrigée
+ * Composant d'affichage des résultats d'analyse - Version 3.5
+ * Suppression du CSS intégré et simplification de l'affichage
  */
 export class AnalysisComponent {
     constructor(dataService, translator, formatters, onStrategyChanged) {
@@ -10,7 +11,7 @@ export class AnalysisComponent {
         
         this.currentStrategy = 'optimal';
         this.strategies = {};
-        this.customScenario = [];
+        this.customScenario = {}; // Changé en objet pour correspondre au format attendu
         this.startLevel = 0;
         this.endLevel = 9;
         this.currentItemId = null;
@@ -103,26 +104,25 @@ export class AnalysisComponent {
 
     /**
      * Initialise le scénario personnalisé avec le chemin complet
+     * Utilise maintenant un objet pour être compatible avec les nouvelles classes
      */
     initCustomScenario() {
-        this.customScenario = [];
+        this.customScenario = {};
         
-        // Inclure TOUS les niveaux depuis 1 jusqu'à endLevel
-        for (let level = 1; level <= this.endLevel; level++) {
-            if (level <= 4) {
-                this.customScenario[level - 1] = "Parchemin de Guerre";
-            } else if (level > 9) {
-                // Forcer pierre magique pour les niveaux > 9
-                this.customScenario[level - 1] = "Pierre magique";
+        // Initialiser pour tous les niveaux
+        for (let level = 0; level < this.endLevel; level++) {
+            if (level >= 9) {
+                this.customScenario[level] = "Pierre magique";
+            } else if (level <= 3) {
+                this.customScenario[level] = "Parchemin de Guerre";
             } else {
-                // Par défaut, utiliser Parchemin du Dieu Dragon pour les niveaux 5-9
-                this.customScenario[level - 1] = "Parchemin du Dieu Dragon";
+                this.customScenario[level] = "Parchemin du Dieu Dragon";
             }
         }
     }
 
     /**
-     * Met à jour l'affichage des cartes de stratégie
+     * Met à jour l'affichage des cartes de stratégie avec un design simplifié
      */
     updateStrategyCards() {
         Object.entries(this.strategies).forEach(([key, strategy]) => {
@@ -135,33 +135,41 @@ export class AnalysisComponent {
             const totalTrials = Math.round(strategy.totalTrials || 0);
             const totalCost = this.formatters.formatCost(strategy.totalCost || 0);
             
-            // Intervalles
+            // Intervalles basés sur la distribution
             let trials5 = null;
+            let trials50 = null; // Médiane
             let trials95 = null;
+            let trialsQ1 = null;
+            let trialsQ3 = null;
             
-            if (strategy.intervals?.total?.ci95) {
+            if (strategy.intervals?.total?.percentiles) {
+                // Utiliser les valeurs calculées depuis la distribution
+                trials5 = Math.round(strategy.intervals.total.percentiles.p5);
+                trialsQ1 = Math.round(strategy.intervals.total.percentiles.p25);
+                trials50 = Math.round(strategy.intervals.total.percentiles.p50);
+                trialsQ3 = Math.round(strategy.intervals.total.percentiles.p75);
+                trials95 = Math.round(strategy.intervals.total.percentiles.p95);
+            } else if (strategy.intervals?.total?.ci95) {
+                // Fallback sur ci95
                 trials5 = Math.round(strategy.intervals.total.ci95.lower);
                 trials95 = Math.round(strategy.intervals.total.ci95.upper);
-            } else if (strategy.calculateTrialsProbabilities) {
-                // Calculer à partir de la courbe de probabilité
-                const points = strategy.calculateTrialsProbabilities();
-                for (let i = 0; i < points.length; i++) {
-                    const point = points[i];
-                    if (trials5 === null && point.y >= 5) {
-                        trials5 = point.x;
-                    }
-                    if (trials95 === null && point.y >= 95) {
-                        trials95 = point.x;
-                        break;
-                    }
-                }
+                trials50 = Math.round((trials5 + trials95) / 2);
+                trialsQ1 = Math.round((trials5 + trials50) / 2);
+                trialsQ3 = Math.round((trials50 + trials95) / 2);
+            } else {
+                // Fallback avec approximation
+                trials5 = Math.round(totalTrials * 0.5);
+                trialsQ1 = Math.round(totalTrials * 0.75);
+                trials50 = totalTrials;
+                trialsQ3 = Math.round(totalTrials * 1.25);
+                trials95 = Math.round(totalTrials * 2);
             }
             
-            // Valeurs par défaut si pas trouvé
-            if (trials5 === null) trials5 = Math.round(totalTrials * 0.5);
-            if (trials95 === null) trials95 = Math.round(totalTrials * 2);
+            // S'assurer que les valeurs sont cohérentes
+            trials5 = Math.max(1, Math.min(trials5, totalTrials));
+            trials95 = Math.max(totalTrials, trials95);
             
-            // Reconstruire le contenu de la carte avec traductions
+            // Reconstruire le contenu de la carte avec un design simplifié
             card.innerHTML = `
                 <div class="strategy-header">
                     <span class="strategy-icon">${key === 'optimal' ? '⭐' : '🎨'}</span>
@@ -169,6 +177,7 @@ export class AnalysisComponent {
                 </div>
                 
                 <div class="strategy-body">
+                    <!-- Coût principal en grand -->
                     <div class="strategy-main-stats">
                         <div class="main-stat">
                             <span class="main-stat-label">${this.translator.t('avgCost')}</span>
@@ -176,18 +185,68 @@ export class AnalysisComponent {
                         </div>
                     </div>
                     
+                    <!-- Statistiques détaillées -->
                     <div class="strategy-details">
-                        <div class="detail-item">
-                            <span class="detail-label">${this.translator.t('avgTrialsTotal')}:</span>
-                            <span class="detail-value highlight">${totalTrials}</span>
+                        <!-- Section Tentatives -->
+                        <div class="detail-section stats-section">
+                            <div class="section-header">
+                                <span class="section-icon">📊 ${this.translator.t('trialsStatistics')}</span>
+                            </div>
+                            
+                            <div class="stats-grid">
+                                <div class="stat-item highlight">
+                                    <div class="stat-label">${this.translator.t('avgTrialsShort')}</div>
+                                    <div class="stat-value">${totalTrials}</div>
+                                </div>
+                                
+                                <div class="stat-item">
+                                    <div class="stat-label">${this.translator.t('medianShort')}</div>
+                                    <div class="stat-value">${trials50}</div>
+                                </div>
+                            </div><br>
+                                        ${this.showIntervals && strategy.intervals?.total ? `
+                        <!-- Section Intervalles avec visualisation améliorée -->
+                        <div class="detail-section intervals-section">
+
+                            
+                            <div class="interval-display">
+                                <div class="interval-bar">
+                                    <div class="interval-line"></div>
+                                    <div class="interval-marker" style="left: 5%">
+                                        <div class="marker-dot"></div>
+                                        <div class="marker-label">${trials5}</div>
+                                        <div class="marker-percentile">5%</div>
+                                    </div>
+                                    <div class="interval-marker" style="left: 25%">
+                                        <div class="marker-dot secondary"></div>
+                                        <div class="marker-label">${trialsQ1}</div>
+                                        <div class="marker-percentile">Q1</div>
+                                    </div>
+                                    <div class="interval-marker" style="left: 50%">
+                                        <div class="marker-dot primary"></div>
+                                        <div class="marker-label">${trials50}</div>
+                                        <div class="marker-percentile">${this.translator.t('medianShort')}</div>
+                                    </div>
+                                    <div class="interval-marker" style="left: 75%">
+                                        <div class="marker-dot secondary"></div>
+                                        <div class="marker-label">${trialsQ3}</div>
+                                        <div class="marker-percentile">Q3</div>
+                                    </div>
+                                    <div class="interval-marker" style="left: 95%">
+                                        <div class="marker-dot"></div>
+                                        <div class="marker-label">${trials95}</div>
+                                        <div class="marker-percentile">95%</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                         </div>
                         
-                        ${this.showIntervals ? `
-                        <div class="detail-item">
-                            <span class="detail-label">${this.translator.t('interval95')}:</span>
-                            <span class="detail-value">${trials5} - ${trials95} ${this.translator.t('trials')}</span>
-                        </div>
+
                         ` : ''}
+                        
+                        <!-- Indicateur de risque -->
+
                     </div>
                 </div>
             `;
@@ -197,6 +256,33 @@ export class AnalysisComponent {
                 card.classList.add('active');
             }
         });
+    }
+
+    /**
+     * Crée l'indicateur de risque
+     */
+    createRiskIndicator(strategy) {
+        const riskLevel = strategy.riskLevel || 'medium';
+        const riskColors = {
+            low: '#10b981',
+            medium: '#f59e0b',
+            high: '#ef4444'
+        };
+        
+        const riskLabels = {
+            low: this.translator.t('riskLow'),
+            medium: this.translator.t('riskMedium'),
+            high: this.translator.t('riskHigh')
+        };
+        
+        return `
+            <div class="risk-indicator">
+                <div class="risk-label">${this.translator.t('riskLevel')}:</div>
+                <div class="risk-badge" style="background-color: ${riskColors[riskLevel]}20; color: ${riskColors[riskLevel]}">
+                    ${riskLabels[riskLevel]}
+                </div>
+            </div>
+        `;
     }
 
     /**
@@ -251,19 +337,21 @@ export class AnalysisComponent {
 
         const pathSteps = [];
         
-        // Déterminer le niveau minimum à afficher en fonction de la possibilité de rétrogradation
-        let displayStartLevel = 1; // Par défaut, on affiche depuis le niveau 1
+        // Déterminer le niveau minimum à afficher
+        let displayStartLevel = 1;
         
         // Analyser si on peut rétrograder depuis le niveau de départ
         if (this.startLevel > 0) {
-            let canRetrograde = false;
             let minReachableLevel = this.startLevel;
             
             // Vérifier le type d'amélioration au niveau de départ
             let startUpgradeType = "Pierre magique";
             
+            // IMPORTANT: Utiliser fullPath pour la stratégie optimale
             if (isCustom && this.customScenario[this.startLevel]) {
                 startUpgradeType = this.customScenario[this.startLevel];
+            } else if (fullPath[this.startLevel]) {
+                startUpgradeType = fullPath[this.startLevel];
             } else if (path[0]) {
                 startUpgradeType = path[0].name;
             }
@@ -275,7 +363,6 @@ export class AnalysisComponent {
                 // Analyser jusqu'où on peut rétrograder
                 for (let level = this.startLevel; level > 0; level--) {
                     let upgradeType;
-                    let rate;
                     
                     if (isCustom && this.customScenario[level - 1]) {
                         upgradeType = this.customScenario[level - 1];
@@ -294,7 +381,7 @@ export class AnalysisComponent {
                     
                     // Calculer le taux
                     const levelData = itemData[level.toString()] || { success_rate: 0 };
-                    rate = this.calculateSuccessRate(level, upgradeType, levelData.success_rate);
+                    const rate = this.calculateSuccessRate(level, upgradeType, levelData.success_rate);
                     
                     // Si taux 100% ou Pierre magique, on ne peut pas descendre en dessous
                     if (rate === 100 || upgradeType === "Pierre magique") {
@@ -325,44 +412,26 @@ export class AnalysisComponent {
                 const isTarget = level > this.startLevel && level <= this.endLevel;
                 const isRetrogradePath = level >= displayStartLevel && level <= this.startLevel;
 
-                // Déterminer le type d'amélioration et l'éditabilité
-                if (level <= 4) {
-                    upgradeType = "Parchemin de Guerre";
-                    isEditable = false;
-                } else if (level > 9) {
-                    upgradeType = "Pierre magique";
-                    isEditable = false;
-                } else if (isCustom) {
+                // Déterminer le type d'amélioration
+                if (isCustom) {
+                    // Pour la stratégie personnalisée
                     upgradeType = this.customScenario[customIndex] || "Parchemin de bénédiction";
-                    // Permettre l'édition pour TOUS les niveaux 5-9, même ceux en dessous du départ
-                    isEditable = true;
+                    // Permettre l'édition pour les niveaux 5-9
+                    isEditable = level >= 5 && level <= 9;
                 } else {
-                    // Stratégie optimale
-                    if (isRetrogradePath && level < this.startLevel) {
-                        // Pour les niveaux de rétrogradation, utiliser les valeurs appropriées
-                        if (fullPath && fullPath[level - 1]) {
-                            upgradeType = fullPath[level - 1];
-                        } else if (level === 5 || level === 6) {
-                            upgradeType = "Manuel de Forgeron";
-                        } else if (level === 7 || level === 8) {
-                            upgradeType = "Parchemin du Dieu Dragon";
-                        } else if (level === 9) {
-                            upgradeType = "Pierre magique";
-                        } else {
-                            upgradeType = "Parchemin de bénédiction";
-                        }
+                    // Pour la stratégie optimale - TOUJOURS utiliser fullPath si disponible
+                    if (fullPath && fullPath[level - 1]) {
+                        upgradeType = fullPath[level - 1];
                     } else if (pathData?.name) {
                         upgradeType = pathData.name;
-                    } else if (fullPath[level - 1]) {
-                        upgradeType = fullPath[level - 1];
                     } else {
-                        // Valeurs par défaut
-                        if (level <= 4) {
-                            upgradeType = "Parchemin de Guerre";
-                        } else if (level <= 9) {
-                            upgradeType = "Parchemin de bénédiction";
-                        } else {
+                        // Valeurs par défaut uniquement si aucune donnée
+                        if (level > 9) {
                             upgradeType = "Pierre magique";
+                        } else if (level <= 4) {
+                            upgradeType = "Parchemin de Guerre";
+                        } else {
+                            upgradeType = "Parchemin de bénédiction";
                         }
                     }
                 }
@@ -413,7 +482,7 @@ export class AnalysisComponent {
                     isTarget,
                     isRetrogradePath,
                     isMagicStoneOnly,
-                    isStartLevel: level === this.startLevel && this.startLevel > 0,  // IMPORTANT
+                    isStartLevel: level === this.startLevel && this.startLevel > 0,
                     levelInterval,
                     itemInterval,
                     costInterval,
@@ -442,18 +511,20 @@ export class AnalysisComponent {
                 if (!magicStoneSeparatorAdded && step.level === 10) {
                     pathHtml += `
                         <div class="magic-stone-separator">
-                            <div class="magic-stone-warning" title="${this.translator.t('magicStoneRestriction') || 'Restriction : utilisation de la Pierre magique à partir de +10 par absence d\'autres données statistiques'}"></div>
+                            <div class="magic-stone-warning">
+                                <span class="warning-tooltip">${this.translator.t('magicStoneRestriction') || 'Restriction : utilisation de la Pierre magique à partir de +10 par absence d\'autres données statistiques'}</span>
+                            </div>
                         </div>
                     `;
                     magicStoneSeparatorAdded = true;
                 }
-                
+
                 pathHtml += this.createPathStepHtml(step, isCustom);
             }
         });
         
         if (this.endLevel > 19) {
-            // Récupérer les stats pour les niveaux 10-19 pour la loop
+            // Affichage groupé pour les niveaux élevés
             const loopSteps = pathSteps.filter(s => s.level >= 10 && s.level <= 19);
             
             pathHtml += `</div><div class="upgrade-loop-section">
@@ -550,95 +621,6 @@ export class AnalysisComponent {
     }
 
     /**
-     * Crée un affichage groupé pour les chemins très longs
-     */
-    createGroupedPathDisplay(pathSteps, isCustom) {
-        let html = '<div class="upgrade-path grouped">';
-        
-        // Afficher les premiers niveaux individuellement
-        const individualLimit = 20;
-        
-        // Afficher tous les niveaux jusqu'à individualLimit individuellement
-        for (let i = 0; i < pathSteps.length && pathSteps[i].level <= individualLimit; i++) {
-            html += this.createPathStepHtml(pathSteps[i], isCustom);
-        }
-        
-        // Grouper les niveaux restants par dizaines
-        const groupSize = 10;
-        let currentGroupStart = individualLimit + 1;
-        
-        while (currentGroupStart <= this.endLevel) {
-            const groupEnd = Math.min(currentGroupStart + groupSize - 1, this.endLevel);
-            
-            // Collecter les steps de ce groupe
-            const groupSteps = pathSteps.filter(step => 
-                step.level >= currentGroupStart && step.level <= groupEnd
-            );
-            
-            if (groupSteps.length > 0) {
-                // Calculer les totaux du groupe
-                let totalCost = 0;
-                let totalTrials = 0;
-                const groupMaterials = new Map();
-                
-                groupSteps.forEach(step => {
-                    totalCost += step.avgCost || 0; // Éviter NaN
-                    totalTrials += Math.max(step.waypoint, 0.01); // Éviter 0
-                    
-                    // Agréger les matériaux
-                    step.materials.forEach(mat => {
-                        if (groupMaterials.has(mat.id)) {
-                            const existing = groupMaterials.get(mat.id);
-                            existing.avgQty += mat.avgQty;
-                        } else {
-                            groupMaterials.set(mat.id, {
-                                ...mat,
-                                avgQty: mat.avgQty
-                            });
-                        }
-                    });
-                });
-                
-                const groupKey = `${currentGroupStart}-${groupEnd}`;
-                const isExpanded = this.expandedGroups.has(groupKey);
-                
-                html += `
-                    <div class="path-group" data-group="${groupKey}">
-                        <div class="group-header ${isExpanded ? 'expanded' : ''}" data-group-id="${groupKey}">
-                            <div class="group-toggle">
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <polyline points="${isExpanded ? '6 9 12 15 18 9' : '9 6 15 12 9 18'}"/>
-                                </svg>
-                            </div>
-                            <div class="group-info">
-                                <span class="group-range">+${currentGroupStart} → +${groupEnd}</span>
-                                <span class="group-summary">
-                                    ${Math.round(totalTrials)} ${this.translator.t('trials')} • 
-                                    ${this.formatters.formatCost(totalCost)}
-                                </span>
-                            </div>
-                            <div class="group-upgrade-icon">
-                                <img src="${this.dataService.getUpgradeItemImagePath('Pierre magique')}" 
-                                     class="group-upgrade-icon-img" 
-                                     title="${this.dataService.getUpgradeItemName('Pierre magique')}"
-                                     onerror="this.style.display='none'">
-                            </div>
-                        </div>
-                        <div class="group-content" style="${isExpanded ? '' : 'display: none;'}">
-                            ${groupSteps.map(step => this.createPathStepHtml(step, isCustom)).join('')}
-                        </div>
-                    </div>
-                `;
-            }
-            
-            currentGroupStart += groupSize;
-        }
-        
-        html += '</div>';
-        return html;
-    }
-
-    /**
      * Bascule l'état d'expansion d'un groupe
      */
     toggleGroup(header) {
@@ -663,19 +645,18 @@ export class AnalysisComponent {
         const upgradeOptions = this.dataService.getUpgradeOptions();
         let options = [];
         
-        // IMPORTANT : Permettre toutes les options pour tous les niveaux 1-9
+        // Permettre toutes les options pour les niveaux 5-9 en mode custom
         if (step.level > 9) {
             options = ["Pierre magique"];
         } else if (step.level <= 4) {
             options = ["Parchemin de Guerre"];
-        } else {
-            // Tous les niveaux 5-9 peuvent utiliser tous les parchemins
+        } else if (isCustom) {
+            // En mode custom, permettre toutes les options pour les niveaux 5-9
             options = ["Parchemin de bénédiction", "Manuel de Forgeron", "Parchemin du Dieu Dragon", "Pierre magique"];
         }
         
         let stepClass = 'path-step';
-        if (step.isStartLevel) stepClass += ' start-level';  // IMPORTANT : Vérifiez que cette ligne est bien là !
-        //if (step.isBelowStart) stepClass += ' below-start';
+        if (step.isStartLevel) stepClass += ' start-level';
         if (step.isRetrogradePath && step.level < this.startLevel) stepClass += ' retrograde-path';
         if (step.isTarget) stepClass += ' target-level';
         if (step.isEditable) stepClass += ' editable';
@@ -706,7 +687,7 @@ export class AnalysisComponent {
             <div class="step-cost">${this.formatters.formatCost(step.avgCost)}</div>
         `;
         
-        // Obtenir l'image de l'objet d'amélioration
+        // Obtenir l'image et le nom traduit de l'objet d'amélioration
         const upgradeItemImage = this.dataService.getUpgradeItemImagePath(step.upgradeType);
         const upgradeItemDisplayName = this.dataService.getUpgradeItemName(step.upgradeType);
 
@@ -943,7 +924,6 @@ export class AnalysisComponent {
 
     /**
      * Calcule le taux de succès selon la nouvelle mécanique
-     * IMPORTANT : Pierre magique et Parchemin de bénédiction utilisent TOUJOURS le taux de l'item
      */
     calculateSuccessRate(level, upgradeType, baseRate) {
         const itemId = this.dataService.getUpgradeItemId(upgradeType);
@@ -1007,11 +987,11 @@ export class AnalysisComponent {
                 } else if (this.currentStrategy === 'custom') {
                     upgradeType = this.customScenario[level - 1] || "Parchemin de bénédiction";
                 } else {
-                    // Utiliser les données disponibles
-                    if (pathData?.name) {
-                        upgradeType = pathData.name;
-                    } else if (fullPath[level - 1]) {
+                    // Utiliser fullPath pour la stratégie optimale
+                    if (fullPath[level - 1]) {
                         upgradeType = fullPath[level - 1];
+                    } else if (pathData?.name) {
+                        upgradeType = pathData.name;
                     } else {
                         // Par défaut
                         if (level <= 4) {
