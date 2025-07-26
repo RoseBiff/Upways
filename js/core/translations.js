@@ -36,7 +36,7 @@ export const translations = {
         // Analyse
         analysisResults: "Résultats de l'analyse",
         optimal: "Optimal",
-        custom: "Personnalisée",
+        custom: "Personnalisé",
         avgCost: "Coût moyen",
         avgTrials: "Tentatives moyennes",
         avgTrialsShort: "Moyenne",
