@@ -1,6 +1,6 @@
 /**
- * Service d'export des résultats avec options de partage - Version 4.1
- * Mise à jour pour correspondre à l'affichage actuel du site
+ * Service d'export des résultats avec options de partage - Version 4.2
+ * Optimisation de l'affichage des matériaux pour éviter les images trop longues
  */
 export class ExportService {
     constructor(formatters, translator) {
@@ -49,8 +49,8 @@ export class ExportService {
             const pathDisplay = await this.createImprovedPathDisplay(strategy, currentItemId, startLevel, endLevel, dataService);
             pathSection.appendChild(pathDisplay);
 
-            // Ajouter le tableau des prix utilisés
-            const priceTable = await this.createPriceTable(strategy, currentItemId, startLevel, endLevel, dataService);
+            // Ajouter le tableau des prix utilisés - VERSION OPTIMISÉE
+            const priceTable = await this.createOptimizedPriceTable(strategy, currentItemId, startLevel, endLevel, dataService);
             captureContainer.appendChild(priceTable);
 
             // Forcer le rendu avant la capture
@@ -429,26 +429,6 @@ export class ExportService {
                     overflow: hidden;
                 `;
                 
-                // Ajouter une étoile pour marquer les niveaux élevés
-                //const star = document.createElement('div');
-                //star.style.cssText = `
-                //    position: absolute;
-                //    top: -6px;
-                //    right: -6px;
-                //    background: linear-gradient(135deg, #9333ea, #7c3aed);
-                //    color: white;
-                //    width: 20px;
-                //    height: 20px;
-                //    border-radius: 50%;
-                //    display: flex;
-                //    align-items: center;
-                //    justify-content: center;
-                //    font-size: 10px;
-                //    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-                //`;
-                //star.innerHTML = '✨';
-                //groupDiv.appendChild(star);
-                
                 groupDiv.innerHTML += `
                     <div style="font-size: 13px; color: #e0aaff; font-weight: bold; margin-bottom: 5px;">
                         +${groupStart} → +${groupEnd}
@@ -491,8 +471,10 @@ export class ExportService {
         return pathDisplay;
     }
 
-    // Méthode pour créer le tableau des prix
-    async createPriceTable(strategy, currentItemId, startLevel, endLevel, dataService) {
+    /**
+     * Méthode optimisée pour créer le tableau des prix avec une présentation compacte et unifiée
+     */
+    async createOptimizedPriceTable(strategy, currentItemId, startLevel, endLevel, dataService) {
         const container = document.createElement('div');
         container.style.cssText = `
             background: #0f1419;
@@ -512,27 +494,29 @@ export class ExportService {
         title.textContent = this.translator.t('priceConfiguration');
         container.appendChild(title);
 
-        // Créer deux colonnes
-        const grid = document.createElement('div');
-        grid.style.cssText = `
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
+        // Section pour les objets d'amélioration (toujours affichés normalement)
+        const upgradeSection = document.createElement('div');
+        upgradeSection.style.cssText = `
+            margin-bottom: 20px;
         `;
-
-        // Colonne 1: Objets d'amélioration
-        const upgradeColumn = document.createElement('div');
+        
         const upgradeTitle = document.createElement('h4');
         upgradeTitle.style.cssText = 'color: #cbd5e1; font-size: 14px; margin-bottom: 10px;';
         upgradeTitle.textContent = this.translator.t('upgradeItems');
-        upgradeColumn.appendChild(upgradeTitle);
+        upgradeSection.appendChild(upgradeTitle);
+
+        const upgradeGrid = document.createElement('div');
+        upgradeGrid.style.cssText = `
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        `;
 
         const upgradeOptions = dataService.getUpgradeOptions();
-
         upgradeOptions.forEach(option => {
             const cost = dataService.getUpgradeCost(option.internalName);
             const row = document.createElement('div');
-            row.style.cssText = 'display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; padding: 4px 0;';
+            row.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 4px 0;';
             
             const itemInfo = document.createElement('div');
             itemInfo.style.cssText = 'display: flex; align-items: center; gap: 8px; flex: 1;';
@@ -554,22 +538,25 @@ export class ExportService {
             
             row.appendChild(itemInfo);
             row.appendChild(price);
-            upgradeColumn.appendChild(row);
+            upgradeGrid.appendChild(row);
         });
 
-        // Colonne 2: Matériaux uniques
-        const materialsColumn = document.createElement('div');
+        upgradeSection.appendChild(upgradeGrid);
+        container.appendChild(upgradeSection);
+
+        // Section optimisée pour les matériaux
+        const materialsSection = document.createElement('div');
         const materialsTitle = document.createElement('h4');
         materialsTitle.style.cssText = 'color: #cbd5e1; font-size: 14px; margin-bottom: 10px;';
         materialsTitle.textContent = this.translator.t('materials');
-        materialsColumn.appendChild(materialsTitle);
+        materialsSection.appendChild(materialsTitle);
 
         // Collecter TOUS les matériaux uniques de l'objet
         const allMaterials = new Map();
         const itemData = await dataService.getItemById(currentItemId);
 
-        // Parcourir tous les niveaux pour collecter les matériaux uniques
-        for (let level = 1; level <= 255; level++) {
+        // Parcourir uniquement les niveaux concernés par l'amélioration
+        for (let level = startLevel; level <= endLevel; level++) {
             const levelData = itemData[level.toString()];
             if (levelData?.materials) {
                 Object.entries(levelData.materials).forEach(([id, info]) => {
@@ -584,51 +571,182 @@ export class ExportService {
             }
         }
 
-        // Trier par nom et afficher
+        // Trier par nom
         const sortedMaterials = Array.from(allMaterials.values()).sort((a, b) => 
             a.name.localeCompare(b.name)
         );
 
         if (sortedMaterials.length > 0) {
+            const materialsGrid = document.createElement('div');
+            
+            // Déterminer le nombre de colonnes en fonction du nombre de matériaux
+            let columns;
+            if (sortedMaterials.length <= 6) {
+                columns = 2;
+            } else if (sortedMaterials.length <= 12) {
+                columns = 3;
+            } else if (sortedMaterials.length <= 20) {
+                columns = 4;
+            } else {
+                // Pour beaucoup de matériaux, utiliser un affichage ultra compact
+                this.createUltraCompactMaterialsDisplay(sortedMaterials, dataService, materialsSection);
+                container.appendChild(materialsSection);
+                return container;
+            }
+            
+            materialsGrid.style.cssText = `
+                display: grid;
+                grid-template-columns: repeat(${columns}, 1fr);
+                gap: 8px;
+            `;
+
+            // Style plus compact pour les items
             sortedMaterials.forEach(mat => {
                 const cost = dataService.getMaterialCost(mat.id);
-                const row = document.createElement('div');
-                row.style.cssText = 'display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; padding: 4px 0;';
-                
-                const itemInfo = document.createElement('div');
-                itemInfo.style.cssText = 'display: flex; align-items: center; gap: 8px; flex: 1;';
+                const cell = document.createElement('div');
+                cell.style.cssText = `
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    padding: 3px 0;
+                    font-size: 11px;
+                `;
                 
                 const img = document.createElement('img');
                 img.src = mat.imgPath;
-                img.style.cssText = 'width: 24px; height: 24px; object-fit: contain;';
+                img.style.cssText = 'width: 20px; height: 20px; object-fit: contain;';
                 
-                const name = document.createElement('span');
-                name.style.cssText = 'color: #94a3b8; font-size: 12px;';
+                const info = document.createElement('div');
+                info.style.cssText = 'flex: 1; min-width: 0;';
+                
+                const name = document.createElement('div');
+                name.style.cssText = 'color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;';
                 name.textContent = mat.name;
                 
-                itemInfo.appendChild(img);
-                itemInfo.appendChild(name);
-                
-                const price = document.createElement('span');
-                price.style.cssText = `color: ${cost > 0 ? '#6366f1' : '#6B7280'}; font-weight: bold; font-size: 12px;`;
+                const price = document.createElement('div');
+                price.style.cssText = `color: ${cost > 0 ? '#6366f1' : '#6B7280'}; font-weight: bold;`;
                 price.textContent = this.formatters.formatCost(cost);
                 
-                row.appendChild(itemInfo);
-                row.appendChild(price);
-                materialsColumn.appendChild(row);
+                info.appendChild(name);
+                info.appendChild(price);
+                
+                cell.appendChild(img);
+                cell.appendChild(info);
+                materialsGrid.appendChild(cell);
             });
+
+            materialsSection.appendChild(materialsGrid);
         } else {
             const noMaterials = document.createElement('div');
             noMaterials.style.cssText = 'color: #6B7280; font-size: 12px; font-style: italic;';
             noMaterials.textContent = this.translator.t('noMaterialsRequired');
-            materialsColumn.appendChild(noMaterials);
+            materialsSection.appendChild(noMaterials);
         }
 
-        grid.appendChild(upgradeColumn);
-        grid.appendChild(materialsColumn);
-        container.appendChild(grid);
-
+        container.appendChild(materialsSection);
         return container;
+    }
+
+    /**
+     * Affichage ultra compact pour les cas avec beaucoup de matériaux (20+)
+     */
+    createUltraCompactMaterialsDisplay(materials, dataService, container) {
+        // Séparer les matériaux avec prix et sans prix
+        const withPrice = materials.filter(m => dataService.getMaterialCost(m.id) > 0);
+        const withoutPrice = materials.filter(m => dataService.getMaterialCost(m.id) === 0);
+
+        // Section pour les matériaux avec prix (plus importants)
+        if (withPrice.length > 0) {
+            const pricedSection = document.createElement('div');
+            pricedSection.style.cssText = 'margin-bottom: 15px;';
+            
+            const pricedTitle = document.createElement('div');
+            pricedTitle.style.cssText = 'color: #6366f1; font-size: 12px; font-weight: 600; margin-bottom: 8px;';
+            pricedTitle.textContent = this.translator.t('pricedMaterials') || 'Matériaux avec prix configuré';
+            pricedSection.appendChild(pricedTitle);
+
+            const pricedGrid = document.createElement('div');
+            pricedGrid.style.cssText = `
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 6px;
+            `;
+
+            withPrice.forEach(mat => {
+                const cost = dataService.getMaterialCost(mat.id);
+                const cell = document.createElement('div');
+                cell.style.cssText = `
+                    background: #1a1f2e;
+                    border: 1px solid #334155;
+                    border-radius: 6px;
+                    padding: 6px;
+                    display: flex;
+                    align-items: center;
+                    gap: 4px;
+                    font-size: 10px;
+                `;
+                
+                cell.innerHTML = `
+                    <img src="${mat.imgPath}" style="width: 18px; height: 18px;">
+                    <div style="flex: 1; overflow: hidden;">
+                        <div style="color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${mat.name}">
+                            ${mat.name}
+                        </div>
+                        <div style="color: #6366f1; font-weight: bold;">
+                            ${this.formatters.formatCost(cost)}
+                        </div>
+                    </div>
+                `;
+                
+                pricedGrid.appendChild(cell);
+            });
+
+            pricedSection.appendChild(pricedGrid);
+            container.appendChild(pricedSection);
+        }
+
+        // Section compacte pour les matériaux sans prix
+        if (withoutPrice.length > 0) {
+            const unpricedSection = document.createElement('div');
+            
+            const unpricedTitle = document.createElement('div');
+            unpricedTitle.style.cssText = 'color: #6B7280; font-size: 12px; font-weight: 600; margin-bottom: 8px;';
+            unpricedTitle.textContent = this.translator.t('unpricedMaterials') || 'Autres matériaux requis';
+            unpricedSection.appendChild(unpricedTitle);
+
+            // Affichage en grille d'icônes uniquement
+            const iconGrid = document.createElement('div');
+            iconGrid.style.cssText = `
+                display: flex;
+                flex-wrap: wrap;
+                gap: 4px;
+                padding: 8px;
+                background: #1a1f2e;
+                border-radius: 6px;
+            `;
+
+            withoutPrice.forEach(mat => {
+                const icon = document.createElement('img');
+                icon.src = mat.imgPath;
+                icon.style.cssText = 'width: 24px; height: 24px; object-fit: contain; cursor: help;';
+                icon.title = mat.name;
+                iconGrid.appendChild(icon);
+            });
+
+            // Ajouter un compteur
+            const counter = document.createElement('div');
+            counter.style.cssText = `
+                color: #6B7280;
+                font-size: 11px;
+                margin-top: 4px;
+                text-align: right;
+            `;
+            counter.textContent = `(${withoutPrice.length} ${this.translator.t('materials').toLowerCase()})`;
+
+            unpricedSection.appendChild(iconGrid);
+            unpricedSection.appendChild(counter);
+            container.appendChild(unpricedSection);
+        }
     }
 
     // Version compacte du stepDiv pour l'export avec affichage du coût en yang
@@ -713,29 +831,6 @@ export class ExportService {
             stepDiv.appendChild(arrow);
         }
 
-        // Ajouter l'indicateur visuel pour les niveaux > 9
-        //if (isHighLevel) {
-        //    const sparkle = document.createElement('div');
-        //    sparkle.style.cssText = `
-        //        position: absolute;
-        //        top: -6px;
-        //        right: -6px;
-        //        background: linear-gradient(135deg, #9333ea, #7c3aed);
-        //        color: white;
-        //        width: 20px;
-        //        height: 20px;
-        //        border-radius: 50%;
-        //        display: flex;
-        //        align-items: center;
-        //        justify-content: center;
-        //        font-size: 10px;
-        //        font-weight: bold;
-        //        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-        //    `;
-        //    sparkle.innerHTML = '✨';
-        //    stepDiv.appendChild(sparkle);
-        //}
-
         // Créer le contenu interne avec structure flex
         const content = document.createElement('div');
         content.style.cssText = `
@@ -758,6 +853,7 @@ export class ExportService {
         // Afficher le coût total moyen
         const avgCostDisplay = `
             <div style="font-size: 9px; color: ${isStartLevel ? '#FFD700' : '#10b981'}; font-weight: bold;">
+                <img src="won.png" style="width: 12px; height: 12px;">
                 ${this.formatters.formatCost(avgCost)}
             </div>
         `;
@@ -776,8 +872,8 @@ export class ExportService {
             <div style="color: #10b981; font-size: 11px; font-weight: bold;">${rate}%</div>
             <div style="color: ${isStartLevel ? '#FFD700' : '#818cf8'}; font-size: 10px; font-weight: 600;">${waypointValue.toFixed(1)}x</div>
             ${avgCostDisplay}
-            ${yangDisplay}
         `;
+            // ${yangDisplay} Retiré de content.innerHTML pour tester sans les yangs... data peu interessante.
 
         stepDiv.appendChild(content);
 

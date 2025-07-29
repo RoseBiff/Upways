@@ -369,6 +369,10 @@ class UpwaysApp {
      * Lance l'analyse avec les nouvelles classes Calculator et Strategy
      */
     async runAnalysis() {
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
         if (!this.searchComponent.hasSelectedItem()) {
             this.uiState.showToast('error', this.translator.t('selectItemFirst'));
             return;

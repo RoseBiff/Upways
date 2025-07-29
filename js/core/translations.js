@@ -33,6 +33,19 @@ export const translations = {
         exportConfigError: "Erreur lors de l'export de la configuration",
         importConfigError: "Erreur lors de l'import de la configuration",
         
+        // Section de bienvenue
+        welcomeTitle: "Bienvenue sur Upways",
+        welcomeSubtitle: "L'outil ultime pour optimiser vos améliorations dans Metin2",
+        welcomeDescription: "Upways calcule mathématiquement la meilleure stratégie pour améliorer vos équipements. Notre algorithme vous aide à économiser temps et yang en trouvant le chemin optimal pour atteindre le niveau d'amélioration souhaité.",
+        tipsTitle: "💡 Conseils d'utilisation",
+        tip1Title: "Configurez vos prix",
+        tip1Text: "Entrez les prix actuels du marché pour obtenir une estimation précise du coût total. Les prix sont sauvegardés automatiquement.",
+        tip2Title: "Stratégie optimale vs personnalisée",
+        tip2Text: "La stratégie optimale minimise le coût moyen. La stratégie personnalisée vous permet d'ajuster selon vos préférences et ressources disponibles.",
+        tip3Title: "Comprenez les intervalles",
+        tip3Text: "Les intervalles montrent la variation possible. 50% des joueurs réussissent dans la médiane, 95% dans l'intervalle affiché.",
+        hideWelcome: "Masquer cette introduction",
+        
         // Analyse
         analysisResults: "Résultats de l'analyse",
         optimal: "Optimal",
@@ -199,6 +212,18 @@ export const translations = {
         exportConfigError: "Error exporting configuration",
         importConfigError: "Error importing configuration",
         
+        // Welcome section
+        welcomeTitle: "Welcome to Upways",
+        welcomeSubtitle: "The ultimate tool to optimize your upgrades in Metin2",
+        welcomeDescription: "Upways mathematically calculates the best strategy to upgrade your equipment. Our algorithm helps you save time and yang by finding the optimal path to reach your desired upgrade level.",        tipsTitle: "💡 Usage Tips",
+        tip1Title: "Configure your prices",
+        tip1Text: "Enter current market prices to get an accurate estimate of the total cost. Prices are saved automatically.",
+        tip2Title: "Optimal vs Custom strategy",
+        tip2Text: "The optimal strategy minimizes average cost. The custom strategy allows you to adjust according to your preferences and available resources.",
+        tip3Title: "Understand the intervals",
+        tip3Text: "Intervals show possible variation. 50% of players succeed within the median, 95% within the displayed interval.",
+        hideWelcome: "Hide this introduction",
+        
         analysisResults: "Analysis Results",
         optimal: "Optimal",
         custom: "Custom",
@@ -356,6 +381,18 @@ export const translations = {
         configImported: "Configurație importată cu succes",
         exportConfigError: "Eroare la exportul configurației",
         importConfigError: "Eroare la importul configurației",
+        
+        // Secțiunea de bun venit
+        welcomeTitle: "Bun venit la Upways",
+        welcomeSubtitle: "Instrumentul suprem pentru optimizarea îmbunătățirilor în Metin2",
+        welcomeDescription: "Upways calculează matematic cea mai bună strategie pentru a-ți îmbunătăți echipamentele. Algoritmul nostru te ajută să economisești timp și yang găsind calea optimă pentru a atinge nivelul de îmbunătățire dorit.",        tipsTitle: "💡 Sfaturi de utilizare",
+        tip1Title: "Configurează prețurile",
+        tip1Text: "Introdu prețurile actuale de pe piață pentru a obține o estimare precisă a costului total. Prețurile sunt salvate automat.",
+        tip2Title: "Strategie optimă vs personalizată",
+        tip2Text: "Strategia optimă minimizează costul mediu. Strategia personalizată îți permite să ajustezi conform preferințelor și resurselor disponibile.",
+        tip3Title: "Înțelege intervalele",
+        tip3Text: "Intervalele arată variația posibilă. 50% dintre jucători reușesc în mediană, 95% în intervalul afișat.",
+        hideWelcome: "Ascunde această introducere",
         
         analysisResults: "Rezultatele analizei",
         optimal: "Optimă",
@@ -515,6 +552,18 @@ export const translations = {
         exportConfigError: "Yapılandırma dışa aktarılırken hata",
         importConfigError: "Yapılandırma içe aktarılırken hata",
         
+        // Hoş geldiniz bölümü
+        welcomeTitle: "Upways'e Hoş Geldiniz",
+        welcomeSubtitle: "Metin2'de yükseltmelerinizi optimize etmek için en iyi araç",
+        welcomeDescription: "Upways, ekipmanlarınızı geliştirmek için matematiksel olarak en iyi stratejiyi hesaplar. Algoritmamız, istediğiniz geliştirme seviyesine ulaşmak için en uygun yolu bularak zaman ve yang tasarrufu yapmanıza yardımcı olur.",        tipsTitle: "💡 Kullanım İpuçları",
+        tip1Title: "Fiyatlarınızı yapılandırın",
+        tip1Text: "Toplam maliyetin doğru tahmini için güncel pazar fiyatlarını girin. Fiyatlar otomatik olarak kaydedilir.",
+        tip2Title: "Optimal vs Özel strateji",
+        tip2Text: "Optimal strateji ortalama maliyeti en aza indirir. Özel strateji, tercihlerinize ve mevcut kaynaklarınıza göre ayarlama yapmanızı sağlar.",
+        tip3Title: "Aralıkları anlayın",
+        tip3Text: "Aralıklar olası değişimi gösterir. Oyuncuların %50'si medyanda, %95'i gösterilen aralıkta başarılı olur.",
+        hideWelcome: "Bu tanıtımı gizle",
+        
         analysisResults: "Analiz Sonuçları",
         optimal: "Optimal",
         custom: "Özel",
@@ -672,6 +721,18 @@ export const translations = {
         configImported: "Konfiguration erfolgreich importiert",
         exportConfigError: "Fehler beim Export der Konfiguration",
         importConfigError: "Fehler beim Import der Konfiguration",
+        
+        // Willkommensbereich
+        welcomeTitle: "Willkommen bei Upways",
+        welcomeSubtitle: "Das ultimative Tool zur Optimierung Ihrer Verbesserungen in Metin2",
+        welcomeDescription: "Upways berechnet mathematisch die beste Strategie zur Verbesserung Ihrer Ausrüstung. Unser Algorithmus hilft Ihnen, Zeit und Yang zu sparen, indem er den optimalen Weg findet, um die gewünschte Verbesserungsstufe zu erreichen.",        tipsTitle: "💡 Nutzungstipps",
+        tip1Title: "Konfigurieren Sie Ihre Preise",
+        tip1Text: "Geben Sie aktuelle Marktpreise ein, um eine genaue Schätzung der Gesamtkosten zu erhalten. Preise werden automatisch gespeichert.",
+        tip2Title: "Optimale vs. Benutzerdefinierte Strategie",
+        tip2Text: "Die optimale Strategie minimiert die durchschnittlichen Kosten. Die benutzerdefinierte Strategie ermöglicht es Ihnen, nach Ihren Vorlieben und verfügbaren Ressourcen anzupassen.",
+        tip3Title: "Verstehen Sie die Intervalle",
+        tip3Text: "Intervalle zeigen mögliche Abweichungen. 50% der Spieler schaffen es im Median, 95% im angezeigten Intervall.",
+        hideWelcome: "Diese Einführung ausblenden",
         
         analysisResults: "Analyseergebnisse",
         optimal: "Optimal",
