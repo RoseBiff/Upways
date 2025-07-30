@@ -93,7 +93,7 @@ export class ChartComponent {
      */
     zoomIn() {
         if (!this.chart) return;
-        this.chart.zoom(1.1);
+        this.chart.zoom({x: 1.1}); 
     }
 
     /**
@@ -101,7 +101,7 @@ export class ChartComponent {
      */
     zoomOut() {
         if (!this.chart) return;
-        this.chart.zoom(0.9);
+        this.chart.zoom({x: 0.9});
     }
 
     /**
@@ -494,6 +494,7 @@ export class ChartComponent {
      * Crée la configuration du graphique
      */
     createChartConfig(points, meanTrials, medianTrials, strategy) {
+        // Garder le calcul EXACT original (pas d'arrondi)
         const maxY = this.showCumulative ? 100 : Math.max(...points.map(p => p.y)) * 1.1;
         
         return {
@@ -533,7 +534,7 @@ export class ChartComponent {
                             pinch: {
                                 enabled: true
                             },
-                            mode: 'xy',
+                            mode: 'x', // SEUL CHANGEMENT : zoom uniquement sur X
                             drag: {
                                 enabled: true,
                                 backgroundColor: 'rgba(99, 102, 241, 0.1)',
@@ -544,7 +545,7 @@ export class ChartComponent {
                         },
                         pan: {
                             enabled: true,
-                            mode: 'xy',
+                            mode: 'x', // SEUL CHANGEMENT : pan uniquement sur X
                             speed: 10,
                             threshold: 10
                         },
@@ -555,7 +556,7 @@ export class ChartComponent {
                             },
                             y: {
                                 min: 0,
-                                max: maxY * 1.2
+                                max: maxY * 1.2 // Garder le comportement original
                             }
                         }
                     }
@@ -712,10 +713,59 @@ export class ChartComponent {
         return { annotations };
     }
 
+    calculateSmartYMax(points) {
+        if (!points || points.length === 0) return 100;
+        
+        // Pour la vue cumulée, toujours 100% (c'est logique)
+        if (this.showCumulative) {
+            return 100;
+        }
+        
+        // Pour la vue distribution, calculer intelligemment
+        const maxValue = Math.max(...points.map(p => p.y));
+        
+        // Ajouter une marge de 10-20% au-dessus de la valeur max
+        const withMargin = maxValue * 1.15;
+        
+        // Arrondir à un nombre "rond" pour l'esthétique
+        if (withMargin <= 1) {
+            return 1;
+        } else if (withMargin <= 5) {
+            return Math.ceil(withMargin); // Arrondir à l'entier supérieur
+        } else if (withMargin <= 10) {
+            return Math.ceil(withMargin / 2) * 2; // Arrondir au multiple de 2
+        } else if (withMargin <= 20) {
+            return Math.ceil(withMargin / 5) * 5; // Arrondir au multiple de 5
+        } else if (withMargin <= 50) {
+            return Math.ceil(withMargin / 10) * 10; // Arrondir au multiple de 10
+        } else {
+            return Math.ceil(withMargin / 25) * 25; // Arrondir au multiple de 25
+        }
+    }
+
     /**
      * Configuration des échelles
      */
     createScalesConfig(maxY = 100) {
+        // Calculer un stepSize approprié selon la valeur max
+        let stepSize;
+        if (this.showCumulative) {
+            stepSize = 10; // Toujours 10% pour la vue cumulée
+        } else {
+            // Pour la distribution, adapter le stepSize à la valeur max
+            if (maxY <= 5) {
+                stepSize = 0.5;
+            } else if (maxY <= 10) {
+                stepSize = 1;
+            } else if (maxY <= 20) {
+                stepSize = 2;
+            } else if (maxY <= 50) {
+                stepSize = 5;
+            } else {
+                stepSize = 10;
+            }
+        }
+        
         return {
             x: {
                 type: 'linear',
@@ -745,12 +795,12 @@ export class ChartComponent {
                     font: { size: 14, weight: 'bold' }
                 },
                 min: 0,
-                max: maxY,
+                max: maxY, // Utiliser la valeur calculée intelligemment
                 ticks: {
                     callback: (value) => `${value.toFixed(this.showCumulative ? 0 : 1)}%`,
                     color: '#94a3b8',
                     font: { size: 12 },
-                    stepSize: this.showCumulative ? 10 : undefined
+                    stepSize: stepSize // Adapter le stepSize
                 },
                 grid: {
                     color: 'rgba(148, 163, 184, 0.1)',

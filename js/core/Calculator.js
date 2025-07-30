@@ -221,12 +221,12 @@ export class DistributionCalculator extends Calculator {
     const size = Q.length;
     const lastSuccessProb = successRates[size - 1] / 100;
 
-    const expectedVisitDistribution = [];
+    const expectedVisitDistribution = [0];
     let cumulativeSum = 0;
 
     let powerMatrix = Matrix.identity(size);
 
-    for (let trial = 0; trial < this.maxTrial; trial++) {
+    for (let trial = 1; trial < this.maxTrial; trial++) {
       const percentage = powerMatrix[startLevel][size - 1] * lastSuccessProb;
       cumulativeSum += percentage;
 
