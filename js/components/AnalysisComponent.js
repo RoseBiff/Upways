@@ -95,8 +95,26 @@ export class AnalysisComponent {
         this.endLevel = params.endLevel;
         this.currentItemId = params.itemId;
         
-        // Mettre à jour l'affichage des niveaux
-        this.elements.analysisLevels.textContent = `(+${this.startLevel} → +${this.endLevel})`;
+        // Mettre à jour l'objet sélectionné
+        const selectedItemDiv = document.getElementById('analysisSelectedItem');
+        const itemImage = document.getElementById('analysisItemImage');
+        const itemNameElement = document.getElementById('analysisItemName');
+        
+        if (this.currentItemId) {
+            const itemName = this.dataService.itemNames[this.currentItemId] || `Item ${this.currentItemId}`;
+            const displayName = this.formatters.removeUpgradeLevel(itemName);
+            
+            selectedItemDiv.style.display = 'flex';
+            itemImage.src = this.dataService.getItemImagePath(this.currentItemId);
+            itemImage.alt = displayName;
+            itemNameElement.textContent = displayName;
+
+            // Mettre à jour les niveaux
+            selectedItemDiv.querySelector('.level-start').textContent = `+${this.startLevel}`;
+            selectedItemDiv.querySelector('.level-end').textContent = `+${this.endLevel}`;
+        } else {
+            selectedItemDiv.style.display = 'none';
+        }
         
         // Initialiser le scénario personnalisé
         this.initCustomScenario();
@@ -1125,6 +1143,16 @@ export class AnalysisComponent {
         
         if (this.strategies[this.currentStrategy]) {
             await this.displayStrategyDetails();
+        }
+        
+        // Ajouter cette partie pour mettre à jour l'objet sélectionné
+        if (this.currentItemId) {
+            const itemNameElement = document.getElementById('analysisItemName');
+            if (itemNameElement) {
+                const itemName = this.dataService.itemNames[this.currentItemId] || `Item ${this.currentItemId}`;
+                const displayName = this.formatters.removeUpgradeLevel(itemName);
+                itemNameElement.textContent = displayName;
+            }
         }
     }
     

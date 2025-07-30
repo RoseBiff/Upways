@@ -4086,3 +4086,62 @@ select:focus-visible {
         font-size: 0.8125rem;
     }
 }
+
+body:has(.loading-overlay:not([style*="display: none"])) .path-step:hover,
+html:not(:hover) .path-step:hover {
+    transform: none;
+    box-shadow: var(--shadow-sm);
+    border-color: var(--border-color);
+}
+
+/* Solution plus simple : utiliser pointer-events */
+@media (hover: hover) {
+    .upgrade-path {
+        scroll-behavior: smooth;
+    }
+    
+    .upgrade-path:has(.path-step:hover) {
+        pointer-events: none;
+    }
+    
+    .upgrade-path .path-step {
+        pointer-events: auto;
+    }
+}
+
+#analysisTab .selected-item {
+    margin: 1.5rem 0;
+}
+
+/* Badge des niveaux dans l'objet sélectionné */
+.item-levels-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(99, 102, 241, 0.1);
+    padding: 0.25rem 0.75rem;
+    border-radius: 999px;
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    margin-top: 0.5rem;
+}
+
+.level-start {
+    color: #FFD700;
+    font-size: 0.875rem;
+    font-weight: bold;
+}
+
+.level-arrow {
+    color: var(--primary);
+    width: 16px;
+    height: 16px;
+    position: relative;
+    top: -11px;
+    left: 2px;
+}
+
+.level-end {
+    color: var(--success);
+    font-size: 0.875rem;
+    font-weight: bold;
+}

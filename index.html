@@ -337,7 +337,6 @@
             <div class="analysis-header">
                 <h2 class="analysis-title">
                     <span data-i18n="analysisResults">Résultats de l'analyse</span>
-                    <span class="analysis-levels" id="analysisLevels"></span>
                 </h2>
                 <button class="export-btn" id="exportBtn" title="Exporter" data-i18n-title="exportTitle">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -346,6 +345,20 @@
                         <line x1="12" y1="15" x2="12" y2="3"/>
                     </svg>
                 </button>
+            </div>
+
+            <div class="selected-item" id="analysisSelectedItem" style="display: none;">
+                <img id="analysisItemImage" class="item-image" src="" alt="">
+                <div class="item-info">
+                    <h3 id="analysisItemName" class="item-name"></h3>
+                    <div class="item-levels-badge">
+                        <span class="level-start">+0</span>
+                        <svg class="level-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M5 12h14M12 5l7 7-7 7"/>
+                        </svg>
+                        <span class="level-end">+9</span>
+                    </div>
+                </div>
             </div>
 
             <!-- Résumé des stratégies -->

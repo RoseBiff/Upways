@@ -280,7 +280,8 @@ class UpwaysApp {
         this.analysisComponent.setAnalysisParams({
             startLevel,
             endLevel,
-            itemId
+            itemId,
+            itemName
         });
         
         if (this.config.enableDebugLogs) {

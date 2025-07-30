@@ -853,7 +853,6 @@ export class ExportService {
         // Afficher le coût total moyen
         const avgCostDisplay = `
             <div style="font-size: 9px; color: ${isStartLevel ? '#FFD700' : '#10b981'}; font-weight: bold;">
-                <img src="won.png" style="width: 12px; height: 12px;">
                 ${this.formatters.formatCost(avgCost)}
             </div>
         `;
