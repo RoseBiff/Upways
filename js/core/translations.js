@@ -24,6 +24,11 @@ export const translations = {
         fromLevel: "De",
         toLevel: "À",
         notAvailable: "Non disponible",
+        moonlightBeam: "Coffre de rayon de Lune",
+        moonlightTooltipTitle: "Conversion en Parchemin du Dieu Dragon",
+        moonlightTooltipContent: "200 Coffre de rayon de lune donnent 10 Parchemins du Dieu Dragon en moyenne (5% de chance par coffre).",
+        price200Moonlight: "Prix 200 Coffres",
+        price1Scroll: "Prix 1 Parchemin",
         
         // Import/Export config
         exportConfig: "Exporter config",
@@ -203,6 +208,11 @@ export const translations = {
         fromLevel: "From",
         toLevel: "To",
         notAvailable: "Not available",
+        moonlightBeam: "Moonlight Treasure Chest",
+        moonlightTooltipTitle: "Dragon Scroll Conversion",
+        moonlightTooltipContent: "200 Moonlight Treasure Chests yield 10 Dragon Scroll on average (5% chance per chest).",
+        price200Moonlight: "Price 200 Chests",
+        price1Scroll: "Price 1 Scroll",
         
         // Import/Export config
         exportConfig: "Export config",
@@ -373,6 +383,11 @@ export const translations = {
         fromLevel: "De la",
         toLevel: "La",
         notAvailable: "Indisponibil",
+        moonlightBeam: "Cufăr Lumina Lunii",
+        moonlightTooltipTitle: "Conversie în Pergamentul Dragonului",
+        moonlightTooltipContent: "200 Cufăr Lumina Lunii oferă 10 Pergamentul Dragonului în medie (5% șansă per cufăr).",
+        price200Moonlight: "Preț 200 Cufere",
+        price1Scroll: "Preț 1 Pergament",
         
         // Import/Export config
         exportConfig: "Exportă config",
@@ -543,6 +558,11 @@ export const translations = {
         fromLevel: "Başlangıç",
         toLevel: "Bitiş",
         notAvailable: "Mevcut değil",
+        moonlightBeam: "Ayışığı Define Sandığı",
+        moonlightTooltipTitle: "Ejderha Parşömeni Dönüşümü",
+        moonlightTooltipContent: "200 Ayışığı Define Sandığı ortalama 10 Ejderha Parşömeni verir (sandık başına %5 şans).",
+        price200Moonlight: "200 Sandık Fiyatı",
+        price1Scroll: "1 Parşömen Fiyatı",
         
         // Import/Export config
         exportConfig: "Ayarları dışa aktar",
@@ -713,6 +733,11 @@ export const translations = {
         fromLevel: "Von",
         toLevel: "Bis",
         notAvailable: "Nicht verfügbar",
+        moonlightBeam: "Mondlicht-Schatztruhe",
+        moonlightTooltipTitle: "Umrechnung in Schriftrolle des Drachen",
+        moonlightTooltipContent: "200 Mondlicht-Schatztruhen ergeben im Durchschnitt 10 Schriftrolle des Drachen (5% Chance pro Truhe).",
+        price200Moonlight: "Preis 200 Truhen",
+        price1Scroll: "Preis 1 Schriftrolle",
         
         // Import/Export config
         exportConfig: "Konfig exportieren",

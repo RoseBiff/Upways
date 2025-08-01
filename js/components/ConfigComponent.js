@@ -207,6 +207,99 @@ export class ConfigComponent {
         }
     }
 
+    showMoonlightTooltip(element) {
+        const tooltip = document.getElementById('tooltip');
+        const tooltipContent = document.getElementById('tooltipContent');
+        
+        if (!tooltip || !tooltipContent) return;
+        
+        // Contenu du tooltip
+        tooltipContent.innerHTML = `
+            <div class="tooltip-title">${this.translator.t('moonlightTooltipTitle')}</div>
+            <div class="tooltip-content">
+                <p>${this.translator.t('moonlightTooltipContent')}</p>
+                <div class="tooltip-formula">
+                    <div class="formula-row">
+                        <span>${this.translator.t('price200Moonlight') || 'Prix 200 Coffres'}</span>
+                        <span>÷ 10</span>
+                        <span>= ${this.translator.t('price1Scroll') || 'Prix 1 Parchemin'}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        tooltip.style.display = 'block';
+        
+        // Positionner le tooltip
+        const rect = element.getBoundingClientRect();
+        const tooltipRect = tooltip.getBoundingClientRect();
+        
+        let left = rect.left + rect.width / 2 - tooltipRect.width / 2;
+        let top = rect.top - tooltipRect.height - 10;
+        
+        // Ajuster si sort de l'écran
+        if (left < 10) left = 10;
+        if (left + tooltipRect.width > window.innerWidth - 10) {
+            left = window.innerWidth - tooltipRect.width - 10;
+        }
+        if (top < 10) {
+            top = rect.bottom + 10;
+            tooltip.classList.add('tooltip-bottom');
+        } else {
+            tooltip.classList.remove('tooltip-bottom');
+        }
+        
+        tooltip.style.left = left + 'px';
+        tooltip.style.top = top + 'px';
+    }
+
+    hideMoonlightTooltip() {
+        const tooltip = document.getElementById('tooltip');
+        if (tooltip) {
+            tooltip.style.display = 'none';
+        }
+    }
+
+    attachDragonScrollEvents() {
+        const dragonScrollInput = document.getElementById('dragonScrollPrice');
+        const moonlightInput = document.getElementById('moonlightPrice');
+        
+        if (!dragonScrollInput || !moonlightInput) return;
+        
+        // Attacher le tooltip
+        const helpIcon = document.querySelector('.moonlight-help');
+        if (helpIcon) {
+            helpIcon.addEventListener('mouseenter', (e) => this.showMoonlightTooltip(e.target));
+            helpIcon.addEventListener('mouseleave', () => this.hideMoonlightTooltip());
+        }
+        
+        // Conversion Parchemin → Rayon de lune
+        dragonScrollInput.addEventListener('input', (e) => {
+            const dragonPrice = parseFloat(e.target.value) || 0;
+            moonlightInput.value = (dragonPrice * 10).toFixed(1);
+        });
+        
+        // Conversion Rayon de lune → Parchemin
+        moonlightInput.addEventListener('input', (e) => {
+            const moonlightPrice = parseFloat(e.target.value) || 0;
+            const dragonPrice = Math.max(0, moonlightPrice / 10); // Garantir >= 0
+            dragonScrollInput.value = dragonPrice.toFixed(1);
+            
+            // Mettre à jour et sauvegarder directement
+            this.dataService.updateUpgradeCost("Parchemin du Dieu Dragon", dragonPrice);
+            
+            // Notifier le changement
+            if (this.onConfigChanged) {
+                this.onConfigChanged({
+                    type: 'price',
+                    priceType: 'upgrade',
+                    name: "Parchemin du Dieu Dragon",
+                    value: dragonPrice
+                });
+            }
+        });
+    }
+
     /**
      * Affiche les prix des objets d'amélioration
      */
@@ -216,20 +309,50 @@ export class ConfigComponent {
         
         this.elements.upgradeItemPrices.innerHTML = upgradeOptions.map(option => {
             const imagePath = this.dataService.getUpgradeItemImagePath(option.internalName);
+            
+            // Traitement spécial pour le Parchemin du Dieu Dragon
+            if (option.internalName === "Parchemin du Dieu Dragon") {
+                return `
+                    <div class="price-item price-item-special">
+                        <img src="${imagePath}" class="price-icon" onerror="this.style.display='none'">
+                        <label>${option.displayName}</label>
+                        <input type="number" class="price-input" data-type="upgrade" data-name="${option.internalName}" 
+                            value="${costs[option.internalName] || 0}" min="0" step="0.1" id="dragonScrollPrice">
+                        <span class="currency">M</span>
+                        
+                        <div class="price-separator"></div>
+                        
+                        <img src="rdl.png" class="price-icon" onerror="this.style.display='none'">
+                        <div class="moonlight-label-container">
+                            <label>${this.translator.t('moonlightBeam') || 'Rayons de lune'} x200</label>
+                            <span class="help-icon moonlight-help" data-tooltip="moonlight">?</span>
+                        </div>
+                        <input type="number" class="price-input moonlight-price" 
+                            value="${(costs[option.internalName] || 0) * 10}" min="0" step="0.1" id="moonlightPrice">
+                        <span class="currency">M</span>
+                    </div>
+                `;
+            }
+            
+            // Code normal pour les autres objets
             return `
                 <div class="price-item">
                     <img src="${imagePath}" class="price-icon" onerror="this.style.display='none'">
                     <label>${option.displayName}</label>
                     <input type="number" class="price-input" data-type="upgrade" data-name="${option.internalName}" 
-                           value="${costs[option.internalName] || 0}" min="0" step="0.1">
+                        value="${costs[option.internalName] || 0}" min="0" step="0.1">
                     <span class="currency">M</span>
                 </div>
             `;
         }).join('');
 
-        this.elements.upgradeItemPrices.querySelectorAll('.price-input').forEach(input => {
+        // Attacher les événements normaux
+        this.elements.upgradeItemPrices.querySelectorAll('.price-input:not(.moonlight-price)').forEach(input => {
             input.addEventListener('change', () => this.updatePrice(input));
         });
+        
+        // Attacher les événements spéciaux pour Parchemin du Dieu Dragon
+        this.attachDragonScrollEvents();
     }
 
     /**

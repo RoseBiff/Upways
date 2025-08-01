@@ -4145,3 +4145,114 @@ html:not(:hover) .path-step:hover {
     font-size: 0.875rem;
     font-weight: bold;
 }
+
+
+
+
+
+
+
+
+
+
+/* Prix spécial pour Parchemin du Dieu Dragon */
+.price-item-special {
+    display: grid;
+    grid-template-columns: 32px 1fr 80px 40px 20px 32px 1fr 80px 40px;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+.price-separator {
+    width: 1px;
+    height: 24px;
+    background: var(--border-color);
+    justify-self: center;
+}
+
+.moonlight-label-container {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.help-icon {
+    width: 18px;
+    height: 18px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--primary);
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: bold;
+    color: var(--primary);
+    cursor: help;
+    transition: all var(--transition-base);
+    flex-shrink: 0;
+}
+
+.help-icon:hover {
+    background: var(--primary);
+    color: white;
+    transform: scale(1.1);
+    box-shadow: 0 2px 8px rgba(var(--primary-rgb), 0.3);
+}
+
+.moonlight-price {
+    background: rgba(var(--primary-rgb), 0.05);
+    border: 1px solid rgba(var(--primary-rgb), 0.3);
+}
+
+.moonlight-price:focus {
+    background: rgba(var(--primary-rgb), 0.08);
+    border-color: var(--primary);
+}
+
+/* Style pour le tooltip spécifique */
+.tooltip-formula {
+    margin-top: 0.75rem;
+    padding: 0.75rem;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: var(--radius-sm);
+    font-size: 0.875rem;
+}
+
+.formula-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    justify-content: center;
+    color: var(--primary-light);
+    font-weight: 500;
+}
+
+.formula-row span:nth-child(2) {
+    color: var(--text-muted);
+}
+
+/* Responsive pour l'affichage spécial */
+@media (max-width: 1200px) {
+    .price-item-special {
+        grid-template-columns: 32px 1fr 80px 40px;
+        grid-template-rows: auto auto;
+    }
+    
+    .price-separator {
+        display: none;
+    }
+    
+    .price-item-special > img:nth-of-type(2),
+    .moonlight-label-container,
+    .price-item-special > input:nth-of-type(2),
+    .price-item-special > span:nth-of-type(2) {
+        margin-top: 0.5rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .moonlight-label-container {
+        grid-column: span 2;
+    }
+}
