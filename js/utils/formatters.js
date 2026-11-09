@@ -27,6 +27,15 @@ export function formatCost(value, lang = 'fr') {
         return `${wons.toFixed(2).replace('.', decimalSeparator)}w`;
     }
     
+    // Sous 0,1M (100 000 yang), afficher en milliers : « 0,0M » ne disait rien
+    if (value < 0.1) {
+        const thousands = value * 1000;
+        if (thousands >= 10) return `${Math.round(thousands)}k`;
+        const rounded = Math.round(thousands * 10) / 10;
+        if (rounded === Math.floor(rounded)) return `${rounded}k`;
+        return `${rounded.toFixed(1).replace('.', decimalSeparator)}k`;
+    }
+
     // Si < 100M, afficher en millions
     // Si c'est un nombre entier
     if (value === Math.floor(value)) {

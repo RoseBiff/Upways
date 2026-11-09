@@ -126,8 +126,24 @@ export class AnalysisComponent {
             selectedItemDiv.style.display = 'none';
         }
         
-        // Initialiser le scénario personnalisé
+        // Initialiser le scénario personnalisé (il sera recalé sur l'optimal au calcul)
         this.initCustomScenario();
+        this._customScenarioEdited = false;
+    }
+
+    /**
+     * Recale le scénario personnalisé sur le chemin optimal, tant que l'utilisateur
+     * ne l'a pas modifié lui-même : « Personnalisé » part du meilleur chemin.
+     */
+    seedCustomScenarioFrom(strategy) {
+        if (this._customScenarioEdited || !Array.isArray(strategy?.fullPath)) return;
+        this.initCustomScenario();
+        for (let level = 0; level < this.endLevel; level++) {
+            const name = strategy.fullPath[level];
+            if (name && this.dataService.UPGRADE_ITEM_IDS?.[name] !== undefined) {
+                this.customScenario[level] = name;
+            }
+        }
     }
 
     /**
@@ -2054,6 +2070,9 @@ export class AnalysisComponent {
      * Met à jour le chemin personnalisé
      */
     updateCustomPath() {
+        // L'utilisateur a personnalisé : on ne recale plus sur l'optimal
+        this._customScenarioEdited = true;
+
         // Récupérer les nouvelles valeurs pour TOUS les niveaux
         this.elements.upgradePath.querySelectorAll('.step-select').forEach(select => {
             const index = parseInt(select.dataset.level);

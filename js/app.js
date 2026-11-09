@@ -501,15 +501,21 @@ class UpwaysApp {
         }
 
         // ── Transition de lancement ──
+        // La fusée et les feux d'artifice ne sont joués qu'une fois par session,
+        // et jamais si le système demande de réduire les animations.
         const overlay = document.getElementById('loadingOverlay');
         const btn     = document.getElementById('analyzeBtn');
+        const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+        let launchAlreadyPlayed = false;
+        try { launchAlreadyPlayed = sessionStorage.getItem('upways.launchPlayed') === '1'; } catch (e) { /* stockage indisponible */ }
+        const playLaunch = !reduceMotion && !launchAlreadyPlayed;
 
-        // Animer le bouton (fusée qui décolle)
-        if (btn) btn.classList.add('launching');
-
-        // Afficher l'overlay en mode launch
-        if (overlay) overlay.classList.add('launch-mode');
-        this._spawnLaunchStars();
+        if (playLaunch) {
+            // Animer le bouton (fusée qui décolle) et afficher l'overlay en mode launch
+            if (btn) btn.classList.add('launching');
+            if (overlay) overlay.classList.add('launch-mode');
+            this._spawnLaunchStars();
+        }
         this.uiState.showLoading(this.translator.t('calculating'));
 
         const startTime = Date.now();
@@ -538,10 +544,13 @@ class UpwaysApp {
 
             // Marquer l'onglet pour l'animation d'entrée en échelons
             const analysisTab = document.getElementById('analysisTab');
-            if (analysisTab) analysisTab.classList.add('revealing');
+            if (analysisTab && !reduceMotion) analysisTab.classList.add('revealing');
 
-            // Lever le rideau → révèle les résultats
-            await this._playReveal(overlay);
+            if (playLaunch) {
+                // Lever le rideau → révèle les résultats
+                await this._playReveal(overlay);
+                try { sessionStorage.setItem('upways.launchPlayed', '1'); } catch (e) { /* stockage indisponible */ }
+            }
 
             // Nettoyer la classe d'animation
             setTimeout(() => analysisTab?.classList.remove('revealing'), 700);
@@ -551,8 +560,6 @@ class UpwaysApp {
                 console.log(`Analysis completed in ${elapsedTime}ms`);
                 console.log('Strategies:', this.strategies);
             }
-
-            this.uiState.showToast('success', this.translator.t('analysisComplete'));
         } catch (error) {
             console.error('Analysis error:', error);
             this.uiState.showToast('error', this.translator.t('errorAnalysis'));
@@ -683,11 +690,13 @@ class UpwaysApp {
                 console.log('Calculating strategies:', { startLevel, endLevel, customScenario });
             }
 
-            // Stratégies standard (optimal + personnalisée)
-            const [optimal, custom] = await Promise.all([
-                this.strategyService.calculateOptimalStrategy(this.currentItemId, startLevel, endLevel),
-                this.strategyService.calculateCustomStrategy(customScenario, this.currentItemId, startLevel, endLevel)
-            ]);
+            // Stratégie optimale, puis personnalisée : tant que l'utilisateur ne l'a pas
+            // modifiée, la personnalisée part du chemin optimal
+            const optimal = await this.strategyService.calculateOptimalStrategy(this.currentItemId, startLevel, endLevel);
+            this.analysisComponent.seedCustomScenarioFrom(optimal);
+            const custom = await this.strategyService.calculateCustomStrategy(
+                this.analysisComponent.getCustomScenario(), this.currentItemId, startLevel, endLevel
+            );
 
             this.strategies = { optimal, custom };
 
