@@ -4118,6 +4118,10 @@ select:focus-visible {
     padding: 2rem;
     position: relative;
     overflow: hidden;
+    /* clip : comme hidden, mais le bloc ne peut plus être décalé par un défilement
+       automatique (tutoriel, focus) qui laissait le haut de la carte inaccessible */
+    overflow: clip;
+    min-width: 0;
     box-shadow: 0 4px 20px -2px rgba(var(--primary-rgb), 0.1);
 }
 
@@ -4731,6 +4735,8 @@ html:not(:hover) .path-step:hover {
     border: 1px solid var(--border-color, #334155);
     border-radius: 12px;
     overflow: hidden;
+    overflow: clip; /* voir .welcome-card */
+    min-width: 0;
     margin-bottom: 1.5rem;
 }
 
@@ -6832,10 +6838,11 @@ html:not(:hover) .path-step:hover {
     transform: rotate(45deg);
     z-index: -1;
 }
-.tutorial-bubble[data-arrow="top"]    .tutorial-bubble-arrow { top: -8px; left: 50%; margin-left: -7px; border-right: none; border-bottom: none; }
-.tutorial-bubble[data-arrow="bottom"] .tutorial-bubble-arrow { bottom: -8px; left: 50%; margin-left: -7px; border-left: none; border-top: none; }
-.tutorial-bubble[data-arrow="left"]   .tutorial-bubble-arrow { left: -8px; top: 50%; margin-top: -7px; border-right: none; border-top: none; }
-.tutorial-bubble[data-arrow="right"]  .tutorial-bubble-arrow { right: -8px; top: 50%; margin-top: -7px; border-left: none; border-bottom: none; }
+.tutorial-bubble[data-arrow="top"]    .tutorial-bubble-arrow { top: -8px; left: var(--arrow-x, 50%); margin-left: -7px; border-right: none; border-bottom: none; }
+.tutorial-bubble[data-arrow="bottom"] .tutorial-bubble-arrow { bottom: -8px; left: var(--arrow-x, 50%); margin-left: -7px; border-left: none; border-top: none; }
+.tutorial-bubble[data-arrow="left"]   .tutorial-bubble-arrow { left: -8px; top: var(--arrow-y, 50%); margin-top: -7px; border-right: none; border-top: none; }
+.tutorial-bubble[data-arrow="right"]  .tutorial-bubble-arrow { right: -8px; top: var(--arrow-y, 50%); margin-top: -7px; border-left: none; border-bottom: none; }
+.tutorial-bubble[data-arrow="none"]   .tutorial-bubble-arrow { display: none; }
 
 .tutorial-bubble-header {
     display: flex;
@@ -7143,10 +7150,12 @@ html:not(:hover) .path-step:hover {
     flex-wrap: wrap;
 }
 
-/* --- Élément mis en lumière (pointer-events passent à travers le voile) --- */
+/* --- Élément mis en lumière (pointer-events passent à travers le voile) ---
+   z-index sous le calque du tutoriel (9999) : la bulle reste toujours cliquable,
+   même posée sur une grande cible ; au-dessus du reste de la page (en-tête : 1000). */
 .tutorial-target-highlight {
     position: relative;
-    z-index: 10000;
+    z-index: 9998;
     pointer-events: auto;
 }
 

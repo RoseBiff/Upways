@@ -100,6 +100,20 @@ export class TutorialComponent {
         window.addEventListener('resize', reposition, { passive: true });
         window.addEventListener('scroll', reposition, { passive: true });
 
+        // Après un redimensionnement (rotation du téléphone…), recadrer si la cible est sortie
+        // de l'écran ou si la bulle a dû se poser dessus faute de place
+        window.addEventListener('resize', () => {
+            clearTimeout(this._recenterTimer);
+            this._recenterTimer = setTimeout(() => {
+                const target = this._pendingTarget;
+                if (!this.active || !target) return;
+                const r = target.getBoundingClientRect();
+                const offscreen = r.bottom < 0 || r.top > window.innerHeight;
+                const covered = this.els.bubble.dataset.arrow === 'none';
+                if (offscreen || covered) this._positionForTarget(target, this.steps[this.stepIndex]);
+            }, 250);
+        }, { passive: true });
+
         // Bouton de relance (header)
         this.els.replayBtn?.addEventListener('click', () => this.start({ force: true }));
     }
@@ -284,8 +298,8 @@ export class TutorialComponent {
         // Petit délai pour laisser la transition précédente démarrer
         await new Promise(r => requestAnimationFrame(r));
 
+        // La bulle s'affiche une fois la page arrivée à destination (voir _positionForTarget)
         this._positionForTarget(target, step);
-        this._revealBubble();
 
         // Installation éventuelle du waitFor (laisse l'utilisateur agir sur l'UI réelle)
         if (typeof step.waitFor === 'function') {
@@ -340,21 +354,96 @@ export class TutorialComponent {
             this.els.overlay.classList.add('no-target');
             this._positionBubbleCentered();
             this._resetBackdropFullscreen();
+            this._revealBubble();
             return;
         }
 
-        // S'assurer que la cible est visible
-        const prevScrollBehavior = document.documentElement.style.scrollBehavior;
-        document.documentElement.style.scrollBehavior = 'smooth';
-        const tRect = target.getBoundingClientRect();
-        const needsScroll = tRect.top < 80 || tRect.bottom > window.innerHeight - 80;
-        if (needsScroll) {
-            target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-        document.documentElement.style.scrollBehavior = prevScrollBehavior;
+        // Bulle cachée pendant le déplacement : elle apparaît directement au bon endroit
+        this.els.bubble.classList.remove('visible');
 
-        // Après un petit délai, mesurer de nouveau
-        setTimeout(() => this._updatePositioning(step), needsScroll ? 420 : 40);
+        // Faire défiler la PAGE pour que la cible et la bulle tiennent ensemble à l'écran.
+        // Pas de scrollIntoView() : il faisait aussi défiler les blocs en overflow:hidden
+        // (carte de configuration), qui restaient ensuite décalés et inaccessibles.
+        const maxY = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+        const wanted = this._scrollDeltaFor(target, step);
+        const delta = Math.max(-window.scrollY, Math.min(wanted, maxY - window.scrollY));
+        const needsScroll = Math.abs(delta) > 2;
+        if (needsScroll) {
+            const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+            if (reduceMotion) {
+                // Instantané : on neutralise le scroll-behavior: smooth du site le temps du saut
+                const rootStyle = document.documentElement.style;
+                const prev = rootStyle.scrollBehavior;
+                rootStyle.scrollBehavior = 'auto';
+                window.scrollBy(0, delta);
+                rootStyle.scrollBehavior = prev;
+            } else {
+                window.scrollBy({ top: delta, behavior: 'smooth' });
+            }
+        }
+
+        // Une fois le défilement terminé : mesurer de nouveau, puis afficher la bulle
+        let done = false;
+        const hasScrollEnd = 'onscrollend' in window;
+        const finish = () => {
+            if (done) return;
+            done = true;
+            clearTimeout(timer);
+            window.removeEventListener('scrollend', finish);
+            if (!this.active || this._pendingTarget !== target) return;
+            this._updatePositioning(step);
+            this._revealBubble();
+        };
+        const timer = setTimeout(finish, needsScroll ? (hasScrollEnd ? 1200 : 450) : 40);
+        if (needsScroll && hasScrollEnd) window.addEventListener('scrollend', finish);
+    }
+
+    // Haut de la zone utile : sous l'en-tête collant, sauf pour une cible située dedans
+    _safeTop(target) {
+        const header = document.querySelector('.header');
+        if (!header || (target && header.contains(target))) return 0;
+        const pos = getComputedStyle(header).position;
+        if (pos !== 'sticky' && pos !== 'fixed') return 0;
+        return Math.max(0, header.getBoundingClientRect().bottom);
+    }
+
+    // Côté visé pour la bulle : celui de l'étape, ou dessous si la place manque en largeur (mobile)
+    _preferredSide(r, step) {
+        const side = step?.placement || 'bottom';
+        if (side !== 'left' && side !== 'right') return side;
+        const bw = this.els.bubble.offsetWidth || 320;
+        const room = side === 'left' ? r.left : window.innerWidth - r.right;
+        return room - 2 * 16 >= bw ? side : 'bottom';
+    }
+
+    // Défilement vertical nécessaire pour voir la cible avec la bulle du bon côté
+    _scrollDeltaFor(target, step) {
+        const r = target.getBoundingClientRect();
+        const margin = 16, pad = 8;
+        const bh = this.els.bubble.offsetHeight || 200;
+        const areaTop = this._safeTop(target) + margin;
+        const areaBottom = window.innerHeight - margin;
+        const side = this._preferredSide(r, step);
+
+        let blockTop = r.top - pad;
+        let blockBottom = r.bottom + pad;
+        if (side === 'top') blockTop -= bh + margin;
+        else if (side === 'bottom') blockBottom += bh + margin;
+        else if (bh > r.height) {                  // bulle à côté, centrée sur la cible
+            blockTop -= (bh - r.height) / 2;
+            blockBottom += (bh - r.height) / 2;
+        }
+
+        if (blockTop >= areaTop && blockBottom <= areaBottom) return 0;      // déjà bien placé
+        if (blockBottom - blockTop <= areaBottom - areaTop) {                // tient à l'écran : on centre
+            return (blockTop + blockBottom) / 2 - (areaTop + areaBottom) / 2;
+        }
+        // Cible plus haute que l'écran : la bulle en haut, puis le début de la cible.
+        // Écran trop bas pour montrer les deux (téléphone à l'horizontale) : la cible d'abord,
+        // la bulle se posera dessus.
+        const bubbleSpace = (side === 'left' || side === 'right') ? 0 : bh + margin;
+        const targetRoom = areaBottom - areaTop - bubbleSpace - pad;
+        return r.top - pad - (targetRoom >= 120 ? bubbleSpace : 0) - areaTop;
     }
 
     _updatePositioning(step) {
@@ -391,8 +480,8 @@ export class TutorialComponent {
 
         const top    = Math.max(rect.top - pad, 0);
         const left   = Math.max(rect.left - pad, 0);
-        const width  = rect.width + pad * 2;
-        const height = rect.height + pad * 2;
+        const width  = rect.right + pad - left;
+        const height = rect.bottom + pad - top;
 
         // Anneau lumineux
         Object.assign(this.els.ring.style, {
@@ -417,7 +506,7 @@ export class TutorialComponent {
         this.els.overlay.classList.add('has-target');
 
         // Positionner la bulle à côté
-        this._positionBubbleNearRect({ top, left, width, height }, step);
+        this._positionBubbleNearRect({ top, left, width, height }, currentStep);
     }
 
     _resetBackdropFullscreen() {
@@ -449,49 +538,60 @@ export class TutorialComponent {
         const vw = window.innerWidth;
         const vh = window.innerHeight;
         const margin = 16;
+        // Ne pas recouvrir l'en-tête collant quand la hauteur le permet
+        const safeTop = this._safeTop(this._pendingTarget) + margin;
+        const minTop = (vh - bh - margin >= safeTop) ? safeTop : margin;
 
-        // Placement préférentiel : explicit step.placement sinon auto-détection
-        let placement = step?.placement;
-        if (!placement) {
-            if (rect.top + rect.height + bh + margin < vh)   placement = 'bottom';
-            else if (rect.top - bh - margin > 0)              placement = 'top';
-            else if (rect.left + rect.width + bw + margin < vw) placement = 'right';
-            else placement = 'left';
-        }
+        // Côtés où la bulle tient sans recouvrir la cible
+        const fits = {
+            top:    rect.top - margin - bh >= minTop,
+            bottom: rect.top + rect.height + margin + bh <= vh - margin,
+            left:   rect.left - margin - bw >= margin,
+            right:  rect.left + rect.width + margin + bw <= vw - margin
+        };
+        // Côté demandé par l'étape, sinon l'opposé, sinon le premier qui a la place
+        const opposite = { top: 'bottom', bottom: 'top', left: 'right', right: 'left' };
+        const wanted = step?.placement;
+        let placement = [wanted, opposite[wanted], 'bottom', 'top', 'right', 'left'].find(p => p && fits[p]);
+        // Aucun côté libre (cible plus grande que l'écran) : la bulle se pose sur la cible,
+        // du côté le plus dégagé (elle reste au-dessus, voir .tutorial-target-highlight)
+        const overlap = !placement;
+        if (overlap) placement = (rect.top - minTop > vh - rect.top - rect.height) ? 'top' : 'bottom';
 
-        let top, left, arrow;
+        let top, left;
         switch (placement) {
             case 'top':
                 top  = rect.top - bh - margin;
                 left = rect.left + rect.width / 2 - bw / 2;
-                arrow = 'bottom';
                 break;
             case 'left':
                 top  = rect.top + rect.height / 2 - bh / 2;
                 left = rect.left - bw - margin;
-                arrow = 'right';
                 break;
             case 'right':
                 top  = rect.top + rect.height / 2 - bh / 2;
                 left = rect.left + rect.width + margin;
-                arrow = 'left';
                 break;
             case 'bottom':
             default:
                 top  = rect.top + rect.height + margin;
                 left = rect.left + rect.width / 2 - bw / 2;
-                arrow = 'top';
                 break;
         }
 
         // Clamp dans la fenêtre
         left = Math.max(margin, Math.min(left, vw - bw - margin));
-        top  = Math.max(margin, Math.min(top,  vh - bh - margin));
+        top  = Math.max(minTop, Math.min(top,  vh - bh - margin));
 
         bubble.style.top  = `${top}px`;
         bubble.style.left = `${left}px`;
         bubble.style.transform = '';
-        bubble.dataset.arrow = arrow;
+        // Flèche tournée vers la cible, alignée sur son centre même si la bulle est décalée
+        const arrows = { top: 'bottom', bottom: 'top', left: 'right', right: 'left' };
+        bubble.dataset.arrow = overlap ? 'none' : arrows[placement];
+        const clamp = (v, lo, hi) => Math.max(lo, Math.min(v, hi));
+        bubble.style.setProperty('--arrow-x', `${clamp(rect.left + rect.width / 2 - left, 22, bw - 22)}px`);
+        bubble.style.setProperty('--arrow-y', `${clamp(rect.top + rect.height / 2 - top, 22, bh - 22)}px`);
     }
 
     _revealBubble() {
