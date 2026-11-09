@@ -790,6 +790,7 @@ export class ConfigComponent {
 
             // Met à jour l'URL visible sans recharger la page
             window.history.replaceState({}, '', fullUrl);
+            window.app?.analytics?.track('partage', { objet: Number(this.currentItemId) });
 
             // Copie dans le presse-papiers (avec fallback pour contextes non sécurisés)
             let copied = false;

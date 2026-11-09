@@ -48,3 +48,13 @@ export const SCROLL_LIMIT = 9;
  */
 export const ENGINE_VERSION = '3.3.1';
 export const ENGINE_BUILD_DATE = '2026-04-16';
+/**
+ * Mesure d'audience (Umami, sans cookies). Désactivée tant que websiteId est vide.
+ * Pour l'activer : créer un compte gratuit sur umami.is, ajouter le site, coller ici
+ * son « Website ID » puis mettre en ligne. Voir README > Mesure d'audience.
+ */
+export const ANALYTICS = {
+    websiteId: '',                                   // ← identifiant du site Umami
+    scriptUrl: 'https://cloud.umami.is/script.js',
+    domains: 'metin2upways.com,www.metin2upways.com' // les visites en local ne sont pas comptées
+};

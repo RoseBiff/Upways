@@ -137,6 +137,11 @@ export class DmDcComponent {
         return this.t('dmdcOneChanceIn', { n: nTxt });
     }
 
+    /** Mesure d'audience : une fois par stat et par objet */
+    trackUse(key) {
+        window.app?.analytics?.trackOnce(`dmdc-${key}-${this.itemId}`, 'dmdc', { stat: key, objet: Number(this.itemId) });
+    }
+
     /* ───────────── Rendu ───────────── */
 
     render() {
@@ -222,7 +227,7 @@ export class DmDcComponent {
             this.setMarker(key, Math.ceil(v));
         };
 
-        input.addEventListener('input', update);
+        input.addEventListener('input', () => { update(); this.trackUse(key); });
 
         // Boutons − / +
         input.closest('.dmdc-stepper').querySelectorAll('.dmdc-step').forEach(btn => {
@@ -232,6 +237,7 @@ export class DmDcComponent {
                 const next = Math.min(dist.stats.max, Math.max(dist.stats.min, base + Number(btn.dataset.step)));
                 input.value = next;
                 update();
+                this.trackUse(key);
             });
         });
 
@@ -308,6 +314,7 @@ export class DmDcComponent {
                     if (!elements.length) return;
                     const x = dist.xs[elements[0].index];
                     this.calcUpdaters[key]?.(x);
+                    this.trackUse(key);
                 },
                 plugins: {
                     legend: {

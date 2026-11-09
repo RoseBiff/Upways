@@ -50,12 +50,16 @@ export class AnalysisComponent {
             btn.addEventListener('click', () => this.selectStrategy(btn.dataset.tab));
         });
         // Sélection via les cartes côte à côte
+        const chooseStrategy = (key) => {
+            if (key !== this.currentStrategy) window.app?.analytics?.track('strategie', { type: key });
+            this.selectStrategy(key);
+        };
         document.querySelectorAll('.strategy-card[data-tab]').forEach(card => {
-            card.addEventListener('click', () => this.selectStrategy(card.dataset.tab));
+            card.addEventListener('click', () => chooseStrategy(card.dataset.tab));
             card.addEventListener('keydown', e => {
                 if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
-                    this.selectStrategy(card.dataset.tab);
+                    chooseStrategy(card.dataset.tab);
                 }
             });
         });
@@ -1000,7 +1004,13 @@ export class AnalysisComponent {
             out.innerHTML = text;
             if (bar) bar.style.width = `${Math.max(1, Math.round(res.probability * 100))}%`;
         };
-        input.addEventListener('input', update);
+        input.addEventListener('input', () => {
+            update();
+            window.app?.analytics?.trackOnce(
+                `budget-${this.currentItemId}-${this.startLevel}-${this.endLevel}`,
+                'budget', { objet: Number(this.currentItemId) }
+            );
+        });
         update();
     }
 

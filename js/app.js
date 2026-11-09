@@ -2,6 +2,7 @@
 import { DataService } from './services/DataService.js';
 import { StrategyService } from './services/StrategyService.js';
 import { ExportService } from './services/ExportService.js';
+import { AnalyticsService } from './services/AnalyticsService.js';
 
 import { SearchComponent } from './components/SearchComponent.js';
 import { ConfigComponent } from './components/ConfigComponent.js';
@@ -31,6 +32,7 @@ class UpwaysApp {
         this.formatters = new Formatters(this.translator);
         this.strategyService = new StrategyService(this.dataService);
         this.exportService = new ExportService(this.formatters, this.translator);
+        this.analytics = new AnalyticsService(); // inactif tant que l'identifiant Umami est vide
         this.uiState = new UIState();
 
         // Composants
@@ -249,6 +251,7 @@ class UpwaysApp {
                 try {
                     await this.translator.setLanguage(lang);
                     this.updateLanguage();
+                    this.analytics.track('langue', { langue: lang });
                 } catch (error) {
                     console.error('Error changing language:', error);
                     this.uiState.showToast('error', 'Error changing language');
@@ -555,6 +558,15 @@ class UpwaysApp {
             // Nettoyer la classe d'animation
             setTimeout(() => analysisTab?.classList.remove('revealing'), 700);
 
+            const analysedName = this.formatters.removeUpgradeLevel(this.dataService.itemNames[this.currentItemId] || '');
+            this.analytics.track('analyse', {
+                objet: Number(this.currentItemId),
+                nom: analysedName,
+                de: startLevel,
+                a: endLevel,
+                langue: this.translator.getLanguage()
+            });
+
             const elapsedTime = Date.now() - startTime;
             if (this.config.enableDebugLogs) {
                 console.log(`Analysis completed in ${elapsedTime}ms`);
@@ -830,6 +842,7 @@ class UpwaysApp {
             );
 
             this.uiState.showToast('success', this.translator.t('exportSuccess'));
+            this.analytics.track('export', { strategie: currentStrategy });
         } catch (error) {
             console.error('Export error:', error);
             this.uiState.showToast('error', this.translator.t('exportFailed'));
