@@ -7427,3 +7427,59 @@ html:not(:hover) .path-step:hover {
         height: 260px;
     }
 }
+
+/* ============================================================
+   Correctifs responsive — onglet Analyse
+   ============================================================ */
+/* Boutons de zoom du graphique alignés sur une ligne */
+.chart-controls .zoom-controls {
+    display: inline-flex;
+    gap: 0.5rem;
+}
+
+@media (max-width: 1279px) {
+    /* En-tête de l'objet : les étapes 1-2-3 passent sous le nom au lieu d'être centrées par-dessus */
+    #analysisTab .selected-item {
+        flex-wrap: wrap;
+    }
+    #analysisTab .analysis-nav-wizard {
+        position: static;
+        transform: none;
+        min-width: 0;
+        width: 100%;
+        max-width: 420px;
+        margin: 0.5rem auto 0;
+    }
+}
+
+@media (max-width: 768px) {
+    /* Barre d'outils du graphique : sous le titre, et sur plusieurs lignes si besoin */
+    .chart-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+    }
+    .chart-header .chart-subtitle {
+        margin-bottom: 0;
+    }
+    .chart-controls {
+        margin-left: 0;
+        flex-wrap: wrap;
+    }
+    .chart-controls .btn {
+        padding: 0.5rem 0.85rem;
+        font-size: 0.875rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .chart-controls .btn {
+        padding: 0.45rem 0.65rem;
+    }
+    #analysisTab .analysis-nav-step {
+        min-width: 56px;
+    }
+    #analysisTab .analysis-nav-line {
+        min-width: 20px;
+    }
+}
