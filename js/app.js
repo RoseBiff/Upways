@@ -8,6 +8,7 @@ import { ConfigComponent } from './components/ConfigComponent.js';
 import { AnalysisComponent } from './components/AnalysisComponent.js';
 import { ChartComponent } from './components/ChartComponent.js';
 import { TutorialComponent } from './components/TutorialComponent.js';
+import { DmDcComponent } from './components/DmDcComponent.js';
 
 import { Translator } from './utils/translator.js';
 import { Formatters } from './utils/formatters.js';
@@ -38,6 +39,7 @@ class UpwaysApp {
         this.analysisComponent = null;
         this.chartComponent = null;
         this.tutorialComponent = null;
+        this.dmdcComponent = null;
 
         // État de l'application
         this.currentItemId = null;
@@ -191,6 +193,9 @@ class UpwaysApp {
 
         // Composant du tutoriel (G2)
         this.tutorialComponent = new TutorialComponent(this.translator, this.dataService);
+
+        // Section Probabilités DM/DC (onglet Analyse, objets concernés uniquement)
+        this.dmdcComponent = new DmDcComponent(this.translator);
 
         // Configuration initiale
         this.analysisComponent.setShowIntervals(this.config.showIntervals);
@@ -373,6 +378,10 @@ class UpwaysApp {
         if (this.chartComponent) {
             this.chartComponent.reset();
         }
+
+        if (this.dmdcComponent) {
+            this.dmdcComponent.hide();
+        }
     }
 
     onConfigChanged(change) {
@@ -525,6 +534,7 @@ class UpwaysApp {
             this.analysisComponent.setStrategies(this.strategies);
             this.analysisComponent.selectStrategy('optimal');
             this.chartComponent.drawTrialsProbabilityChart(this.strategies.optimal);
+            this.dmdcComponent.setItem(this.currentItemId);
 
             // Marquer l'onglet pour l'animation d'entrée en échelons
             const analysisTab = document.getElementById('analysisTab');
@@ -865,6 +875,7 @@ class UpwaysApp {
         if (this.configComponent) this.configComponent.destroy();
         if (this.analysisComponent) this.analysisComponent.destroy();
         if (this.chartComponent) this.chartComponent.destroy();
+        if (this.dmdcComponent) this.dmdcComponent.destroy();
     }
 }
 

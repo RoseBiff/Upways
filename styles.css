@@ -7195,3 +7195,235 @@ html:not(:hover) .path-step:hover {
         transition-duration: 120ms !important;
     }
 }
+
+/* ============================================================
+   Probabilités DM / DC (onglet Analyse, objets concernés)
+   ============================================================ */
+.dmdc-section {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-xl);
+    padding: 2rem;
+    margin-top: 1.5rem;
+}
+
+.dmdc-section[hidden] {
+    display: none !important;
+}
+
+.dmdc-header {
+    margin-bottom: 1.25rem;
+}
+
+.dmdc-header .chart-subtitle {
+    margin-bottom: 0;
+}
+
+.dmdc-title-icon {
+    margin-right: 0.5rem;
+}
+
+.dmdc-blocks {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.dmdc-block {
+    --dmdc-color: var(--primary);
+    --dmdc-rgb: var(--primary-rgb);
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-top: 3px solid var(--dmdc-color);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem;
+}
+
+.dmdc-block--dc {
+    --dmdc-color: var(--secondary);
+    --dmdc-rgb: 245, 158, 11;
+}
+
+
+.dmdc-block-head {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem 0.6rem;
+}
+
+.dmdc-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--dmdc-color);
+    box-shadow: 0 0 10px rgba(var(--dmdc-rgb), 0.6);
+    flex-shrink: 0;
+}
+
+.dmdc-block-title {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+
+
+
+.dmdc-calc {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem 1.5rem;
+    background: rgba(var(--dmdc-rgb), 0.08);
+    border: 1px solid rgba(var(--dmdc-rgb), 0.25);
+    border-radius: var(--radius-md);
+    padding: 0.75rem 0.85rem;
+}
+
+.dmdc-calc-expr {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.4rem 0.5rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.dmdc-stepper {
+    display: inline-flex;
+    align-items: stretch;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.dmdc-stepper:focus-within {
+    border-color: var(--dmdc-color);
+    box-shadow: 0 0 0 3px rgba(var(--dmdc-rgb), 0.25);
+}
+
+.dmdc-step {
+    width: 34px;
+    border: none;
+    background: rgba(var(--dmdc-rgb), 0.12);
+    color: var(--text-primary);
+    font-size: 1.1rem;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    transition: background var(--transition-fast);
+}
+
+.dmdc-step:hover {
+    background: rgba(var(--dmdc-rgb), 0.3);
+}
+
+.dmdc-step:focus-visible {
+    outline: 2px solid var(--dmdc-color);
+    outline-offset: -2px;
+}
+
+.dmdc-calc-input {
+    width: 58px;
+    padding: 0.4rem 0.25rem;
+    background: transparent;
+    border: none;
+    color: var(--text-primary);
+    font-size: 1rem;
+    font-weight: 700;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+.dmdc-calc-input::-webkit-outer-spin-button,
+.dmdc-calc-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.dmdc-calc-input:focus {
+    outline: none;
+}
+
+.dmdc-calc-out {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.2rem 0.6rem;
+}
+
+.dmdc-calc-out strong {
+    font-size: 1.25rem;
+    color: var(--dmdc-color);
+    font-variant-numeric: tabular-nums;
+}
+
+.dmdc-calc-odds {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.dmdc-chart {
+    position: relative;
+    height: 320px;
+    min-width: 0;
+}
+
+.dmdc-note {
+    margin-top: 1.25rem;
+    background: rgba(var(--primary-rgb), 0.08);
+    border-left: 3px solid var(--primary);
+    border-radius: var(--radius-md);
+    padding: 0.85rem 1rem;
+    font-size: 0.85rem;
+    line-height: 1.6;
+    color: var(--text-secondary);
+}
+
+.dmdc-note p + p {
+    margin-top: 0.4rem;
+}
+
+.dmdc-note span[aria-hidden] {
+    margin-right: 0.25rem;
+}
+
+#analysisTab.revealing .dmdc-section {
+    animation: revealItem 0.5s ease-out both;
+    animation-delay: 0.42s;
+}
+
+@media (max-width: 1100px) {
+    .dmdc-chart {
+        height: 320px;
+    }
+}
+
+@media (max-width: 768px) {
+    .dmdc-section {
+        padding: 1.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .dmdc-section {
+        padding: 1rem;
+    }
+    .dmdc-block {
+        padding: 0.9rem;
+        gap: 1rem;
+    }
+    .dmdc-chart {
+        height: 260px;
+    }
+}
