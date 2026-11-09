@@ -56,8 +56,8 @@ class UpwaysApp {
         // SEO multilingue
         this.seoData = {
             fr: {
-                title: "Upways - Calculateur amélioration Metin2 | Optimiser vos upgrades",
-                description: "Calculez la meilleure stratégie pour améliorer vos objets dans Metin2. Économisez temps et yang avec Upways, l'optimiseur d'amélioration gratuit.",
+                title: "Upways - Calculateur amélioration Metin2 | Optimise tes upgrades",
+                description: "Calcule la meilleure stratégie pour améliorer tes objets dans Metin2. Économise temps et yang avec Upways, l'optimiseur d'amélioration gratuit.",
                 keywords: "metin2, upways, amélioration, upgrade, calculateur, optimiseur"
             },
             en: {
@@ -72,7 +72,7 @@ class UpwaysApp {
             },
             tr: {
                 title: "Upways - Metin2 Yükseltme Hesaplayıcısı | Yükseltmeleri optimize et",
-                description: "Metin2'de eşyalarınızı yükseltmek için en iyi stratejiyi hesaplayın. Upways ile zaman ve yang tasarrufu yapın.",
+                description: "Metin2'de eşyalarını yükseltmek için en iyi stratejiyi hesapla. Upways ile zaman ve yang tasarrufu yap.",
                 keywords: "metin2, upways, yükseltme, hesaplayıcı, optimizasyon"
             },
             de: {

@@ -121,7 +121,7 @@ export class DmDcComponent {
         return `${pct.toLocaleString(this.lang, { maximumSignificantDigits: 3 })} %`;
     }
 
-    /** « 1 chance sur N », « 9,3 chances sur 10 », « quasi certain » ou « impossible » */
+    /** « 1 chance sur N », « 9,3 chances sur 10 », « moins de 1 sur 10 millions », « quasi certain » ou « impossible » */
     fmtOdds(prob) {
         if (prob <= 0) return this.t('dmdcImpossible');
         if (prob >= 0.995) return this.t('dmdcAlmostSure');
@@ -131,6 +131,8 @@ export class DmDcComponent {
             return this.t('dmdcChancesOutOf10', { n: nTxt });
         }
         const n = 1 / prob;
+        // Au-delà de 1 sur 10 millions, un chiffre exact n'apporte rien au joueur
+        if (n > 10_000_000) return this.t('dmdcVeryRare');
         const nTxt = n < 10 ? this.fmtDec(n, 1) : Math.round(n).toLocaleString(this.lang);
         return this.t('dmdcOneChanceIn', { n: nTxt });
     }
