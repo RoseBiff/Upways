@@ -129,6 +129,7 @@ export class AnalysisComponent {
         // Initialiser le scénario personnalisé (il sera recalé sur l'optimal au calcul)
         this.initCustomScenario();
         this._customScenarioEdited = false;
+        this._budgetM = null;
     }
 
     /**
@@ -913,6 +914,7 @@ export class AnalysisComponent {
                 <div class="prep-description">
                     ${descText}
                 </div>
+                ${this._budgetBoxHtml(strategy)}
                 <div class="prep-result">
                     ${resultHtml}
                 </div>
@@ -921,6 +923,120 @@ export class AnalysisComponent {
 
         // Attacher les tooltips de détail sur le contenu initial
         this._attachPrepDetailTooltips(container);
+        this._bindBudgetBox(container, strategy);
+    }
+
+    /* ───────────── Budget → probabilité ───────────── */
+
+    /**
+     * Probabilité de réussir l'amélioration complète avec un budget donné (en millions).
+     * C'est l'inverse exact de la liste de préparation : mêmes paliers fixes (100 %, 1 tentative)
+     * et même mise à l'échelle des paliers aléatoires. Taper le coût affiché pour « 90 % »
+     * redonne donc ~90 %.
+     */
+    probabilityWithinBudget(strategy, budgetM) {
+        const dist = strategy?.distribution;
+        const meanCost = strategy?.totalCost || 0;
+        if (!dist?.length || !(budgetM >= 0) || meanCost <= 0) return null;
+
+        const isHybrid = strategy.type === 'hybrid';
+        const meanTrials = isHybrid
+            ? (strategy.expectedItems || strategy.totalTrials || 1)
+            : (strategy.intervals?.total?.mean || strategy.totalTrials || 1);
+
+        // Paliers déterministes (coût fixe), comme dans _computeScaleFactor
+        let detTrials = 0, detCost = 0;
+        if (!isHybrid) {
+            const path = strategy.path || [];
+            const extWp = strategy.extendedWaypoints || [];
+            for (let level = 1; level <= this.endLevel; level++) {
+                const pathData = path[level - this.startLevel - 1];
+                const wp = pathData?.expectedTrials || extWp[level - 1] || 0;
+                if (pathData?.rate === 100 && wp <= 1.01) {
+                    detTrials += wp;
+                    detCost += wp * (pathData.totalCost || 0);
+                }
+            }
+        }
+
+        const stochCost = meanCost - detCost;
+        const stochTrials = meanTrials - detTrials;
+        let trials;
+        if (stochCost <= 0 || stochTrials <= 0) {
+            trials = budgetM >= meanCost ? dist.length : 0;
+        } else {
+            trials = detTrials + Math.max(budgetM - detCost, 0) / stochCost * stochTrials;
+        }
+
+        // P(nombre de tentatives ≤ trials)
+        let cdf = 0;
+        const idx = Math.floor(trials + 1e-9);
+        for (let i = 0; i <= Math.min(idx, dist.length - 1); i++) cdf += dist[i];
+        return { probability: Math.min(cdf, 1), trials };
+    }
+
+    _formatChance(p) {
+        const lang = this.translator.getLanguage();
+        const pct = p * 100;
+        const fmt = (v, d) => v.toLocaleString(lang, { minimumFractionDigits: d, maximumFractionDigits: d });
+        if (pct >= 99.9) return `> ${fmt(99.9, 1)} %`;
+        if (pct < 0.1) return `< ${fmt(0.1, 1)} %`;
+        return `${fmt(pct, pct < 10 ? 1 : 0)} %`;
+    }
+
+    _budgetBoxHtml(strategy) {
+        if (!strategy?.distribution?.length || !(strategy.totalCost > 0)) return '';
+        if (this._budgetM === undefined || this._budgetM === null) {
+            // Valeur de départ : le coût moyen, arrondi au dixième supérieur
+            this._budgetM = Math.max(0.1, Math.ceil(strategy.totalCost * 10) / 10);
+        }
+        const unitHint = this.translator.t('budgetUnitHint');
+        return `
+            <div class="prep-budget">
+                <label class="prep-budget-label" for="prepBudgetInput">
+                    <span aria-hidden="true">💰</span> ${this.translator.t('budgetTitle')}
+                </label>
+                <div class="prep-budget-row">
+                    <div class="prep-budget-input-wrap" title="${unitHint}">
+                        <input type="number" id="prepBudgetInput" class="prep-budget-input"
+                               min="0" step="0.1" inputmode="decimal"
+                               value="${this._budgetM}" aria-label="${unitHint}">
+                        <span class="prep-budget-unit">M</span>
+                    </div>
+                    <span class="prep-budget-arrow" aria-hidden="true">→</span>
+                    <output class="prep-budget-out" for="prepBudgetInput" aria-live="polite"></output>
+                </div>
+                <div class="prep-budget-bar" aria-hidden="true"><span></span></div>
+            </div>
+        `;
+    }
+
+    _bindBudgetBox(container, strategy) {
+        const input = container.querySelector('#prepBudgetInput');
+        const out = container.querySelector('.prep-budget-out');
+        const bar = container.querySelector('.prep-budget-bar > span');
+        if (!input || !out) return;
+
+        const isHybrid = strategy.type === 'hybrid';
+        const update = () => {
+            const value = parseFloat(String(input.value).replace(',', '.'));
+            if (Number.isNaN(value) || value < 0) {
+                out.textContent = '—';
+                if (bar) bar.style.width = '0%';
+                return;
+            }
+            this._budgetM = value;
+            const res = this.probabilityWithinBudget(strategy, value);
+            if (!res) { out.textContent = '—'; return; }
+            const key = isHybrid ? 'budgetChanceGuild' : 'budgetChance';
+            const text = this.translator.t(key)
+                .replace('{pct}', `<strong>${this._formatChance(res.probability)}</strong>`)
+                .replace('{level}', this.endLevel);
+            out.innerHTML = text;
+            if (bar) bar.style.width = `${Math.max(1, Math.round(res.probability * 100))}%`;
+        };
+        input.addEventListener('input', update);
+        update();
     }
 
     /**
