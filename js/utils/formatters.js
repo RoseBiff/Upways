@@ -36,6 +36,14 @@ export function formatCost(value, lang = 'fr') {
         return `${rounded.toFixed(1).replace('.', decimalSeparator)}k`;
     }
 
+    // Entre 0,1M et 1M : 2 décimales (« 0,4M » pouvait cacher 50 000 yang d'écart)
+    if (value < 1) {
+        const rounded = Math.round(value * 100) / 100;
+        if (rounded >= 1) return '1M';
+        const txt = rounded.toFixed(2).replace(/0$/, '');
+        return `${txt.replace('.', decimalSeparator)}M`;
+    }
+
     // Si < 100M, afficher en millions
     // Si c'est un nombre entier
     if (value === Math.floor(value)) {
