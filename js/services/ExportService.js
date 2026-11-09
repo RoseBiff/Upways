@@ -2,6 +2,32 @@
  * Service d'export des résultats avec options de partage - Version 4.2
  * Optimisation de l'affichage des matériaux pour éviter les images trop longues
  */
+
+// html2canvas n'est utile qu'à l'export : chargé à la demande (version figée + empreinte SRI)
+const HTML2CANVAS_SRC = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+const HTML2CANVAS_SRI = 'sha384-ZZ1pncU3bQe8y31yfZdMFdSpttDoPmOZg2wguVK9almUodir1PghgT0eY7Mrty8H';
+let html2canvasPromise = null;
+
+function loadHtml2Canvas() {
+    if (window.html2canvas) return Promise.resolve(window.html2canvas);
+    if (!html2canvasPromise) {
+        html2canvasPromise = new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = HTML2CANVAS_SRC;
+            script.integrity = HTML2CANVAS_SRI;
+            script.crossOrigin = 'anonymous';
+            script.referrerPolicy = 'no-referrer';
+            script.onload = () => resolve(window.html2canvas);
+            script.onerror = () => {
+                html2canvasPromise = null; // permettre un nouvel essai
+                reject(new Error('html2canvas indisponible'));
+            };
+            document.head.appendChild(script);
+        });
+    }
+    return html2canvasPromise;
+}
+
 export class ExportService {
     constructor(formatters, translator) {
         this.formatters = formatters;
@@ -56,7 +82,8 @@ export class ExportService {
             // Forcer le rendu avant la capture
             await new Promise(resolve => setTimeout(resolve, 100));
 
-            // Capturer avec html2canvas
+            // Capturer avec html2canvas (chargé au premier export)
+            const html2canvas = await loadHtml2Canvas();
             const canvas = await html2canvas(captureContainer, {
                 backgroundColor: '#1a1f2e',
                 scale: 2,
