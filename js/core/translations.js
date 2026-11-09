@@ -401,7 +401,8 @@ export const translations = {
         // Welcome section
         welcomeTitle: "Welcome to Upways",
         welcomeSubtitle: "The ultimate tool to optimize your upgrades in Metin2",
-        welcomeDescription: "Upways mathematically calculates the best strategy to upgrade your equipment. Our algorithm helps you save time and yang by finding the optimal path to reach your desired upgrade level.",        tipsTitle: "💡 Usage Tips",
+        welcomeDescription: "Upways mathematically calculates the best strategy to upgrade your equipment. Our algorithm helps you save time and yang by finding the optimal path to reach your desired upgrade level.",
+        tipsTitle: "💡 Usage Tips",
         tip1Title: "Configure your prices",
         tip1Text: "Enter current market prices to get an accurate estimate of the total cost. Prices are saved automatically.",
         tip2Title: "Optimal vs Custom strategy",
@@ -751,7 +752,8 @@ export const translations = {
         // Secțiunea de bun venit
         welcomeTitle: "Bun venit la Upways",
         welcomeSubtitle: "Instrumentul suprem pentru optimizarea îmbunătățirilor în Metin2",
-        welcomeDescription: "Upways calculează matematic cea mai bună strategie pentru a-ți îmbunătăți echipamentele. Algoritmul nostru te ajută să economisești timp și yang găsind calea optimă pentru a atinge nivelul de îmbunătățire dorit.",        tipsTitle: "💡 Sfaturi de utilizare",
+        welcomeDescription: "Upways calculează matematic cea mai bună strategie pentru a-ți îmbunătăți echipamentele. Algoritmul nostru te ajută să economisești timp și yang găsind calea optimă pentru a atinge nivelul de îmbunătățire dorit.",
+        tipsTitle: "💡 Sfaturi de utilizare",
         tip1Title: "Configurează prețurile",
         tip1Text: "Introdu prețurile actuale de pe piață pentru a obține o estimare precisă a costului total. Prețurile sunt salvate automat.",
         tip2Title: "Strategie optimă vs personalizată",
@@ -1102,6 +1104,7 @@ export const translations = {
         welcomeTitle: "Upways'e Hoş Geldin",
         welcomeSubtitle: "Metin2'de yükseltmelerini optimize etmek için en iyi araç",
         welcomeDescription: "Upways, ekipmanlarını geliştirmek için matematiksel olarak en iyi stratejiyi hesaplar. Algoritmamız, istediğin geliştirme seviyesine ulaşmak için en uygun yolu bularak zaman ve yang tasarrufu yapmana yardımcı olur.",
+        tipsTitle: "💡 Kullanım İpuçları",
         tip1Title: "Fiyatlarını yapılandır",
         tip1Text: "Toplam maliyetin doğru tahmini için güncel pazar fiyatlarını gir. Fiyatlar otomatik olarak kaydedilir.",
         tip2Title: "Optimal vs Özel strateji",
