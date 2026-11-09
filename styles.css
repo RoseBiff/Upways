@@ -483,6 +483,10 @@ body {
     box-shadow: 0 0 0 1px rgba(var(--primary-rgb), 0.2);
 }
 
+#wizardStep1 .selected-item {
+    margin-bottom: 1.25rem;
+}
+
 .item-image {
     width: 60px;
     height: 60px;
@@ -640,6 +644,7 @@ body {
 .config-actions {
     display: flex;
     justify-content: center;
+    gap: 0.75rem;
     margin-top: 2rem;
 }
 
@@ -1326,6 +1331,19 @@ body {
     max-width: 100px;
 }
 
+/* Sous-label du parchemin utilisé au forgeron de guilde */
+.step-guild-scroll {
+    font-size: 0.7rem;
+    color: var(--accent-primary, #f59e0b);
+    font-weight: 600;
+    margin-top: 0.15rem;
+    opacity: 0.85;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100px;
+}
+
 .step-select {
     width: 100%;
     padding: 0.4rem 0.6rem;
@@ -1546,6 +1564,28 @@ body {
     position: relative;
     margin-bottom: 1.5rem;
 }
+
+/* Statistiques déplacées dans la section chart (intervalles + légende) */
+.chart-stats {
+    margin-bottom: 1.25rem;
+}
+.chart-stats:empty {
+    display: none;
+}
+.chart-stats-inner {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 1rem 1.25rem;
+}
+.chart-stats-inner .interval-display {
+    margin-bottom: 0.75rem;
+}
+.chart-stats-inner .stats-legend {
+    border-top: 1px solid rgba(255,255,255,0.07);
+    padding-top: 0.6rem;
+}
+
 
 .chart-legend {
     display: flex;
@@ -1793,7 +1833,11 @@ body {
     align-items: center;
     justify-content: center;
     z-index: 3000;
+    overflow: hidden;
 }
+
+/* Mode normal : spinner + texte */
+.loading-default-only { display: block; }
 
 .loading-spinner {
     width: 48px;
@@ -1806,15 +1850,192 @@ body {
 }
 
 @keyframes spin {
-    to {
-        transform: rotate(360deg);
-    }
+    to { transform: rotate(360deg); }
 }
 
 .loading-overlay p {
     color: var(--text-primary);
     font-size: 1rem;
     animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* ── Mode launch (lancement analyse) ── */
+.loading-overlay.launch-mode {
+    background: var(--bg-primary);
+    backdrop-filter: none;
+    animation: launchOverlayIn 0.25s ease-out;
+}
+
+@keyframes launchOverlayIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+/* Rideau qui monte pour révéler les résultats */
+.loading-overlay.curtain-exit {
+    animation: curtainUp 1.4s cubic-bezier(0.76, 0, 0.24, 1) forwards;
+}
+
+@keyframes curtainUp {
+    from { transform: translateY(0);     opacity: 1; }
+    to   { transform: translateY(-100%); opacity: 1; }
+}
+
+/* Masquer spinner en launch-mode */
+.loading-overlay.launch-mode .loading-default-only {
+    display: none;
+}
+
+/* Éléments launch-mode */
+.launch-visual {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    position: relative;
+    z-index: 1;
+}
+
+.loading-overlay.launch-mode .launch-visual {
+    display: flex;
+}
+
+/* Étoiles en arrière-plan */
+.launch-stars {
+    position: absolute;
+    inset: -50vh -50vw;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.launch-star {
+    position: absolute;
+    width: 2px;
+    height: 2px;
+    background: #fff;
+    border-radius: 50%;
+    opacity: 0;
+    animation: starTwinkle var(--dur, 2s) ease-in-out var(--delay, 0s) infinite;
+}
+
+@keyframes starTwinkle {
+    0%, 100% { opacity: 0;   transform: scale(0.5); }
+    50%       { opacity: 0.6; transform: scale(1); }
+}
+
+/* Fusée flottante */
+.launch-rocket-anim {
+    font-size: 5rem;
+    line-height: 1;
+    display: inline-block;
+    animation: rocketFloat 4s ease-in-out infinite;
+    filter: drop-shadow(0 0 18px rgba(99,102,241,0.5));
+    margin-bottom: 1.75rem;
+}
+
+@keyframes rocketFloat {
+    0%, 100% { transform: translateY(0)    rotate(-10deg); }
+    50%       { transform: translateY(-18px) rotate(-10deg); }
+}
+
+.launch-label {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    letter-spacing: 0.04em;
+    animation: pulse 2s ease-in-out infinite;
+    margin-bottom: 1.25rem;
+}
+
+/* Points pulsants */
+.launch-dots {
+    display: flex;
+    gap: 8px;
+}
+
+.launch-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--primary);
+    animation: dotBounce 2s ease-in-out infinite;
+}
+
+.launch-dot:nth-child(2) { animation-delay: 0.33s; }
+.launch-dot:nth-child(3) { animation-delay: 0.66s; }
+
+@keyframes dotBounce {
+    0%, 80%, 100% { transform: scale(0.55); opacity: 0.35; }
+    40%            { transform: scale(1);    opacity: 1; }
+}
+
+/* ── Feux d'artifice ── */
+.firework-container {
+    position: fixed;
+    pointer-events: none;
+    z-index: 10000;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    overflow: hidden;
+}
+
+.firework-particle {
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    opacity: 1;
+    animation: fireworkBurst var(--dur, 1.2s) ease-out var(--delay, 0s) forwards;
+    transform-origin: center center;
+}
+
+@keyframes fireworkBurst {
+    0%   { transform: translate(0, 0) scale(1);   opacity: 1; }
+    60%  { opacity: 0.85; }
+    100% { transform: translate(var(--tx), var(--ty)) scale(0.3); opacity: 0; }
+}
+
+.firework-trail {
+    position: absolute;
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    opacity: 0;
+    animation: fireworkTrail var(--dur, 0.4s) ease-in var(--delay, 0s) forwards;
+}
+
+@keyframes fireworkTrail {
+    0%   { transform: translate(var(--fx), var(--fy)) scale(1.2); opacity: 0.9; }
+    100% { transform: translate(var(--fx), calc(var(--fy) + 30px)) scale(0.5); opacity: 0; }
+}
+
+/* ── Animation d'entrée de l'onglet analyse ── */
+#analysisTab.revealing .analysis-header,
+#analysisTab.revealing #analysisSelectedItem,
+#analysisTab.revealing .scenarios-panel,
+#analysisTab.revealing .chart-section {
+    animation: revealItem 0.5s ease-out both;
+}
+
+#analysisTab.revealing .analysis-header    { animation-delay: 0.05s; }
+#analysisTab.revealing #analysisSelectedItem { animation-delay: 0.13s; }
+#analysisTab.revealing .scenarios-panel    { animation-delay: 0.22s; }
+#analysisTab.revealing .chart-section      { animation-delay: 0.32s; }
+
+@keyframes revealItem {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Animation du bouton launch au clic ── */
+.btn-launch.launching .btn-icon {
+    display: inline-block;
+    animation: iconLiftoff 0.45s ease-in forwards;
+}
+
+@keyframes iconLiftoff {
+    0%   { transform: translateY(0) rotate(0deg);   opacity: 1; }
+    100% { transform: translateY(-36px) rotate(-20deg); opacity: 0; }
 }
 
 @keyframes pulse {
@@ -1850,6 +2071,15 @@ body {
 .footer a:hover {
     color: var(--primary-light);
     text-decoration: underline;
+}
+
+.footer-engine-info {
+    font-size: 0.72rem !important;
+    opacity: 0.55;
+    letter-spacing: 0.02em;
+    margin-top: 0.6rem !important;
+    margin-bottom: 0 !important;
+    font-variant-numeric: tabular-nums;
 }
 
 /* Export specific styles */
@@ -3724,6 +3954,17 @@ select:focus-visible {
     outline-offset: 0;
 }
 
+/* Pas de contour au clic sur les cartes de stratégie / panneaux de scénario
+   (elles ont role="button" + tabindex, ce qui provoque un focus ring peu élégant). */
+.strategy-card:focus,
+.strategy-card:focus-visible,
+.scenario-pane:focus,
+.scenario-pane:focus-visible,
+.scenario-tab:focus,
+.scenario-tab:focus-visible {
+    outline: none;
+}
+
 /* Amélioration de l'accessibilité */
 .sr-only {
     position: absolute;
@@ -3865,6 +4106,7 @@ select:focus-visible {
 
 /* ===== SECTION DE BIENVENUE ===== */
 .welcome-section {
+    margin-top: 2rem;
     margin-bottom: 2rem;
     animation: fadeIn var(--transition-slow) ease-out;
 }
@@ -4111,6 +4353,67 @@ html:not(:hover) .path-step:hover {
 
 #analysisTab .selected-item {
     margin: 1.5rem 0;
+    position: relative;
+}
+
+/* ── Navigation rapide analyse → config (reprend le style wizard) ── */
+.analysis-nav-wizard {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    /* Centrage absolu dans .selected-item */
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    min-width: 480px;
+}
+
+.analysis-nav-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+    cursor: pointer;
+    min-width: 70px;
+}
+
+.analysis-nav-step .step-circle {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: var(--primary);
+    border: 2px solid var(--primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1rem;
+    color: #fff;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.analysis-nav-step:hover .step-circle {
+    opacity: 0.8;
+    box-shadow: 0 0 0 5px rgba(var(--primary-rgb), 0.18);
+}
+
+.analysis-nav-step .step-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--primary-light, #818cf8);
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    white-space: nowrap;
+}
+
+.analysis-nav-line {
+    flex: 1;
+    height: 2px;
+    background: var(--primary);
+    min-width: 60px;
+    margin-top: 18px; /* centré avec le cercle de 38px */
 }
 
 /* Badge des niveaux dans l'objet sélectionné */
@@ -4254,5 +4557,2641 @@ html:not(:hover) .path-step:hover {
 @media (max-width: 768px) {
     .moonlight-label-container {
         grid-column: span 2;
+    }
+}
+/* ============================================================
+   FORGERON DE GUILDE - Styles
+   ============================================================ */
+
+/* Section config */
+.guild-blacksmith-config {
+    border: 1px solid rgba(234, 179, 8, 0.3);
+    border-radius: 8px;
+    padding: 1rem;
+    background: rgba(234, 179, 8, 0.07);
+    margin-top: 1rem;
+}
+
+.guild-toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+}
+
+/* Toggle switch */
+.guild-toggle-container {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+    flex-shrink: 0;
+}
+
+.guild-toggle-container input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.guild-toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: #cbd5e1;
+    border-radius: 24px;
+    transition: .3s;
+}
+
+.guild-toggle-slider:before {
+    position: absolute;
+    content: '';
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    border-radius: 50%;
+    transition: .3s;
+}
+
+.guild-toggle-container input:checked + .guild-toggle-slider {
+    background-color: #eab308;
+}
+
+.guild-toggle-container input:checked + .guild-toggle-slider:before {
+    transform: translateX(20px);
+}
+
+.guild-toggle-label {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-primary, #1e293b);
+}
+
+.guild-desc {
+    font-size: 0.8rem;
+    color: var(--text-muted, #64748b);
+    margin: 0.4rem 0 0.75rem;
+    line-height: 1.4;
+}
+
+.guild-price-row {
+    margin-top: 0.5rem;
+}
+
+/* Carte analyse */
+.guild-blacksmith-card {
+    border-left: 3px solid #eab308;
+}
+
+.guild-cheaper-badge {
+    display: inline-flex;
+    align-items: center;
+    align-self: center;
+    gap: 0.2rem;
+    padding: 0.2rem 0.55rem;
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--success);
+    border: 1px solid rgba(16, 185, 129, 0.22);
+    border-radius: var(--radius-sm);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+}
+
+.guild-expensive-badge {
+    display: inline-flex;
+    align-items: center;
+    align-self: center;
+    gap: 0.2rem;
+    padding: 0.2rem 0.55rem;
+    background: rgba(239, 68, 68, 0.09);
+    color: var(--danger);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    border-radius: var(--radius-sm);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+}
+
+/* Détails du chemin forgeron */
+.guild-path-info {
+    overflow-x: auto;
+}
+
+.guild-path-intro {
+    margin-bottom: 0.75rem;
+    font-size: 0.9rem;
+    color: var(--text-secondary, #475569);
+}
+
+.guild-path-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+.guild-path-table th,
+.guild-path-table td {
+    padding: 0.4rem 0.6rem;
+    border-bottom: 1px solid var(--border-color, #e2e8f0);
+    text-align: center;
+}
+
+.guild-path-table th {
+    background: var(--surface-hover, #f1f5f9);
+    font-weight: 600;
+    color: var(--text-secondary, #475569);
+}
+
+.guild-items-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.guild-summary-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9rem;
+    padding: 0.25rem 0;
+    border-bottom: 1px solid var(--border-light, #f1f5f9);
+}
+
+
+/* ============================================================
+   SYSTÈME DE SÉLECTION DE SCÉNARIOS — Cartes sélecteur
+   ============================================================ */
+
+.scenarios-panel {
+    background: var(--surface, #1e293b);
+    border: 1px solid var(--border-color, #334155);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+}
+
+/* ============================================================
+   GRILLE DE COMPARAISON — Onglets de navigateur
+   ─ La carte active est « soudée » au panneau de contenu.
+   ─ Les cartes inactives sont en retrait (second plan, plus sombres).
+   ─ Des « oreilles » radial-gradient imitent l'incurvation inversée
+     des vrais onglets de navigateur (coins bas vers l'extérieur).
+   ============================================================ */
+
+/* -- Taille des oreilles (coins inversés) -- */
+:root {
+    --tab-ear-size: 10px;
+}
+
+.strategies-comparison {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1rem;
+    padding: 1.25rem 1.25rem 0;
+    background: var(--surface, #1e293b);
+    position: relative;
+    z-index: 2;
+    /* Toutes les cartes à la même hauteur */
+    align-items: stretch;
+}
+
+/* ── Base de toutes les cartes dans la grille ── */
+.strategies-comparison .strategy-card {
+    cursor: pointer;
+    transition: background 0.25s ease, border-color 0.25s ease,
+                box-shadow 0.25s ease, opacity 0.25s ease;
+    /* Pas de transition sur transform → pas de soulèvement */
+    transform: none !important;
+    /* Flex colonne pour que les stats remplissent l'espace */
+    display: flex;
+    flex-direction: column;
+}
+
+/* Les stats poussent vers le bas pour aligner les cartes */
+.strategies-comparison .strategy-card .strategy-card-stats {
+    margin-top: auto;
+}
+
+/* Neutraliser le hover global qui soulève */
+.strategies-comparison .strategy-card:hover {
+    transform: none !important;
+}
+
+/* ═══════════════════════════════════════════════════════
+   CARTE INACTIVE — Second plan, plus sombre, derrière
+   ═══════════════════════════════════════════════════════ */
+
+.strategies-comparison .strategy-card:not(.active) {
+    /* Fond plus sombre que le panneau de contenu */
+    background: rgba(0, 0, 0, 0.25);
+    border: 1.5px solid rgba(255, 255, 255, 0.05);
+    border-bottom: none;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    color: var(--text-muted, #64748b);
+    opacity: 0.7;
+    /* Décalé visuellement vers le bas pour passer « derrière » le panneau */
+    position: relative;
+    z-index: 1;
+}
+
+.strategies-comparison .strategy-card:not(.active):hover {
+    opacity: 0.9;
+    background: rgba(0, 0, 0, 0.18);
+    border-color: rgba(255, 255, 255, 0.12);
+    box-shadow: none;
+}
+
+/* ═══════════════════════════════════════════════════════
+   CARTE ACTIVE — Onglet premier plan, soudé au contenu
+   Le fond vient du .tab-slider derrière ; la carte est
+   transparente pour laisser le slider briller à travers.
+   ═══════════════════════════════════════════════════════ */
+
+.strategies-comparison .strategy-card.active {
+    background: transparent;
+    border: 1.5px solid rgba(var(--primary-rgb), 0.5);
+    border-bottom: none;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    position: relative;
+    z-index: 4;
+    color: white;
+    box-shadow: none;
+    overflow: visible;
+}
+
+/* Masquer le ::before overlay du .strategy-card de base */
+.strategies-comparison .strategy-card.active::before {
+    display: none;
+}
+
+/*
+ * Bande de masquage — couvre la bordure haute du contenu
+ * pile sous la carte active pour une jonction invisible.
+ */
+.strategies-comparison .strategy-card.active::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--surface, #1e293b);
+    z-index: 5;
+}
+
+/* ── Custom active — variante acier ── */
+.strategies-comparison .strategy-card.custom-tab.active {
+    border-color: rgba(148, 163, 184, 0.5);
+    border-bottom: none;
+}
+
+/* ── Guild active — variante dorée ── */
+.strategies-comparison .strategy-card.guild-tab.active {
+    border-color: rgba(251, 191, 36, 0.5);
+    border-bottom: none;
+}
+
+/* ═══════════════════════════════════════════════════════
+   TAB-SLIDER — Fond coloré glissant derrière la carte active
+   Positionné en absolu dans la grille, ses coordonnées
+   sont mises à jour par JS. La transition CSS fait le reste.
+   ═══════════════════════════════════════════════════════ */
+
+.tab-slider {
+    position: absolute;
+    top: 0; left: 0;
+    width: 0; height: 0;
+    background: linear-gradient(180deg,
+        rgba(var(--primary-rgb), 0.45) 0%,
+        rgba(var(--primary-rgb), 0.3) 55%,
+        rgba(var(--primary-rgb), 0.08) 85%,
+        transparent 100%);
+    border-radius: var(--radius-lg, 12px) var(--radius-lg, 12px) 0 0;
+    z-index: 3;    /* derrière la carte (z:4) mais devant le fond */
+    pointer-events: none;
+    transition: left 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+                top 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+                width 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+                height 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+                background 0.35s ease;
+    box-shadow: 0 -4px 16px -4px rgba(var(--primary-rgb), 0.15);
+}
+
+/* Variante acier/métal pour le scénario personnalisé */
+.tab-slider.custom {
+    background: linear-gradient(180deg,
+        rgba(148, 163, 184, 0.4) 0%,
+        rgba(148, 163, 184, 0.25) 55%,
+        rgba(148, 163, 184, 0.06) 85%,
+        transparent 100%);
+    box-shadow: 0 -4px 16px -4px rgba(148, 163, 184, 0.15);
+}
+
+/* Variante dorée pour le forgeron de guilde */
+.tab-slider.guild {
+    background: linear-gradient(180deg,
+        rgba(184, 134, 11, 0.4) 0%,
+        rgba(184, 134, 11, 0.25) 55%,
+        rgba(184, 134, 11, 0.06) 85%,
+        transparent 100%);
+    box-shadow: 0 -4px 16px -4px rgba(251, 191, 36, 0.15);
+}
+
+/* ═══════════════════════════════════════════════════════
+   OREILLES — Incurvation inversée aux coins bas
+   Deux pseudo-éléments positionnés juste à l'extérieur
+   de la carte active, utilisant radial-gradient pour
+   découper un quart de cercle dans le fond du panneau.
+   ═══════════════════════════════════════════════════════ */
+
+/* Oreilles cachées sur les cartes inactives */
+.strategy-ear-left,
+.strategy-ear-right {
+    display: none;
+}
+
+/*
+ * Chaque oreille est un carré de --tab-ear-size × --tab-ear-size
+ * placé juste à l'extérieur du coin inférieur de la carte.
+ * Un radial-gradient trace un quart de cercle transparent (= la courbe)
+ * sur un fond --surface (= le panneau en dessous).
+ * z-index: 5 — au-dessus du slider (3) pour masquer son coin,
+ * mais sous la bande ::after (5) … on les met au même niveau.
+ */
+.strategies-comparison .strategy-card.active .strategy-ear-left,
+.strategies-comparison .strategy-card.active .strategy-ear-right {
+    display: block;
+    position: absolute;
+    bottom: 0;
+    width: var(--tab-ear-size);
+    height: var(--tab-ear-size);
+    z-index: 5;
+    pointer-events: none;
+}
+
+/* Oreille gauche : quart de cercle en haut-droite du carré */
+.strategies-comparison .strategy-card.active .strategy-ear-left {
+    right: 100%;
+    background: radial-gradient(circle at 100% 0%,
+        transparent var(--tab-ear-size),
+        var(--surface, #1e293b) calc(var(--tab-ear-size) + 0.5px));
+}
+
+/* Oreille droite : quart de cercle en haut-gauche du carré */
+.strategies-comparison .strategy-card.active .strategy-ear-right {
+    left: 100%;
+    background: radial-gradient(circle at 0% 0%,
+        transparent var(--tab-ear-size),
+        var(--surface, #1e293b) calc(var(--tab-ear-size) + 0.5px));
+}
+
+/* ── Stats dans la carte ── */
+.strategy-card-stats {
+    padding: 0.75rem 1.25rem 1rem;
+    margin: 0 0.5rem 0.5rem;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: var(--radius-md, 8px);
+}
+
+.strategy-card-stats .pane-cost-value {
+    font-size: 1.35rem;
+    white-space: nowrap;
+}
+
+/* Empêcher le wrap du coût dans les cartes */
+.strategy-card-stats .pane-main-cost {
+    flex-wrap: nowrap;
+    overflow: hidden;
+}
+
+/* Grille de stats compacte dans les cartes */
+.strategy-card-stats .stats-grid {
+    gap: 6px;
+}
+
+.strategy-card-stats .stat-value {
+    font-size: 1rem;
+    white-space: nowrap;
+}
+
+.strategy-card-stats .stat-label {
+    font-size: 0.65rem;
+    white-space: nowrap;
+}
+
+/* Masquer les éléments lourds dans les cartes (intervalles, légende) */
+.strategy-card-stats .interval-display,
+.strategy-card-stats .stats-legend {
+    display: none;
+}
+
+/* Alléger la zone stats dans les cartes */
+.strategy-card-stats .pane-trials-stats {
+    background: transparent;
+    border: none;
+    padding: 0.4rem 0 0;
+    border-radius: 0;
+}
+
+.strategies-comparison .strategy-card:not(.active) .pane-cost-value {
+    background: none;
+    -webkit-text-fill-color: var(--text-muted, #64748b);
+    color: var(--text-muted, #64748b);
+}
+
+/* ============================================================
+   PANNEAU DE CONTENU — Bordure haute continue le cadre.
+   Le ::after de la carte active masque le segment sous elle.
+   ============================================================ */
+
+.scenario-pane.active {
+    border-top: 1.5px solid rgba(var(--primary-rgb), 0.5);
+    padding-top: 1rem;
+}
+
+.scenario-pane.active.custom-pane {
+    border-top-color: rgba(148, 163, 184, 0.5);
+}
+
+.scenario-pane.active.guild-pane {
+    border-top-color: rgba(251, 191, 36, 0.5);
+}
+
+/* --- Rangée de cartes de sélection (cachée, compatibilité interne) --- */
+.scenario-tabs {
+    display: flex;
+    align-items: stretch;
+    gap: 10px;
+    padding: 1rem 1.1rem;
+    background: var(--bg-primary, #0f172a);
+    border-bottom: 2px solid var(--border-color, #334155);
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+.scenario-tabs::-webkit-scrollbar { display: none; }
+
+/* ── Carte inactive ── */
+.scenario-tab {
+    position: relative;
+    flex: 1;
+    min-width: 110px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    padding: 0.7rem 1rem 0.65rem;
+    background: rgba(255,255,255,0.02);
+    border: 1.5px solid rgba(255,255,255,0.07);
+    border-radius: 10px;
+    color: var(--text-muted, #64748b);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.18s, border-color 0.18s, box-shadow 0.18s;
+    overflow: hidden;
+}
+
+/* Barre en haut de la carte (subtile sur inactive) */
+.scenario-tab::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 10px 10px 0 0;
+    transition: background 0.2s;
+}
+
+.scenario-tab:hover {
+    background: rgba(255,255,255,0.05);
+    border-color: rgba(255,255,255,0.13);
+}
+
+/* ── Carte active : impossible à manquer ── */
+.scenario-tab.active {
+    background: rgba(124, 58, 237, 0.10);
+    border: 2px solid rgba(124, 58, 237, 0.60);
+    color: var(--text-primary, #f1f5f9);
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12), 0 4px 20px rgba(124, 58, 237, 0.2);
+}
+.scenario-tab.active::before {
+    background: linear-gradient(90deg, #7c3aed 0%, #a78bfa 100%);
+    height: 3px;
+}
+
+/* ── Contenu des cartes ── */
+.scenario-tab .tab-icon {
+    font-size: 0.85rem;
+    line-height: 1;
+    opacity: 0.35;
+    order: 0;
+}
+.scenario-tab.active .tab-icon { opacity: 1; }
+
+.scenario-tab .tab-name {
+    order: 1;
+    font-size: 0.67rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text-muted, #64748b);
+    line-height: 1.3;
+    margin-top: 2px;
+}
+.scenario-tab.active .tab-name {
+    color: var(--text-secondary, #cbd5e1);
+    font-weight: 700;
+}
+
+/* Coût : très grand et visible sur l'onglet actif */
+.scenario-tab .tab-cost {
+    order: 2;
+    display: block;
+    font-size: 1rem;
+    font-weight: 700;
+    color: rgba(148, 163, 184, 0.6);
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    min-height: 1.2em;
+}
+.scenario-tab.active .tab-cost {
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: #a78bfa;
+    letter-spacing: -0.04em;
+}
+
+/* ── Forgeron de guilde — teinte ambre ── */
+.scenario-tab.guild-tab.active {
+    background: rgba(217, 119, 6, 0.08);
+    border-color: rgba(217, 119, 6, 0.55);
+    box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.10), 0 4px 20px rgba(217, 119, 6, 0.15);
+}
+.scenario-tab.guild-tab.active::before {
+    background: linear-gradient(90deg, #d97706 0%, #fbbf24 100%);
+}
+.scenario-tab.guild-tab.active .tab-cost { color: #fbbf24; }
+
+/* --- Contenu du panneau --- */
+.scenario-pane {
+    padding: 1.25rem 1.5rem 1rem;
+}
+
+/* Dans le panneau, masquer le coût principal (déjà affiché dans la carte) mais
+   garder les intervalles, légendes explicatives et infos hybrides visibles. */
+.scenario-pane .pane-stats .pane-main-cost {
+    display: none;
+}
+.scenario-pane .pane-stats .stats-grid {
+    display: none;
+}
+
+/* Stats résumées */
+.pane-stats-inner {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+}
+.pane-main-cost {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+}
+.pane-cost-label {
+    font-size: 0.8rem;
+    color: var(--text-muted, #64748b);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+.pane-cost-value {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--text-primary, #f1f5f9);
+}
+
+/* ── Sélecteur d'objectif de réussite (forgeron de guilde) ── */
+.guild-target-selector {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: rgba(184, 134, 11, 0.06);
+    border: 1px solid rgba(184, 134, 11, 0.2);
+    border-radius: var(--radius-md, 8px);
+}
+
+.guild-target-label {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted, #64748b);
+    margin-bottom: 0.6rem;
+}
+
+.guild-target-options {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.75rem;
+}
+
+.guild-target-btn {
+    padding: 0.3rem 0.75rem;
+    border: 1px solid rgba(184, 134, 11, 0.3);
+    border-radius: var(--radius-sm, 6px);
+    background: transparent;
+    color: var(--text-secondary, #94a3b8);
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.guild-target-btn:hover {
+    background: rgba(184, 134, 11, 0.12);
+    border-color: rgba(184, 134, 11, 0.5);
+    color: #fbbf24;
+}
+
+.guild-target-btn.active {
+    background: rgba(184, 134, 11, 0.2);
+    border-color: #b8860b;
+    color: #fbbf24;
+}
+
+.guild-target-result {
+    font-size: 0.9rem;
+    color: var(--text-primary, #e2e8f0);
+    line-height: 1.4;
+}
+
+/* ================================================================
+   LISTE DE PRÉPARATION — section taux de confiance cible
+   ================================================================ */
+
+.preparation-section {
+    margin: 1.25rem 0;
+    padding: 1.25rem;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(99, 102, 241, 0.03));
+    border: 1px solid rgba(99, 102, 241, 0.25);
+    border-radius: var(--radius-lg, 12px);
+}
+
+.preparation-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.preparation-header .detail-title {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.prep-icon {
+    font-size: 1.1rem;
+}
+
+.prep-confidence-selector {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    padding: 0.5rem 0.75rem;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.10), rgba(245, 158, 11, 0.06));
+    border: 1px solid rgba(99, 102, 241, 0.28);
+    border-radius: var(--radius-md, 10px);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02),
+                0 2px 8px rgba(99, 102, 241, 0.08);
+    position: relative;
+}
+
+.prep-confidence-selector::before {
+    content: '🎯';
+    font-size: 0.9rem;
+    opacity: 0.75;
+    filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.35));
+}
+
+.prep-confidence-label {
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--secondary-light, #fbbf24);
+    white-space: nowrap;
+    text-shadow: 0 0 12px rgba(245, 158, 11, 0.25);
+}
+
+.prep-confidence-options {
+    display: flex;
+    gap: 0.35rem;
+    padding: 0.15rem;
+    background: rgba(15, 23, 42, 0.45);
+    border-radius: var(--radius-sm, 6px);
+    border: 1px solid rgba(99, 102, 241, 0.15);
+}
+
+.prep-confidence-btn {
+    padding: 0.3rem 0.7rem;
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    border-radius: var(--radius-sm, 6px);
+    background: transparent;
+    color: var(--text-secondary, #cbd5e1);
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.prep-confidence-btn:hover {
+    background: rgba(99, 102, 241, 0.15);
+    border-color: rgba(99, 102, 241, 0.55);
+    color: var(--primary-light, #818cf8);
+    transform: translateY(-1px);
+}
+
+.prep-confidence-btn.active {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.28), rgba(99, 102, 241, 0.18));
+    border-color: var(--primary, #6366f1);
+    color: #ffffff;
+    box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.45),
+                0 0 14px rgba(99, 102, 241, 0.35);
+}
+
+.prep-mean-btn {
+    border-style: dashed;
+    margin-right: 0.15rem;
+}
+
+.prep-median-btn {
+    border-style: dashed;
+}
+
+/* Bandeau d'entête du chemin d'amélioration : contient le bandeau guild + sélecteur */
+.pane-path-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 0.5rem 0 0.75rem 0;
+}
+
+.pane-path-header:empty {
+    display: none;
+}
+
+.pane-path-header .prep-confidence-selector {
+    flex: 1 1 auto;
+}
+
+/* Bandeau P(succès/objet) pour le forgeron de guilde */
+.guild-info-banner {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.45rem 0.85rem;
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(245, 158, 11, 0.04));
+    border: 1px solid rgba(245, 158, 11, 0.35);
+    border-radius: var(--radius-md, 10px);
+    font-size: 0.85rem;
+    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.10);
+}
+
+.guild-info-icon {
+    font-size: 1rem;
+    filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.40));
+}
+
+.guild-info-label {
+    font-weight: 600;
+    color: var(--text-secondary, #cbd5e1);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-size: 0.72rem;
+}
+
+.guild-info-value {
+    color: var(--secondary-light, #fbbf24);
+    font-size: 0.95rem;
+    font-weight: 700;
+}
+
+/* Phrase de vulgarisation de la confiance ciblée */
+.prep-explain {
+    font-size: 0.78rem;
+    color: var(--text-secondary, #94a3b8);
+    line-height: 1.5;
+    margin-bottom: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: rgba(99, 102, 241, 0.05);
+    border-left: 3px solid rgba(99, 102, 241, 0.40);
+    border-radius: var(--radius-sm, 6px);
+    font-style: italic;
+}
+
+.prep-description {
+    font-size: 0.82rem;
+    color: var(--text-secondary, #94a3b8);
+    margin-bottom: 1rem;
+    line-height: 1.4;
+}
+
+.prep-trials-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35em;
+    padding: 0.3rem 0.75rem;
+    background: rgba(99, 102, 241, 0.12);
+    border: 1px solid rgba(99, 102, 241, 0.2);
+    border-radius: var(--radius-sm, 6px);
+    font-size: 0.8rem;
+    color: var(--primary-light, #818cf8);
+    margin-bottom: 0;
+    cursor: help;
+}
+
+/* Résumé en tête de la section préparation : coût total (héro) + badge tentatives */
+.prep-summary {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: stretch;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+@media (max-width: 640px) {
+    .prep-summary {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Style commun aux deux boîtes (coût total + tentatives) */
+.prep-total.prep-total-hero,
+.prep-trials-badge.prep-trials-hero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    margin: 0;
+    padding: 0.9rem 1.1rem;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.18), rgba(139, 92, 246, 0.14));
+    border: 1px solid rgba(99, 102, 241, 0.35);
+    border-radius: var(--radius-md, 8px);
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.10);
+    transition: transform 0.15s ease, box-shadow 0.2s ease;
+    text-align: center;
+}
+
+.prep-total.prep-total-hero:hover,
+.prep-trials-badge.prep-trials-hero:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.18);
+}
+
+.prep-total.prep-total-hero .prep-total-label,
+.prep-trials-badge.prep-trials-hero .prep-total-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4em;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-secondary, #cbd5e1);
+    font-weight: 500;
+}
+
+.prep-total.prep-total-hero .prep-total-value,
+.prep-trials-badge.prep-trials-hero .prep-total-value {
+    font-size: 1.25rem;
+    font-weight: 500;
+    color: var(--primary-light, #a5b4fc);
+    letter-spacing: 0.01em;
+}
+
+/* Icône ℹ dans le libellé du badge : discrète, ne casse pas la typographie */
+.prep-trials-badge.prep-trials-hero .badge-icon {
+    font-size: 0.65rem;
+    width: 14px;
+    height: 14px;
+}
+
+.prep-lists {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.prep-list-section {
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: var(--radius-md, 8px);
+    padding: 0.75rem;
+}
+
+.prep-list-title {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted, #94a3b8);
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.35rem;
+    border-bottom: 1px solid var(--border-color, rgba(148, 163, 184, 0.1));
+}
+
+.prep-item-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.35rem 0;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.06);
+}
+
+.prep-item-row:last-child {
+    border-bottom: none;
+}
+
+.prep-item-icon {
+    width: 22px;
+    height: 22px;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
+.prep-item-name {
+    flex: 1;
+    font-size: 0.82rem;
+    color: var(--text-primary, #e2e8f0);
+}
+
+.prep-item-qty {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--primary-light, #818cf8);
+    min-width: 3rem;
+    text-align: right;
+}
+
+.prep-item-cost {
+    font-size: 0.78rem;
+    color: var(--text-muted, #94a3b8);
+    min-width: 4.5rem;
+    text-align: right;
+}
+
+.prep-yang-icon {
+    width: 22px;
+    text-align: center;
+    flex-shrink: 0;
+    font-size: 0.9rem;
+}
+
+.prep-yang-row .prep-item-cost {
+    font-weight: 600;
+    color: var(--secondary-light, #fbbf24);
+}
+
+.prep-total {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 1rem;
+    padding: 0.75rem;
+    background: rgba(99, 102, 241, 0.1);
+    border-radius: var(--radius-md, 8px);
+    border: 1px solid rgba(99, 102, 241, 0.2);
+}
+
+.prep-total-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-secondary, #cbd5e1);
+}
+
+.prep-total-value {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--primary-light, #818cf8);
+}
+
+.prep-note {
+    margin-top: 0.6rem;
+    font-size: 0.72rem;
+    color: var(--text-muted, #94a3b8);
+    font-style: italic;
+    text-align: center;
+    opacity: 0.8;
+}
+
+/* Icônes de détail de calcul (ℹ) */
+.prep-detail-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    font-size: 0.65rem;
+    font-style: normal;
+    font-weight: 600;
+    color: var(--text-muted, #64748b);
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 50%;
+    cursor: help;
+    flex-shrink: 0;
+    opacity: 0.5;
+    transition: opacity 0.2s, color 0.2s, border-color 0.2s;
+}
+.prep-item-row:hover .prep-detail-icon,
+.prep-trials-badge:hover .prep-detail-icon {
+    opacity: 1;
+    color: var(--primary-light, #818cf8);
+    border-color: var(--primary-light, #818cf8);
+}
+.prep-detail-icon.badge-icon {
+    margin-left: 0.4rem;
+    vertical-align: middle;
+}
+
+/* Contenu tooltip pour détail préparation */
+.prep-tooltip-body {
+    font-size: 0.78rem;
+    line-height: 1.5;
+    margin-top: 0.4rem;
+    min-width: 340px;
+    width: 100%;
+}
+
+/* Élargir le conteneur tooltip parent quand il contient le détail */
+.tooltip:has(.prep-tooltip-body) {
+    max-width: 460px;
+    padding: 0.85rem 1rem;
+}
+.tooltip:has(.prep-tooltip-kv) {
+    max-width: 420px;
+}
+
+/* Bandeau de formule en haut du tooltip */
+.prep-tooltip-formula {
+    font-size: 0.75rem;
+    font-style: italic;
+    color: var(--secondary-light, #fbbf24);
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.10), rgba(245, 158, 11, 0.02));
+    border-left: 2px solid var(--secondary, #f59e0b);
+    padding: 0.35rem 0.6rem;
+    margin-bottom: 0.55rem;
+    border-radius: 4px;
+}
+
+/* Tableau des contributions par palier */
+.prep-tooltip-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 0.55rem;
+    font-variant-numeric: tabular-nums;
+}
+.prep-tooltip-table thead th {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted, #94a3b8);
+    padding: 0.25rem 0.4rem 0.3rem;
+    border-bottom: 1px solid rgba(99, 102, 241, 0.25);
+    text-align: center;
+}
+.prep-tooltip-table tbody tr {
+    transition: background 0.15s ease;
+}
+.prep-tooltip-table tbody tr:not(:last-child) td {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+.prep-tooltip-table tbody tr:hover {
+    background: rgba(99, 102, 241, 0.08);
+}
+.prep-tooltip-table td {
+    padding: 0.3rem 0.35rem;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 0.75rem;
+    white-space: nowrap;
+}
+.prep-td-level {
+    font-weight: 700;
+    color: var(--primary-light, #818cf8);
+    text-align: center;
+    min-width: 2rem;
+    width: 2.2rem;
+}
+.prep-td-num {
+    color: var(--text-secondary, #cbd5e1);
+    text-align: right;
+    min-width: 3rem;
+    font-variant-numeric: tabular-nums;
+}
+.prep-td-op {
+    color: var(--text-muted, #94a3b8);
+    text-align: center;
+    width: 0.7rem;
+    padding: 0.3rem 0.05rem;
+    opacity: 0.7;
+}
+.prep-td-result {
+    color: var(--secondary-light, #fbbf24);
+    font-weight: 700;
+}
+
+/* Résumé bas du tooltip */
+.prep-tooltip-summary {
+    padding-top: 0.4rem;
+    border-top: 1px dashed rgba(99, 102, 241, 0.25);
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+.prep-summary-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 0.75rem;
+    font-size: 0.78rem;
+}
+.prep-summary-label {
+    color: var(--text-muted, #94a3b8);
+}
+.prep-summary-value {
+    color: var(--text-secondary, #cbd5e1);
+    font-variant-numeric: tabular-nums;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
+.prep-summary-final {
+    padding-top: 0.25rem;
+    margin-top: 0.15rem;
+    border-top: 1px solid rgba(99, 102, 241, 0.15);
+}
+.prep-summary-final .prep-summary-label {
+    color: var(--text-primary, #f1f5f9);
+    font-weight: 600;
+}
+.prep-summary-final .prep-summary-value strong {
+    color: var(--secondary-light, #fbbf24);
+    font-size: 0.9rem;
+    text-shadow: 0 0 8px rgba(245, 158, 11, 0.35);
+}
+
+/* Bloc clé/valeur (tooltip du badge global) */
+.prep-tooltip-kv {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    margin-bottom: 0.4rem;
+}
+.prep-kv-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+}
+.prep-kv-row:nth-child(odd) {
+    background: rgba(255, 255, 255, 0.02);
+}
+.prep-kv-label {
+    color: var(--text-muted, #94a3b8);
+    font-weight: 600;
+}
+.prep-kv-value {
+    color: var(--text-secondary, #cbd5e1);
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-variant-numeric: tabular-nums;
+}
+.prep-kv-highlight {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(245, 158, 11, 0.04)) !important;
+    border: 1px solid rgba(245, 158, 11, 0.25);
+}
+.prep-kv-highlight .prep-kv-label {
+    color: var(--secondary-light, #fbbf24);
+}
+.prep-kv-highlight strong {
+    color: var(--secondary-light, #fbbf24);
+    font-size: 0.95rem;
+}
+
+/* Indice pédagogique en bas du tooltip */
+.prep-tooltip-hint {
+    font-size: 0.68rem;
+    color: var(--text-muted, #94a3b8);
+    font-style: italic;
+    line-height: 1.4;
+    margin-top: 0.5rem;
+    padding-top: 0.4rem;
+    border-top: 1px dotted rgba(255, 255, 255, 0.08);
+}
+
+/* Palier à 100% de réussite : facteur forcé à 1 */
+.prep-row-deterministic .prep-td-num,
+.prep-row-deterministic .prep-td-op {
+    opacity: 0.9;
+}
+.prep-td-fixed {
+    color: var(--text-muted, #94a3b8) !important;
+    font-style: italic;
+    position: relative;
+}
+.prep-td-mark {
+    color: var(--secondary-light, #fbbf24);
+    font-weight: 700;
+    margin-left: 0.15rem;
+    font-style: normal;
+}
+.prep-tooltip-note {
+    font-size: 0.7rem;
+    color: var(--secondary-light, #fbbf24);
+    line-height: 1.4;
+    margin-top: 0.4rem;
+    padding: 0.35rem 0.5rem;
+    border-radius: 4px;
+    background: rgba(245, 158, 11, 0.08);
+    border-left: 2px solid rgba(245, 158, 11, 0.5);
+}
+.prep-tooltip-note sup {
+    color: var(--secondary-light, #fbbf24);
+    font-weight: 700;
+    margin-right: 0.15rem;
+}
+
+/* Ancienne ligne conservée (fallback) */
+.prep-tooltip-line {
+    white-space: pre;
+    color: var(--text-secondary, #cbd5e1);
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 0.72rem;
+}
+.prep-tooltip-sep {
+    border: none;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    margin: 0.25rem 0;
+}
+
+/* Variante custom (vert) pour le tooltip */
+.custom-pane .prep-tooltip-formula {
+    color: #34d399;
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.10), rgba(16, 185, 129, 0.02));
+    border-left-color: var(--success, #10b981);
+}
+.custom-pane .prep-tooltip-table thead th {
+    border-bottom-color: rgba(16, 185, 129, 0.25);
+}
+.custom-pane .prep-td-level {
+    color: #34d399;
+}
+.custom-pane .prep-td-result {
+    color: #6ee7b7;
+}
+.custom-pane .prep-summary-final .prep-summary-value strong {
+    color: #6ee7b7;
+    text-shadow: 0 0 8px rgba(16, 185, 129, 0.35);
+}
+
+/* Variante guild (bronze) pour le tooltip */
+.guild-pane .prep-tooltip-formula {
+    color: #fbbf24;
+    background: linear-gradient(135deg, rgba(184, 134, 11, 0.15), rgba(184, 134, 11, 0.03));
+    border-left-color: rgba(184, 134, 11, 0.7);
+}
+.guild-pane .prep-tooltip-table thead th {
+    border-bottom-color: rgba(184, 134, 11, 0.3);
+}
+.guild-pane .prep-td-level {
+    color: #fcd34d;
+}
+
+/* Variante guild pour la préparation (si jamais activé pour guild) */
+.guild-pane .preparation-section {
+    background: linear-gradient(135deg, rgba(184, 134, 11, 0.08), rgba(184, 134, 11, 0.03));
+    border-color: rgba(184, 134, 11, 0.25);
+}
+
+.guild-pane .prep-confidence-selector {
+    background: linear-gradient(135deg, rgba(184, 134, 11, 0.12), rgba(245, 158, 11, 0.06));
+    border-color: rgba(184, 134, 11, 0.35);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02),
+                0 2px 8px rgba(184, 134, 11, 0.10);
+}
+
+.guild-pane .prep-confidence-options {
+    border-color: rgba(184, 134, 11, 0.18);
+}
+
+.guild-pane .prep-confidence-btn {
+    border-color: rgba(184, 134, 11, 0.35);
+}
+
+.guild-pane .prep-confidence-btn:hover {
+    background: rgba(184, 134, 11, 0.15);
+    border-color: rgba(184, 134, 11, 0.55);
+    color: #fbbf24;
+}
+
+.guild-pane .prep-confidence-btn.active {
+    background: linear-gradient(135deg, rgba(184, 134, 11, 0.32), rgba(245, 158, 11, 0.18));
+    border-color: rgba(245, 158, 11, 0.7);
+    color: #ffffff;
+    box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.45),
+                0 0 14px rgba(184, 134, 11, 0.35);
+}
+
+/* Variante custom */
+.custom-pane .preparation-section {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(16, 185, 129, 0.03));
+    border-color: rgba(16, 185, 129, 0.25);
+}
+
+.custom-pane .prep-confidence-selector {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.10), rgba(245, 158, 11, 0.05));
+    border-color: rgba(16, 185, 129, 0.28);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02),
+                0 2px 8px rgba(16, 185, 129, 0.08);
+}
+
+.custom-pane .prep-confidence-options {
+    border-color: rgba(16, 185, 129, 0.15);
+}
+
+.custom-pane .prep-confidence-btn {
+    border-color: rgba(16, 185, 129, 0.3);
+}
+
+.custom-pane .prep-confidence-btn:hover {
+    background: rgba(16, 185, 129, 0.15);
+    border-color: rgba(16, 185, 129, 0.55);
+    color: #34d399;
+}
+
+.custom-pane .prep-confidence-btn.active {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.28), rgba(16, 185, 129, 0.18));
+    border-color: var(--success, #10b981);
+    color: #ffffff;
+    box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.45),
+                0 0 14px rgba(16, 185, 129, 0.35);
+}
+
+.custom-pane .prep-trials-badge {
+    background: rgba(16, 185, 129, 0.12);
+    border-color: rgba(16, 185, 129, 0.2);
+    color: #34d399;
+}
+
+.custom-pane .prep-item-qty {
+    color: #34d399;
+}
+
+.custom-pane .prep-total {
+    background: rgba(16, 185, 129, 0.1);
+    border-color: rgba(16, 185, 129, 0.2);
+}
+
+.custom-pane .prep-total.prep-total-hero,
+.custom-pane .prep-trials-badge.prep-trials-hero {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.16), rgba(16, 185, 129, 0.10));
+    border-color: rgba(16, 185, 129, 0.35);
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.10);
+}
+
+.custom-pane .prep-total-value,
+.custom-pane .prep-total.prep-total-hero .prep-total-value,
+.custom-pane .prep-trials-badge.prep-trials-hero .prep-total-value {
+    color: #34d399;
+}
+
+/* Responsive : sur mobile, empiler le header */
+@media (max-width: 600px) {
+    .preparation-header {
+        flex-direction: column;
+    }
+    .prep-confidence-options {
+        flex-wrap: wrap;
+    }
+}
+
+/* Infos hybride — ancien fallback (conservé pour compatibilité) */
+.hybrid-info-row {
+    font-size: 0.82rem;
+    color: var(--text-secondary, #94a3b8);
+    padding: 0.15rem 0;
+}
+
+/* Tableau de politique MDP (scénario forgeron de guilde) */
+.mdp-policy-table {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--border-color, #334155);
+}
+
+.mdp-policy-row {
+    display: grid;
+    grid-template-columns: 1.4rem 1fr auto;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.75rem;
+    font-size: 0.8rem;
+}
+
+.mdp-policy-row.guild {
+    background: rgba(139, 92, 246, 0.10);
+    border-left: 3px solid #8b5cf6;
+}
+
+.mdp-policy-row.scroll {
+    background: rgba(59, 130, 246, 0.08);
+    border-left: 3px solid #3b82f6;
+}
+
+.mdp-policy-row.proba {
+    background: rgba(255, 255, 255, 0.03);
+    border-left: 3px solid var(--border-color, #334155);
+    border-top: 1px solid var(--border-color, #334155);
+}
+
+.mdp-policy-icon {
+    font-size: 0.95rem;
+    line-height: 1;
+    text-align: center;
+}
+
+.mdp-policy-label {
+    color: var(--text-secondary, #94a3b8);
+    font-size: 0.78rem;
+}
+
+.mdp-policy-range {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-primary, #e2e8f0);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.pane-trials-stats {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-color, #334155);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+}
+
+/* Légende de compréhension des statistiques */
+.stats-legend {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid rgba(255,255,255,0.07);
+}
+
+.stats-legend-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    font-size: 0.78rem;
+    color: var(--text-muted, #64748b);
+    line-height: 1.4;
+}
+
+.stats-legend-row strong { color: var(--text-secondary, #94a3b8); }
+
+.legend-dot {
+    flex-shrink: 0;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-top: 0.3em;
+}
+
+.legend-mean   { background: var(--accent, #7c3aed); }
+.legend-median { background: #22d3ee; }
+.legend-q      { background: #a78bfa; opacity: 0.7; }
+.legend-ci     { background: #64748b; }
+
+/* Titre de section dans le panneau */
+.pane-path-section { margin-top: 1rem; }
+.pane-stats-section { margin-top: 0; }
+.pane-path-section .detail-title,
+.pane-stats-section .detail-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted, #64748b);
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid var(--border-color, #334155);
+}
+
+/* --- Avertissement destruction --- */
+.destruction-warning {
+    background: linear-gradient(135deg, rgba(239,68,68,0.12), rgba(239,68,68,0.06));
+    border: 1px solid rgba(239,68,68,0.3);
+    border-radius: 8px;
+    padding: 0.65rem 1rem;
+    font-size: 0.82rem;
+    color: #fca5a5;
+    margin-bottom: 0.75rem;
+    line-height: 1.5;
+}
+
+/* --- En-têtes de phases hybride --- */
+.hybrid-phase-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 0.45rem 0.75rem;
+    border-radius: 6px;
+    margin-bottom: 0.5rem;
+}
+.guild-phase-header  {
+    background: rgba(139,92,246,0.1);
+    color: #c4b5fd;
+    border-left: 3px solid #8b5cf6;
+}
+.scroll-phase-header {
+    background: rgba(59,130,246,0.1);
+    color: #93c5fd;
+    border-left: 3px solid #3b82f6;
+}
+
+/* Séparateur de basculement */
+.hybrid-crossover-separator {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    color: var(--text-muted, #64748b);
+    padding: 0.5rem 0;
+    margin: 0.5rem 0;
+    border-top: 1px dashed var(--border-color, #334155);
+    border-bottom: 1px dashed var(--border-color, #334155);
+}
+
+.hybrid-no-guild-note {
+    font-size: 0.82rem;
+    color: var(--text-muted, #64748b);
+    font-style: italic;
+    padding: 0.4rem 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.hybrid-scroll-phase-path { margin-top: 0.25rem; }
+
+/* Responsive */
+@media (max-width: 640px) {
+    .scenario-tab { padding: 0.7rem 0.5rem; min-width: 80px; }
+    .scenario-tab .tab-name { font-size: 0.72rem; }
+    .scenario-tab .tab-icon { font-size: 1.2rem; }
+    .scenario-pane { padding: 1rem 0.85rem 0.75rem; }
+    .pane-cost-value { font-size: 1.3rem; }
+}
+
+/* Rangée forgeron dans les objets requis */
+.guild-item-row {
+    border-left: 3px solid #8b5cf6;
+    padding-left: 0.5rem;
+    background: rgba(139, 92, 246, 0.06);
+    border-radius: 0 6px 6px 0;
+}
+
+/* =====================================================
+   WIZARD DE CONFIGURATION (3 étapes)
+   ===================================================== */
+
+.wizard-container {
+    max-width: 720px;
+    margin: 0 auto;
+    padding-bottom: 2rem;
+}
+
+/* --- Timeline --- */
+.wizard-timeline {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 2rem 1rem 1.5rem;
+    gap: 0;
+}
+
+.wizard-step-dot {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: default;
+    min-width: 70px;
+}
+
+.step-circle {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    background: var(--bg-tertiary);
+    border: 2px solid rgba(148, 163, 184, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--text-muted);
+    transition: all var(--transition-base);
+    position: relative;
+    z-index: 1;
+}
+
+.wizard-step-dot.active .step-circle {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+    box-shadow: 0 0 0 5px rgba(99, 102, 241, 0.18);
+}
+
+.wizard-step-dot.completed {
+    cursor: pointer;
+}
+.wizard-step-dot.completed:hover .step-circle {
+    opacity: 0.8;
+    box-shadow: 0 0 0 5px rgba(34, 197, 94, 0.18);
+    transition: box-shadow 0.15s, opacity 0.15s;
+}
+.wizard-step-dot.completed .step-circle {
+    background: var(--success);
+    border-color: var(--success);
+    color: #fff;
+}
+
+.wizard-step-dot.completed .step-circle::after {
+    content: '✓';
+    position: absolute;
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+.wizard-step-dot.completed .step-num {
+    display: none;
+}
+
+.step-label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    white-space: nowrap;
+    transition: color var(--transition-base);
+}
+
+.wizard-step-dot.active .step-label {
+    color: var(--primary-light);
+}
+
+.wizard-step-dot.completed .step-label {
+    color: var(--success);
+}
+
+.wizard-line {
+    flex: 1;
+    height: 2px;
+    background: rgba(148, 163, 184, 0.2);
+    min-width: 50px;
+    max-width: 120px;
+    margin-top: 22px; /* align with center of circle */
+    transition: background var(--transition-base);
+}
+
+.wizard-line.completed {
+    background: var(--success);
+}
+
+/* --- Panels --- */
+.wizard-body {
+    position: relative;
+}
+
+.wizard-panel {
+    display: none;
+}
+
+.wizard-panel.active {
+    display: block;
+    animation: wizardSlideIn 0.28s ease;
+}
+
+.wizard-panel.slide-back {
+    animation: wizardSlideBack 0.28s ease;
+}
+
+@keyframes wizardSlideIn {
+    from { opacity: 0; transform: translateX(28px); }
+    to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes wizardSlideBack {
+    from { opacity: 0; transform: translateX(-28px); }
+    to   { opacity: 1; transform: translateX(0); }
+}
+
+/* --- Navigation --- */
+.wizard-nav {
+    display: flex;
+    align-items: center;
+    padding: 1.25rem 0 0.5rem;
+    gap: 1rem;
+}
+
+.wizard-nav-right {
+    justify-content: flex-end;
+}
+
+.wizard-nav-between {
+    justify-content: space-between;
+}
+
+.btn-arrow {
+    font-size: 1.1rem;
+    line-height: 1;
+}
+
+/* --- Level selectors large (étape 2) --- */
+.level-selectors-wizard {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2.5rem;
+    padding: 2.5rem 1rem;
+}
+
+.level-selector-wizard {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.level-selector-wizard label {
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+}
+
+.level-select-large {
+    font-size: 2rem !important;
+    font-weight: 800 !important;
+    padding: 0.6rem 1rem !important;
+    border-radius: 14px !important;
+    width: 110px !important;
+    text-align: center;
+    background: var(--bg-secondary) !important;
+    border: 2px solid var(--primary) !important;
+    color: var(--primary-light) !important;
+    cursor: pointer;
+    appearance: auto;
+    box-shadow: 0 0 0 0 rgba(99,102,241,0);
+    transition: box-shadow var(--transition-fast), border-color var(--transition-fast);
+}
+
+.level-select-large:focus {
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.2);
+}
+
+.level-arrow-wizard {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* Écraser les contraintes de .level-arrow générique */
+    width: auto !important;
+    height: auto !important;
+    position: static !important;
+    top: auto !important;
+    left: auto !important;
+    margin-top: 1.6rem;
+    font-size: 0;
+}
+
+/* ── Flèche wizard : tige arrondie + tête de flèche ── */
+.wizard-arrow {
+    width: 84px;
+    height: 38px;
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(90deg, var(--primary-dark) 0%, var(--primary) 55%, var(--primary-light) 100%);
+    /* SVG mask : tige avec coins gauche arrondis + pointe triangulaire */
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 84 38'%3E%3Cpath fill='white' d='M 5,12 H 48 V 0 L 84,19 L 48,38 V 26 H 5 Q 0,26 0,21 V 17 Q 0,12 5,12 Z'/%3E%3C/svg%3E");
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 84 38'%3E%3Cpath fill='white' d='M 5,12 H 48 V 0 L 84,19 L 48,38 V 26 H 5 Q 0,26 0,21 V 17 Q 0,12 5,12 Z'/%3E%3C/svg%3E");
+    -webkit-mask-size: 100% 100%;
+    mask-size: 100% 100%;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    filter: drop-shadow(0 2px 10px rgba(var(--primary-rgb), 0.65));
+    animation: wizardArrowPulse 2.4s ease-in-out infinite;
+}
+
+/* Reflet / shimmer qui traverse la flèche */
+.wizard-arrow-flow {
+    position: absolute;
+    top: 0;
+    width: 55%;
+    height: 100%;
+    background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.12) 20%,
+        rgba(255, 255, 255, 0.45) 50%,
+        rgba(255, 255, 255, 0.12) 80%,
+        transparent 100%);
+    animation: wizardFlow 1.8s ease-in-out infinite;
+}
+
+@keyframes wizardFlow {
+    0%   { left: -60%; }
+    100% { left: 110%; }
+}
+
+@keyframes wizardArrowPulse {
+    0%, 100% {
+        filter: drop-shadow(0 2px 8px rgba(99, 102, 241, 0.55));
+        opacity: 0.92;
+    }
+    50% {
+        filter: drop-shadow(0 2px 16px rgba(139, 92, 246, 0.85));
+        opacity: 1;
+    }
+}
+
+/* --- Launch button (étape 3) --- */
+.btn-launch {
+    position: relative;
+    overflow: hidden;
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast), opacity var(--transition-fast);
+}
+
+.btn-launch:not(:disabled) {
+    animation: launchPulse 2.4s ease-in-out infinite;
+}
+
+@keyframes launchPulse {
+    0%, 100% { box-shadow: 0 4px 15px rgba(99,102,241,0.3); }
+    50%       { box-shadow: 0 6px 24px rgba(99,102,241,0.55); }
+}
+
+.btn-launch:not(:disabled):hover {
+    transform: translateY(-2px);
+    animation: none;
+    box-shadow: 0 8px 28px rgba(99, 102, 241, 0.55);
+}
+
+.btn-launch:not(:disabled)::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -75%;
+    width: 40%;
+    height: 200%;
+    background: rgba(255, 255, 255, 0.13);
+    transform: skewX(-20deg);
+    animation: btnShimmer 2.8s ease-in-out infinite;
+}
+
+.btn-launch:disabled {
+    animation: none;
+}
+
+@keyframes btnShimmer {
+    0%   { left: -75%; }
+    60%, 100% { left: 150%; }
+}
+
+/* Section title inside wizard step 3 */
+.config-section-title {
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted, #64748b);
+    margin: 1rem 0 0.5rem;
+}
+
+/* Recent items title inside wizard step 1 */
+.recent-title {
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted, #64748b);
+    margin-bottom: 0.5rem;
+}
+
+/* Responsive wizard */
+@media (max-width: 600px) {
+    .wizard-timeline { padding: 1.5rem 0.5rem 1rem; gap: 0; }
+    .wizard-line { min-width: 24px; }
+    .level-selectors-wizard { gap: 1.5rem; padding: 1.5rem 0.5rem; }
+    .level-select-large { font-size: 1.5rem !important; width: 90px !important; }
+    .wizard-arrow { width: 60px; height: 28px; }
+    .wizard-step-dot { min-width: 55px; }
+}
+
+/* =====================================================================
+   POLISH PASS — Transitions cohérentes à travers le site
+   =====================================================================
+   Objectif : ajouter des animations de transition subtiles et cohérentes
+   avec l'identité visuelle existante (variables --transition-* et
+   cubic-bezier(0.4, 0, 0.2, 1)). Respecte prefers-reduced-motion.
+   --------------------------------------------------------------------- */
+
+/* --- Keyframes réutilisables --- */
+@keyframes polishFadeSlideUp {
+    from { opacity: 0; transform: translate3d(0, 14px, 0); }
+    to   { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+@keyframes polishFadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+@keyframes polishPopIn {
+    0%   { opacity: 0; transform: scale(0.86); }
+    60%  { opacity: 1; transform: scale(1.04); }
+    100% { opacity: 1; transform: scale(1); }
+}
+@keyframes polishBloomOnce {
+    0%   { box-shadow: 0 0 0 0 rgba(var(--primary-rgb, 99, 102, 241), 0.0); }
+    55%  { box-shadow: 0 0 0 8px rgba(var(--primary-rgb, 99, 102, 241), 0.18); }
+    100% { box-shadow: 0 0 0 0 rgba(var(--primary-rgb, 99, 102, 241), 0.0); }
+}
+@keyframes polishShimmerSweep {
+    0%   { transform: translateX(-110%) skewX(-18deg); }
+    100% { transform: translateX(260%) skewX(-18deg); }
+}
+
+/* --- Scenario pane : cross-fade propre quand une carte devient active --- */
+.scenario-pane {
+    transition: opacity var(--transition-base), transform var(--transition-base);
+}
+.scenario-pane.active {
+    animation: polishFadeSlideUp 420ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+/* --- Préparation / liste staggered à l'entrée du panneau actif --- */
+.pane-preparation > * {
+    animation: polishFadeSlideUp 380ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.pane-preparation > *:nth-child(1) { animation-delay: 40ms; }
+.pane-preparation > *:nth-child(2) { animation-delay: 100ms; }
+.pane-preparation > *:nth-child(3) { animation-delay: 160ms; }
+.pane-preparation > *:nth-child(4) { animation-delay: 220ms; }
+.pane-preparation > *:nth-child(5) { animation-delay: 280ms; }
+.pane-preparation > *:nth-child(6) { animation-delay: 340ms; }
+.pane-preparation > *:nth-child(n+7) { animation-delay: 400ms; }
+
+/* --- Stats : pop-in en entrée quand la carte s'active --- */
+.strategy-card.active .stats-section .stat-item {
+    animation: polishFadeSlideUp 360ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.strategy-card.active .stats-section .stat-item:nth-child(1) { animation-delay: 60ms; }
+.strategy-card.active .stats-section .stat-item:nth-child(2) { animation-delay: 130ms; }
+.strategy-card.active .stats-section .stat-item:nth-child(3) { animation-delay: 200ms; }
+.strategy-card.active .stats-section .stat-item:nth-child(4) { animation-delay: 270ms; }
+
+/* --- Main value / cost : pop subtil à la révélation --- */
+.strategy-card.active .main-stat-value,
+.strategy-card.active .pane-cost-value {
+    animation: polishPopIn 520ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    animation-delay: 80ms;
+}
+
+/* --- Strategy card : lift + halo progressif au hover (non-actif) --- */
+.strategy-card:not(.active) {
+    transition: transform var(--transition-base),
+                box-shadow var(--transition-base),
+                border-color var(--transition-base),
+                background var(--transition-base);
+    will-change: transform;
+}
+.strategy-card:not(.active):hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 28px -12px rgba(var(--primary-rgb, 99, 102, 241), 0.28);
+}
+.strategy-card:not(.active):active {
+    transform: translateY(-1px) scale(0.996);
+    transition-duration: 80ms;
+}
+
+/* --- Strategy card : bloom ponctuel lors de l'activation --- */
+.strategy-card.active {
+    animation: polishBloomOnce 900ms cubic-bezier(0.2, 0.7, 0.2, 1) 1;
+}
+
+/* --- Nav buttons (onglets Config / Analyse) : micro-interaction + shimmer --- */
+.nav-btn {
+    position: relative;
+    overflow: hidden;
+}
+.nav-btn::after {
+    content: "";
+    position: absolute;
+    top: 0; left: 0;
+    width: 40%; height: 100%;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.22),
+        transparent
+    );
+    transform: translateX(-120%) skewX(-18deg);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity var(--transition-fast);
+}
+.nav-btn:not(.disabled):hover::after {
+    opacity: 1;
+    animation: polishShimmerSweep 900ms cubic-bezier(0.4, 0, 0.2, 1) 1;
+}
+.nav-btn:not(.disabled):active {
+    transform: translateY(0) scale(0.985);
+    transition-duration: 80ms;
+}
+
+/* --- Header controls : boutons langue / replay / reset -> press-in --- */
+.header-controls button,
+.language-selector-button {
+    transition: transform var(--transition-fast),
+                background var(--transition-fast),
+                box-shadow var(--transition-fast),
+                color var(--transition-fast),
+                border-color var(--transition-fast);
+}
+.header-controls button:active,
+.language-selector-button:active {
+    transform: scale(0.94);
+    transition-duration: 70ms;
+}
+
+/* --- Recent items : stagger à l'apparition --- */
+.recent-items-list .recent-item-btn {
+    animation: polishFadeSlideUp 320ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.recent-items-list .recent-item-btn:nth-child(1) { animation-delay: 30ms; }
+.recent-items-list .recent-item-btn:nth-child(2) { animation-delay: 80ms; }
+.recent-items-list .recent-item-btn:nth-child(3) { animation-delay: 130ms; }
+.recent-items-list .recent-item-btn:nth-child(4) { animation-delay: 180ms; }
+.recent-items-list .recent-item-btn:nth-child(5) { animation-delay: 230ms; }
+.recent-items-list .recent-item-btn:nth-child(n+6) { animation-delay: 280ms; }
+
+/* --- Wizard step dot : bloom à la complétion --- */
+.wizard-step-dot.completed .step-circle {
+    animation: polishBloomOnce 700ms cubic-bezier(0.2, 0.7, 0.2, 1) 1;
+}
+
+/* --- Section titles : reveal doux lors d'un re-rendu --- */
+.section-title {
+    transition: color var(--transition-base),
+                letter-spacing var(--transition-base);
+}
+
+/* --- Focus ring global pour inputs/boutons clés — cohérent avec le spotlight tuto --- */
+.upgrade-item-prices input:focus-visible,
+#objectSearch:focus-visible,
+.level-select-large:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(var(--primary-rgb, 99, 102, 241), 0.28),
+                0 0 0 1px rgba(var(--primary-rgb, 99, 102, 241), 0.7) inset;
+    transition: box-shadow var(--transition-fast);
+}
+
+/* --- Respect de prefers-reduced-motion : on désactive les animations cosmétiques --- */
+@media (prefers-reduced-motion: reduce) {
+    .scenario-pane.active,
+    .pane-preparation > *,
+    .strategy-card.active .stats-section .stat-item,
+    .strategy-card.active .main-stat-value,
+    .strategy-card.active .pane-cost-value,
+    .strategy-card.active,
+    .wizard-step-dot.completed .step-circle,
+    .recent-items-list .recent-item-btn {
+        animation: none !important;
+    }
+    .nav-btn::after { display: none; }
+    .strategy-card:not(.active):hover { transform: none; }
+}
+
+/* =====================================================================
+   G2 — Tutoriel premier lancement (spotlight + bulles + welcome modal)
+   =====================================================================
+   Structure :
+     .tutorial-overlay (fixed, full viewport)
+       ├── .tutorial-backdrop (4 quadrants dim qui encadrent la cible)
+       ├── .tutorial-spotlight-ring (anneau pulsant autour de la cible)
+       ├── .tutorial-bubble (carte flottante avec texte + nav)
+       └── .tutorial-welcome (modal centrée d'intro, étape 0)
+*/
+
+/* --- Conteneur global : activé par .active --- */
+.tutorial-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 320ms cubic-bezier(0.4, 0, 0.2, 1),
+                visibility 320ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.tutorial-overlay.active {
+    opacity: 1;
+    visibility: visible;
+    /* Important : on laisse les clics passer vers la page. Seuls la bulle et
+       la modale d'accueil capturent les clics (elles ont pointer-events: auto
+       explicitement). Cela permet à la cible (spotlight) de rester cliquable
+       sans avoir à jouer avec les z-index des ancêtres (sticky header, etc.). */
+    pointer-events: none;
+}
+
+/* --- Backdrop : 4 quadrants dim pour "découper" la cible (visuel seulement) --- */
+.tutorial-backdrop { position: absolute; inset: 0; pointer-events: none; }
+.tutorial-backdrop-part {
+    position: absolute;
+    pointer-events: none;
+    background: rgba(10, 14, 24, 0.48);
+    backdrop-filter: blur(0.8px);
+    -webkit-backdrop-filter: blur(0.8px);
+    transition: top 380ms cubic-bezier(0.4, 0, 0.2, 1),
+                left 380ms cubic-bezier(0.4, 0, 0.2, 1),
+                width 380ms cubic-bezier(0.4, 0, 0.2, 1),
+                height 380ms cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 380ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+/* Sans cible : un seul voile plein viewport */
+.tutorial-overlay.no-target .tutorial-backdrop-top    { top: 0; left: 0; width: 100%; height: 100%; }
+.tutorial-overlay.no-target .tutorial-backdrop-right,
+.tutorial-overlay.no-target .tutorial-backdrop-bottom,
+.tutorial-overlay.no-target .tutorial-backdrop-left { opacity: 0; pointer-events: none; }
+
+/* --- Anneau lumineux autour de la cible --- */
+.tutorial-spotlight-ring {
+    position: absolute;
+    border-radius: 12px;
+    pointer-events: none;
+    box-shadow:
+        0 0 0 3px rgba(124, 58, 237, 0.8),
+        0 0 0 9px rgba(124, 58, 237, 0.25),
+        0 0 40px 8px rgba(124, 58, 237, 0.35),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+    animation: tutorialRingPulse 2.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    transition: top 380ms cubic-bezier(0.4, 0, 0.2, 1),
+                left 380ms cubic-bezier(0.4, 0, 0.2, 1),
+                width 380ms cubic-bezier(0.4, 0, 0.2, 1),
+                height 380ms cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 200ms ease;
+    opacity: 0;
+}
+.tutorial-overlay.has-target .tutorial-spotlight-ring { opacity: 1; }
+.tutorial-overlay.no-target .tutorial-spotlight-ring  { opacity: 0; }
+
+@keyframes tutorialRingPulse {
+    0%, 100% {
+        box-shadow:
+            0 0 0 3px rgba(124, 58, 237, 0.8),
+            0 0 0 9px rgba(124, 58, 237, 0.25),
+            0 0 40px 8px rgba(124, 58, 237, 0.35),
+            inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+    }
+    50% {
+        box-shadow:
+            0 0 0 3px rgba(167, 139, 250, 1),
+            0 0 0 14px rgba(124, 58, 237, 0.15),
+            0 0 60px 12px rgba(124, 58, 237, 0.5),
+            inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+    }
+}
+
+/* --- Bulle d'info flottante --- */
+.tutorial-bubble {
+    position: absolute;
+    /* La bulle capture les clics même quand l'overlay laisse passer */
+    pointer-events: auto;
+    max-width: 380px;
+    min-width: 280px;
+    background: linear-gradient(135deg, #1e293b, #0f172a);
+    border: 1px solid rgba(124, 58, 237, 0.4);
+    border-radius: 14px;
+    padding: 1.1rem 1.25rem 0.9rem;
+    box-shadow:
+        0 20px 40px rgba(0, 0, 0, 0.5),
+        0 0 0 1px rgba(124, 58, 237, 0.1),
+        0 0 30px rgba(124, 58, 237, 0.2);
+    color: #e2e8f0;
+    transform: scale(0.92) translateY(8px);
+    opacity: 0;
+    transition: transform 340ms cubic-bezier(0.34, 1.56, 0.64, 1),
+                opacity 280ms cubic-bezier(0.4, 0, 0.2, 1),
+                top 380ms cubic-bezier(0.4, 0, 0.2, 1),
+                left 380ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.tutorial-overlay.active .tutorial-bubble.visible {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+}
+
+/* Flèche colorée pointant vers la cible */
+.tutorial-bubble-arrow {
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    background: linear-gradient(135deg, #1e293b, #1e293b);
+    border: 1px solid rgba(124, 58, 237, 0.4);
+    transform: rotate(45deg);
+    z-index: -1;
+}
+.tutorial-bubble[data-arrow="top"]    .tutorial-bubble-arrow { top: -8px; left: 50%; margin-left: -7px; border-right: none; border-bottom: none; }
+.tutorial-bubble[data-arrow="bottom"] .tutorial-bubble-arrow { bottom: -8px; left: 50%; margin-left: -7px; border-left: none; border-top: none; }
+.tutorial-bubble[data-arrow="left"]   .tutorial-bubble-arrow { left: -8px; top: 50%; margin-top: -7px; border-right: none; border-top: none; }
+.tutorial-bubble[data-arrow="right"]  .tutorial-bubble-arrow { right: -8px; top: 50%; margin-top: -7px; border-left: none; border-bottom: none; }
+
+.tutorial-bubble-header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    margin-bottom: 0.6rem;
+}
+.tutorial-bubble-step {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #a78bfa;
+    font-variant-numeric: tabular-nums;
+}
+.tutorial-bubble-title {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #f8fafc;
+    line-height: 1.3;
+}
+.tutorial-bubble-body {
+    font-size: 0.88rem;
+    line-height: 1.55;
+    color: #cbd5e1;
+    margin-bottom: 0.9rem;
+}
+.tutorial-bubble-body strong { color: #e9d5ff; font-weight: 600; }
+.tutorial-bubble-body kbd {
+    padding: 0.1em 0.45em;
+    background: rgba(124, 58, 237, 0.15);
+    border: 1px solid rgba(124, 58, 237, 0.4);
+    border-radius: 4px;
+    font-size: 0.8em;
+    font-family: inherit;
+    color: #e9d5ff;
+}
+
+/* Hint d'attente : "Continuez via l'UI pour débloquer l'étape suivante" */
+.tutorial-bubble-wait-hint {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.7rem;
+    margin-bottom: 0.7rem;
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.14), rgba(6, 182, 212, 0.12));
+    border: 1px solid rgba(124, 58, 237, 0.28);
+    border-radius: 8px;
+    font-size: 0.82rem;
+    color: #cbd5e1;
+    line-height: 1.35;
+    animation: polishFadeIn 260ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.tutorial-bubble-wait-hint[hidden] { display: none; }
+.tutorial-wait-pulse {
+    flex: 0 0 auto;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #a78bfa;
+    box-shadow: 0 0 0 0 rgba(167, 139, 250, 0.6);
+    animation: tutorialWaitPulse 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+@keyframes tutorialWaitPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(167, 139, 250, 0.6); transform: scale(1); }
+    50%      { box-shadow: 0 0 0 6px rgba(167, 139, 250, 0); transform: scale(1.15); }
+}
+
+/* Bouton Next grisé quand en attente d'une action utilisateur */
+.tutorial-btn-next.is-waiting {
+    opacity: 0.45;
+    filter: grayscale(0.4);
+    cursor: default;
+}
+
+/* Barre de progression */
+.tutorial-bubble-progress {
+    height: 3px;
+    background: rgba(148, 163, 184, 0.15);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 0.75rem;
+}
+.tutorial-bubble-progress-bar {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #7c3aed, #a78bfa, #06b6d4);
+    background-size: 200% 100%;
+    border-radius: 2px;
+    transition: width 450ms cubic-bezier(0.4, 0, 0.2, 1);
+    animation: tutorialProgressShimmer 2.5s linear infinite;
+}
+@keyframes tutorialProgressShimmer {
+    0%   { background-position: 0% 50%; }
+    100% { background-position: 200% 50%; }
+}
+
+/* Footer avec nav */
+.tutorial-bubble-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+.tutorial-bubble-nav {
+    display: flex;
+    gap: 0.4rem;
+}
+
+/* Boutons du tutoriel */
+.tutorial-btn {
+    padding: 0.45rem 0.95rem;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 220ms cubic-bezier(0.4, 0, 0.2, 1);
+    background: transparent;
+    color: #cbd5e1;
+    font-family: inherit;
+}
+.tutorial-btn:hover {
+    background: rgba(124, 58, 237, 0.12);
+    color: #f8fafc;
+    transform: translateY(-1px);
+}
+.tutorial-btn:active { transform: translateY(0); }
+.tutorial-btn-skip {
+    color: #64748b;
+    font-size: 0.78rem;
+}
+.tutorial-btn-skip:hover { color: #cbd5e1; background: rgba(148, 163, 184, 0.08); }
+.tutorial-btn-prev,
+.tutorial-btn-next {
+    border-color: rgba(124, 58, 237, 0.35);
+    background: rgba(124, 58, 237, 0.08);
+    color: #e9d5ff;
+}
+.tutorial-btn-prev:hover,
+.tutorial-btn-next:hover {
+    background: rgba(124, 58, 237, 0.25);
+    border-color: rgba(167, 139, 250, 0.8);
+    box-shadow: 0 0 20px rgba(124, 58, 237, 0.3);
+}
+.tutorial-btn-next {
+    background: linear-gradient(135deg, #7c3aed, #8b5cf6);
+    color: #fff;
+    border-color: transparent;
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.35);
+}
+.tutorial-btn-next:hover {
+    background: linear-gradient(135deg, #8b5cf6, #a78bfa);
+    box-shadow: 0 6px 20px rgba(124, 58, 237, 0.5);
+}
+.tutorial-btn:disabled,
+.tutorial-btn[aria-disabled="true"] {
+    opacity: 0.35;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* Bouton CTA principal (welcome modal) */
+.tutorial-btn-primary {
+    padding: 0.75rem 1.5rem;
+    font-size: 0.95rem;
+    background: linear-gradient(135deg, #7c3aed, #8b5cf6, #06b6d4);
+    background-size: 200% 200%;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(124, 58, 237, 0.4);
+    animation: tutorialCtaGradient 4s ease infinite;
+}
+.tutorial-btn-primary:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 12px 32px rgba(124, 58, 237, 0.55);
+}
+@keyframes tutorialCtaGradient {
+    0%, 100% { background-position: 0% 50%; }
+    50%      { background-position: 100% 50%; }
+}
+.tutorial-btn-ghost {
+    padding: 0.75rem 1.25rem;
+    font-size: 0.9rem;
+    border-color: rgba(148, 163, 184, 0.3);
+}
+
+/* --- Modal de bienvenue (étape 0) --- */
+.tutorial-welcome {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    opacity: 0;
+    transform: scale(0.96);
+    pointer-events: none;
+    transition: opacity 420ms cubic-bezier(0.4, 0, 0.2, 1),
+                transform 420ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.tutorial-overlay.show-welcome .tutorial-welcome {
+    opacity: 1;
+    transform: scale(1);
+    pointer-events: auto;
+}
+.tutorial-welcome-card {
+    position: relative;
+    max-width: 480px;
+    width: 100%;
+    padding: 2.5rem 2rem 2rem;
+    background: linear-gradient(145deg, #1e293b 0%, #0f172a 100%);
+    border: 1px solid rgba(124, 58, 237, 0.35);
+    border-radius: 20px;
+    text-align: center;
+    box-shadow:
+        0 30px 60px rgba(0, 0, 0, 0.6),
+        0 0 0 1px rgba(124, 58, 237, 0.2),
+        0 0 80px rgba(124, 58, 237, 0.25);
+    overflow: hidden;
+}
+/* Halo radial animé en fond */
+.tutorial-welcome-card::before {
+    content: '';
+    position: absolute;
+    inset: -50%;
+    background: radial-gradient(circle at 30% 20%, rgba(124, 58, 237, 0.25), transparent 50%),
+                radial-gradient(circle at 70% 80%, rgba(6, 182, 212, 0.2), transparent 50%);
+    animation: tutorialWelcomeHalo 8s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 0;
+}
+@keyframes tutorialWelcomeHalo {
+    0%, 100% { transform: rotate(0deg) scale(1); }
+    50%      { transform: rotate(180deg) scale(1.15); }
+}
+.tutorial-welcome-card > * { position: relative; z-index: 1; }
+
+/* Étincelles décoratives */
+.tutorial-welcome-sparkles {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+}
+.tutorial-welcome-sparkles span {
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    background: radial-gradient(circle, #fff, transparent 70%);
+    border-radius: 50%;
+    animation: tutorialSparkle 3s ease-in-out infinite;
+}
+.tutorial-welcome-sparkles span:nth-child(1) { top: 15%; left: 10%; animation-delay: 0s; }
+.tutorial-welcome-sparkles span:nth-child(2) { top: 25%; right: 15%; animation-delay: 0.5s; }
+.tutorial-welcome-sparkles span:nth-child(3) { top: 60%; left: 8%; animation-delay: 1s; }
+.tutorial-welcome-sparkles span:nth-child(4) { bottom: 20%; right: 12%; animation-delay: 1.5s; }
+.tutorial-welcome-sparkles span:nth-child(5) { top: 45%; right: 5%; animation-delay: 2s; }
+.tutorial-welcome-sparkles span:nth-child(6) { bottom: 35%; left: 20%; animation-delay: 2.5s; }
+@keyframes tutorialSparkle {
+    0%, 100% { opacity: 0; transform: scale(0.5); }
+    50%      { opacity: 1; transform: scale(1.8); }
+}
+
+.tutorial-welcome-icon {
+    font-size: 3.5rem;
+    margin-bottom: 0.75rem;
+    display: inline-block;
+    animation: tutorialWelcomeIcon 2.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    filter: drop-shadow(0 4px 12px rgba(124, 58, 237, 0.5));
+}
+@keyframes tutorialWelcomeIcon {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    25%      { transform: translateY(-6px) rotate(-3deg); }
+    75%      { transform: translateY(-3px) rotate(3deg); }
+}
+
+.tutorial-welcome-title {
+    margin: 0 0 0.5rem;
+    font-size: 1.7rem;
+    font-weight: 800;
+    background: linear-gradient(90deg, #fff, #e9d5ff, #a78bfa);
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: tutorialTitleShine 5s linear infinite;
+}
+@keyframes tutorialTitleShine {
+    0%   { background-position: 0% 50%; }
+    100% { background-position: 200% 50%; }
+}
+.tutorial-welcome-subtitle {
+    margin: 0 0 1.5rem;
+    color: #cbd5e1;
+    font-size: 0.95rem;
+    line-height: 1.55;
+}
+.tutorial-welcome-actions {
+    display: flex;
+    gap: 0.6rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+/* --- Élément mis en lumière (pointer-events passent à travers le voile) --- */
+.tutorial-target-highlight {
+    position: relative;
+    z-index: 10000;
+    pointer-events: auto;
+}
+
+/* Bouton relance dans le header (état "pulse" au 1er lancement) */
+#tutorialReplayBtn.pulse-hint {
+    animation: tutorialReplayHint 2.5s ease-in-out 2;
+}
+@keyframes tutorialReplayHint {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(124, 58, 237, 0); }
+    50%      { box-shadow: 0 0 0 6px rgba(124, 58, 237, 0.3); }
+}
+
+/* --- Responsive --- */
+@media (max-width: 640px) {
+    .tutorial-bubble {
+        max-width: calc(100vw - 2rem);
+        min-width: unset;
+        width: calc(100vw - 2rem);
+        padding: 1rem;
+    }
+    .tutorial-welcome-card {
+        padding: 2rem 1.25rem 1.5rem;
+    }
+    .tutorial-welcome-title { font-size: 1.4rem; }
+    .tutorial-welcome-icon { font-size: 2.8rem; }
+    .tutorial-btn-primary { width: 100%; }
+    .tutorial-btn-ghost { width: 100%; }
+}
+
+/* Réduire les animations si l'utilisateur le préfère */
+@media (prefers-reduced-motion: reduce) {
+    .tutorial-spotlight-ring,
+    .tutorial-welcome-icon,
+    .tutorial-welcome-title,
+    .tutorial-btn-primary,
+    .tutorial-bubble-progress-bar,
+    .tutorial-welcome-card::before,
+    .tutorial-welcome-sparkles span {
+        animation: none !important;
+    }
+    .tutorial-overlay,
+    .tutorial-bubble,
+    .tutorial-backdrop-part,
+    .tutorial-spotlight-ring,
+    .tutorial-welcome {
+        transition-duration: 120ms !important;
     }
 }

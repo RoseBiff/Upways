@@ -7,6 +7,7 @@ import { SearchComponent } from './components/SearchComponent.js';
 import { ConfigComponent } from './components/ConfigComponent.js';
 import { AnalysisComponent } from './components/AnalysisComponent.js';
 import { ChartComponent } from './components/ChartComponent.js';
+import { TutorialComponent } from './components/TutorialComponent.js';
 
 import { Translator } from './utils/translator.js';
 import { Formatters } from './utils/formatters.js';
@@ -16,6 +17,7 @@ import { UIState, showToast, confirm } from './utils/ui-helpers.js';
 import { Calculator } from './core/Calculator.js';
 import { Strategy } from './core/Strategy.js';
 import { FindBestStrategy } from './core/Calculator.js';
+import { ENGINE_VERSION, ENGINE_BUILD_DATE } from './core/Constants.js';
 
 /**
  * Application principale Upways - Version 3.0 avec nouvelles mécaniques
@@ -35,6 +37,7 @@ class UpwaysApp {
         this.configComponent = null;
         this.analysisComponent = null;
         this.chartComponent = null;
+        this.tutorialComponent = null;
 
         // État de l'application
         this.currentItemId = null;
@@ -83,18 +86,36 @@ class UpwaysApp {
 
     async init() {
         this.handleUrlParams();
-        
+
         try {
             this.dataService.loadSavedSettings();
             this.initComponents();
             this.attachGlobalEvents();
             this.updateLanguage();
-            
+
             console.log('Application initialized with new Calculator/Strategy classes');
-            
+
             if (this.config.enableDebugLogs) {
                 console.log('Debug mode enabled');
                 console.log('Available classes:', { Calculator, Strategy, FindBestStrategy });
+            }
+
+            // Appliquer une configuration partagée via URL si présente (après init des composants)
+            if (this._pendingSharedConfig) {
+                const cfg = this._pendingSharedConfig;
+                this._pendingSharedConfig = null;
+                // Laisser le temps aux composants de finir leur montage
+                setTimeout(() => {
+                    this.configComponent.applySharedConfig(cfg);
+                }, 150);
+            }
+
+            // G2 : Démarrer le tutoriel au premier lancement (hors flux de partage)
+            // On laisse quelques centaines de ms pour que l'UI soit totalement rendue.
+            if (!this._pendingSharedConfig) {
+                setTimeout(() => {
+                    this.tutorialComponent?.start({ force: false });
+                }, 600);
             }
         } catch (error) {
             console.error('Initialization error:', error);
@@ -105,14 +126,40 @@ class UpwaysApp {
     handleUrlParams() {
         const urlParams = new URLSearchParams(window.location.search);
         const lang = urlParams.get('lang');
-        
+
         if (lang && this.translator.isLanguageAvailable(lang)) {
             this.translator.setLanguage(lang);
         }
-        
+
         // Activer le mode debug si présent dans l'URL
         if (urlParams.get('debug') === 'true') {
             this.config.enableDebugLogs = true;
+        }
+
+        // Décodage d'un lien de partage : ?share=<base64 URL-safe JSON>
+        const share = urlParams.get('share');
+        if (share) {
+            try {
+                // Reconstitution base64 standard + padding
+                let b64 = share.replace(/-/g, '+').replace(/_/g, '/');
+                while (b64.length % 4 !== 0) b64 += '=';
+                const json = decodeURIComponent(escape(atob(b64)));
+                const parsed = JSON.parse(json);
+                if (parsed && typeof parsed === 'object') {
+                    this._pendingSharedConfig = parsed;
+                    // Si le lien contient une langue, la poser maintenant pour que l'UI
+                    // s'affiche directement dans la bonne langue au premier render
+                    if (parsed.language && this.translator.isLanguageAvailable(parsed.language)) {
+                        this.translator.setLanguage(parsed.language);
+                    }
+                }
+            } catch (e) {
+                console.error('Invalid share param:', e);
+                // Toast différé : translator pas encore prêt à 100 % ici
+                setTimeout(() => {
+                    this.uiState.showToast('error', this.translator.t('shareInvalid'));
+                }, 300);
+            }
         }
     }
 
@@ -141,7 +188,10 @@ class UpwaysApp {
 
         // Composant de graphique
         this.chartComponent = new ChartComponent(this.translator);
-        
+
+        // Composant du tutoriel (G2)
+        this.tutorialComponent = new TutorialComponent(this.translator, this.dataService);
+
         // Configuration initiale
         this.analysisComponent.setShowIntervals(this.config.showIntervals);
     }
@@ -163,6 +213,15 @@ class UpwaysApp {
 
         // Reset
         document.getElementById('resetBtn').addEventListener('click', () => this.resetAll());
+
+        // Raccourcis navigation analyse → config
+        document.querySelectorAll('.analysis-nav-step[data-goto-step]').forEach(dot => {
+            dot.addEventListener('click', () => {
+                const step = parseInt(dot.dataset.gotoStep, 10);
+                this.switchTab('config');
+                this.configComponent.goToStep(step, true);
+            });
+        });
     }
 
     initCustomLanguageSelector() {
@@ -228,30 +287,42 @@ class UpwaysApp {
     updateSEO() {
         const lang = this.translator.getLanguage();
         const seo = this.seoData[lang] || this.seoData.fr;
-        
-        // Mettre à jour le titre avec l'année courante
+
+        const localeMap = { fr: 'fr_FR', en: 'en_US', ro: 'ro_RO', tr: 'tr_TR', de: 'de_DE' };
+        const baseUrl = 'https://metin2upways.com';
+        const pageUrl = lang === 'fr' ? baseUrl : `${baseUrl}/?lang=${lang}`;
+
+        // Titre + description standard
         document.title = seo.title + ' | ' + new Date().getFullYear();
-        
-        // Mettre à jour les meta tags
-        const metaDescription = document.querySelector('meta[name="description"]');
-        if (metaDescription) {
-            metaDescription.content = seo.description;
-        }
-        
-        const metaKeywords = document.querySelector('meta[name="keywords"]');
-        if (metaKeywords) {
-            metaKeywords.content = seo.keywords;
-        }
-        
-        // Mettre à jour l'attribut lang du document
+
+        const setMeta = (selector, value) => {
+            const el = document.querySelector(selector);
+            if (el) el.content = value;
+        };
+        const setAttr = (selector, attr, value) => {
+            const el = document.querySelector(selector);
+            if (el) el.setAttribute(attr, value);
+        };
+
+        setMeta('meta[name="description"]',       seo.description);
+        setMeta('meta[name="keywords"]',           seo.keywords);
+
+        // Open Graph
+        setAttr('meta[property="og:url"]',         'content', pageUrl);
+        setMeta('meta[property="og:title"]',       seo.title);
+        setMeta('meta[property="og:description"]', seo.description);
+        setMeta('meta[property="og:locale"]',      localeMap[lang] || 'fr_FR');
+
+        // Twitter / X
+        setMeta('meta[name="twitter:title"]',       seo.title);
+        setMeta('meta[name="twitter:description"]', seo.description);
+
+        // Attribut lang du document
         document.documentElement.lang = lang;
-        
-        // Mettre à jour l'URL canonique avec la langue
+
+        // URL canonique
         const canonical = document.querySelector('link[rel="canonical"]');
-        if (canonical) {
-            const baseUrl = 'https://metin2upways.com';
-            canonical.href = lang === 'fr' ? baseUrl : `${baseUrl}/?lang=${lang}`;
-        }
+        if (canonical) canonical.href = pageUrl;
     }
 
     /**
@@ -307,7 +378,7 @@ class UpwaysApp {
     onConfigChanged(change) {
         if (change.type === 'levels') {
             this.strategies = {};
-            
+
             if (this.currentItemId) {
                 this.analysisComponent.setAnalysisParams({
                     startLevel: change.startLevel,
@@ -317,6 +388,11 @@ class UpwaysApp {
             }
         } else if (change.type === 'price' && this.analysisComponent.getCurrentStrategy() === 'custom' && Object.keys(this.strategies).length > 0) {
             this.recalculateCustomStrategy();
+        } else if (change.type === 'guildBlacksmith') {
+            // Recalculer le scénario hybride si une analyse est disponible
+            if (Object.keys(this.strategies).length > 0) {
+                this.recalculateGuildStrategy();
+            }
         }
     }
 
@@ -354,6 +430,23 @@ class UpwaysApp {
         if (this.chartComponent) {
             this.chartComponent.updateLanguage();
         }
+
+        // Footer : moteur de calcul (version + date de mise à jour)
+        this.updateEngineInfo();
+    }
+
+    updateEngineInfo() {
+        const el = document.getElementById('engineInfo');
+        if (!el) return;
+        const lang = this.translator.getLanguage();
+        const label = this.translator.t('engineLabel');
+        const updatedOn = this.translator.t('engineUpdatedOn');
+        // Date formatée selon la locale (ex : "16 avril 2026" / "April 16, 2026")
+        const formattedDate = new Date(ENGINE_BUILD_DATE + 'T00:00:00').toLocaleDateString(lang, {
+            year: 'numeric', month: 'long', day: 'numeric'
+        });
+        el.textContent = `${label} v${ENGINE_VERSION} · ${updatedOn} ${formattedDate}`;
+        el.title = `Build ${ENGINE_BUILD_DATE}`;
     }
 
     switchTab(tab) {
@@ -398,10 +491,20 @@ class UpwaysApp {
             return;
         }
 
+        // ── Transition de lancement ──
+        const overlay = document.getElementById('loadingOverlay');
+        const btn     = document.getElementById('analyzeBtn');
+
+        // Animer le bouton (fusée qui décolle)
+        if (btn) btn.classList.add('launching');
+
+        // Afficher l'overlay en mode launch
+        if (overlay) overlay.classList.add('launch-mode');
+        this._spawnLaunchStars();
         this.uiState.showLoading(this.translator.t('calculating'));
-        
+
         const startTime = Date.now();
-        
+
         try {
             // Configurer le composant d'analyse
             this.analysisComponent.setAnalysisParams({
@@ -409,39 +512,152 @@ class UpwaysApp {
                 endLevel,
                 itemId: this.currentItemId
             });
-            
+
             // Calculer les stratégies
             await this.calculateAllStrategies();
-            
+
             // Débloquer l'onglet analyse
             const analysisTabBtn = document.getElementById('analysisTabBtn');
-            if (analysisTabBtn) {
-                analysisTabBtn.classList.remove('disabled');
-            }
-            
-            // Passer à l'onglet analyse
+            if (analysisTabBtn) analysisTabBtn.classList.remove('disabled');
+
+            // Préparer l'onglet analyse SOUS l'overlay (invisible pour l'instant)
             this.switchTab('analysis');
-            
-            // Afficher les résultats
             this.analysisComponent.setStrategies(this.strategies);
             this.analysisComponent.selectStrategy('optimal');
-            
-            // Dessiner le graphique
             this.chartComponent.drawTrialsProbabilityChart(this.strategies.optimal);
-            
+
+            // Marquer l'onglet pour l'animation d'entrée en échelons
+            const analysisTab = document.getElementById('analysisTab');
+            if (analysisTab) analysisTab.classList.add('revealing');
+
+            // Lever le rideau → révèle les résultats
+            await this._playReveal(overlay);
+
+            // Nettoyer la classe d'animation
+            setTimeout(() => analysisTab?.classList.remove('revealing'), 700);
+
             const elapsedTime = Date.now() - startTime;
             if (this.config.enableDebugLogs) {
                 console.log(`Analysis completed in ${elapsedTime}ms`);
                 console.log('Strategies:', this.strategies);
             }
-            
+
             this.uiState.showToast('success', this.translator.t('analysisComplete'));
         } catch (error) {
             console.error('Analysis error:', error);
             this.uiState.showToast('error', this.translator.t('errorAnalysis'));
         } finally {
+            if (btn) btn.classList.remove('launching');
+            // display:none d'abord, puis nettoyage des classes (évite tout flash)
             this.uiState.hideLoading();
+            if (overlay) overlay.classList.remove('launch-mode', 'curtain-exit');
         }
+    }
+
+    /**
+     * Crée les étoiles scintillantes dans l'overlay de lancement
+     */
+    _spawnLaunchStars() {
+        const container = document.getElementById('launchStars');
+        if (!container) return;
+        container.innerHTML = '';
+        for (let i = 0; i < 55; i++) {
+            const star = document.createElement('div');
+            star.className = 'launch-star';
+            star.style.cssText = [
+                `left:${Math.random() * 100}%`,
+                `top:${Math.random() * 100}%`,
+                `--dur:${(1.5 + Math.random() * 2).toFixed(2)}s`,
+                `--delay:${(Math.random() * 2).toFixed(2)}s`,
+                `width:${Math.random() < 0.3 ? 3 : 2}px`,
+                `height:${Math.random() < 0.3 ? 3 : 2}px`
+            ].join(';');
+            container.appendChild(star);
+        }
+    }
+
+    /**
+     * Lève le rideau (overlay glisse vers le haut) puis nettoie.
+     * NB : on ne retire PAS curtain-exit ici pour éviter un flash.
+     *      C'est le finally de runAnalysis qui remet display:none puis nettoie les classes.
+     */
+    _playReveal(overlay) {
+        return new Promise(resolve => {
+            if (!overlay) { resolve(); return; }
+
+            // Petit délai pour laisser le DOM de l'analyse se rendre
+            setTimeout(() => {
+                overlay.classList.add('curtain-exit');
+                // Déclencher les feux d'artifice au moment où le rideau commence à monter
+                setTimeout(() => this._addFireworks(), 300);
+
+                let resolved = false;
+                const done = () => {
+                    if (resolved) return;
+                    resolved = true;
+                    resolve();
+                };
+                overlay.addEventListener('animationend', done, { once: true });
+                // Sécurité : résoudre après 1600ms (animation 1.4s + marge)
+                setTimeout(done, 1600);
+            }, 80);
+        });
+    }
+
+    /**
+     * Lance des feux d'artifice sur l'écran au moment de la révélation
+     */
+    _addFireworks() {
+        // Couleurs vives pour les particules
+        const colors = ['#7c3aed','#a78bfa','#60a5fa','#34d399','#fbbf24','#f472b6','#fb923c'];
+
+        // Créer un conteneur overlay temporaire
+        const container = document.createElement('div');
+        container.className = 'firework-container';
+        document.body.appendChild(container);
+
+        const burst = (cx, cy) => {
+            const particleCount = 18 + Math.floor(Math.random() * 10);
+            for (let i = 0; i < particleCount; i++) {
+                const angle   = (i / particleCount) * 2 * Math.PI + (Math.random() - 0.5) * 0.4;
+                const dist    = 60 + Math.random() * 110;
+                const tx      = Math.cos(angle) * dist;
+                const ty      = Math.sin(angle) * dist;
+                const color   = colors[Math.floor(Math.random() * colors.length)];
+                const size    = 4 + Math.random() * 5;
+                const dur     = (0.8 + Math.random() * 0.6).toFixed(2);
+                const delay   = (Math.random() * 0.15).toFixed(2);
+
+                const p = document.createElement('div');
+                p.className = 'firework-particle';
+                p.style.cssText = [
+                    `left:${cx}px`, `top:${cy}px`,
+                    `width:${size}px`, `height:${size}px`,
+                    `background:${color}`,
+                    `box-shadow:0 0 ${size * 2}px ${color}`,
+                    `--tx:${tx}px`, `--ty:${ty}px`,
+                    `--dur:${dur}s`, `--delay:${delay}s`
+                ].join(';');
+                container.appendChild(p);
+            }
+        };
+
+        // Positions des explosions (en % de la fenêtre)
+        const positions = [
+            [0.25, 0.25], [0.5, 0.2], [0.75, 0.3],
+            [0.15, 0.5],  [0.85, 0.45], [0.4, 0.55],
+            [0.6, 0.15],  [0.5, 0.6]
+        ];
+
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+
+        positions.forEach(([px, py], idx) => {
+            setTimeout(() => burst(px * vw, py * vh), idx * 120);
+        });
+
+        // Supprimer le conteneur après la fin des animations
+        setTimeout(() => container.remove(), 3000);
     }
 
     /**
@@ -449,28 +665,78 @@ class UpwaysApp {
      */
     async calculateAllStrategies() {
         const startLevel = this.configComponent.getStartLevel();
-        const endLevel = this.configComponent.getEndLevel();
+        const endLevel   = this.configComponent.getEndLevel();
         const customScenario = this.analysisComponent.getCustomScenario();
 
         try {
             if (this.config.enableDebugLogs) {
                 console.log('Calculating strategies:', { startLevel, endLevel, customScenario });
             }
-            
+
+            // Stratégies standard (optimal + personnalisée)
             const [optimal, custom] = await Promise.all([
                 this.strategyService.calculateOptimalStrategy(this.currentItemId, startLevel, endLevel),
                 this.strategyService.calculateCustomStrategy(customScenario, this.currentItemId, startLevel, endLevel)
             ]);
-            
+
             this.strategies = { optimal, custom };
-            
+
+            // Forgeron de guilde hybride (toujours calculé si endLevel ≤ 9)
+            if (endLevel <= 9) {
+                try {
+                    const baseItemPrice = this.dataService.getBaseItemPrice(this.currentItemId);
+                    const guildBlacksmith = await this.strategyService.calculateHybridGuildStrategy(
+                        this.currentItemId, endLevel, baseItemPrice
+                    );
+                    this.strategies.guildBlacksmith = guildBlacksmith;
+                } catch (guildError) {
+                    console.warn('Hybrid guild calculation failed:', guildError);
+                    this.strategies.guildBlacksmith = null;
+                }
+            } else {
+                this.strategies.guildBlacksmith = null;
+            }
+
             if (this.config.enableDebugLogs) {
                 console.log('Optimal strategy:', optimal);
                 console.log('Custom strategy:', custom);
+                console.log('Guild blacksmith strategy:', this.strategies.guildBlacksmith);
             }
         } catch (error) {
             console.error('Strategy calculation error:', error);
             throw error;
+        }
+    }
+
+    /**
+     * Recalcule uniquement le scénario hybride forgeron de guilde
+     */
+    async recalculateGuildStrategy() {
+        if (!this.strategies.optimal) return;
+
+        const endLevel = this.configComponent.getEndLevel();
+
+        if (endLevel > 9) {
+            this.strategies.guildBlacksmith = null;
+            this.analysisComponent.setStrategies(this.strategies);
+            return;
+        }
+
+        this.uiState.showLoading(this.translator.t('calculating'));
+
+        try {
+            const baseItemPrice = this.dataService.getBaseItemPrice(this.currentItemId);
+            const guildBlacksmith = await this.strategyService.calculateHybridGuildStrategy(
+                this.currentItemId, endLevel, baseItemPrice
+            );
+
+            this.strategies.guildBlacksmith = guildBlacksmith;
+            this.analysisComponent.setStrategies(this.strategies);
+
+        } catch (error) {
+            console.error('Hybrid guild recalculation error:', error);
+        } finally {
+            this.uiState.hideLoading();
         }
     }
 

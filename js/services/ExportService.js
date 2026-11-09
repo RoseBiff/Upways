@@ -471,9 +471,6 @@ export class ExportService {
         return pathDisplay;
     }
 
-    /**
-     * Méthode optimisée pour créer le tableau des prix avec une présentation compacte et unifiée
-     */
     async createOptimizedPriceTable(strategy, currentItemId, startLevel, endLevel, dataService) {
         const container = document.createElement('div');
         container.style.cssText = `
@@ -555,26 +552,40 @@ export class ExportService {
         const allMaterials = new Map();
         const itemData = await dataService.getItemById(currentItemId);
 
-        // Parcourir uniquement les niveaux concernés par l'amélioration
-        for (let level = startLevel; level <= endLevel; level++) {
-            const levelData = itemData[level.toString()];
-            if (levelData?.materials) {
-                Object.entries(levelData.materials).forEach(([id, info]) => {
-                    if (!allMaterials.has(id)) {
-                        allMaterials.set(id, {
-                            id,
-                            name: dataService.getMaterialName(id),
-                            imgPath: dataService.getItemImagePath(id)
-                        });
-                    }
-                });
+        if (itemData) {
+            // Déterminer le niveau minimum potentiel (en cas de rétrogradation)
+            let minLevel = 1;
+
+            // Si le niveau de départ est > 0, on pourrait potentiellement rétrograder
+            // On prend tous les matériaux depuis le niveau 1 par sécurité
+            if (startLevel > 0) {
+                minLevel = 1;
+            }
+
+            // Parcourir tous les niveaux depuis minLevel jusqu'à endLevel
+            for (let level = minLevel; level <= endLevel; level++) {
+                const levelData = itemData[level.toString()];
+                if (levelData && levelData.materials) {
+                    Object.entries(levelData.materials).forEach(([id, info]) => {
+                        if (!allMaterials.has(id)) {
+                            allMaterials.set(id, {
+                                id: id,
+                                name: dataService.getMaterialName(id),
+                                imgPath: dataService.getItemImagePath(id)
+                            });
+                        }
+                    });
+                }
             }
         }
 
         // Trier par nom
-        const sortedMaterials = Array.from(allMaterials.values()).sort((a, b) => 
-            a.name.localeCompare(b.name)
-        );
+        const sortedMaterials = Array.from(allMaterials.values()).sort((a, b) => {
+            if (a.name && b.name) {
+                return a.name.localeCompare(b.name);
+            }
+            return 0;
+        });
 
         if (sortedMaterials.length > 0) {
             const materialsGrid = document.createElement('div');

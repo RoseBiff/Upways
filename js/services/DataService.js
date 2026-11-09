@@ -20,6 +20,9 @@ export class DataService {
         // Cache pour les noms de matériaux
         this.materialNamesCache = new Map();
         
+        // Forgeron de guilde (hybride) — prix par objet
+        this.baseItemPrices = {};
+
         // État de chargement
         this.dataLoaded = false;
         this.loadingPromise = null;
@@ -348,6 +351,35 @@ export class DataService {
     }
 
     /**
+     * Détermine le multiplicateur de coût yang du forgeron de guilde selon le type d'objet.
+     *
+     * Tarifs Metin2 :
+     *   Armes      (0–8 999)                    × 2,0
+     *   Armures    (11 000–12 999, 13 000–13 999 boucliers,
+     *               15 000–15 999 chaussures, 19 000–21 999,
+     *               23 000–23 999 gants)          × 1,5
+     *   Bijoux     (14 000–14 999 bracelets, 16 000–16 999 colliers,
+     *               17 000–17 999 boucles, 18 000–18 999 ceintures) × 2,5
+     *   Inconnu    (talismans, autres)            null
+     *
+     * @param {string|number} itemId
+     * @returns {{ multiplier: number|null, categoryKey: string }}
+     */
+    getGuildMultiplier(itemId) {
+        const id = parseInt(itemId);
+        if (id <  9000) return { multiplier: 2,    categoryKey: 'itemCategoryWeapon'  }; // armes
+        if (id < 11000) return { multiplier: 2.5,  categoryKey: 'itemCategoryJewelry' }; // talismans → bijoux
+        if (id < 14000) return { multiplier: 1.5,  categoryKey: 'itemCategoryArmor'   }; // armures + boucliers
+        if (id < 15000) return { multiplier: 2.5,  categoryKey: 'itemCategoryJewelry' }; // bracelets
+        if (id < 16000) return { multiplier: 1.5,  categoryKey: 'itemCategoryArmor'   }; // chaussures
+        if (id < 19000) return { multiplier: 2.5,  categoryKey: 'itemCategoryJewelry' }; // colliers, boucles d'oreilles, ceintures
+        if (id < 22000) return { multiplier: 1.5,  categoryKey: 'itemCategoryArmor'   }; // armures supplémentaires
+        if (id < 23000) return { multiplier: null,  categoryKey: 'itemCategoryUnknown' }; // divers → incompatible
+        if (id < 24000) return { multiplier: null,  categoryKey: 'itemCategoryUnknown' }; // gants → incompatible
+        return             { multiplier: null,  categoryKey: 'itemCategoryUnknown' };
+    }
+
+    /**
      * Obtient les probabilités pour un objet d'amélioration
      * IMPORTANT : Pierre magique et Parchemin de bénédiction utilisent TOUJOURS les taux de l'item
      */
@@ -377,6 +409,10 @@ export class DataService {
                 const settings = JSON.parse(saved);
                 this.upgradeCosts = settings.upgradeCosts || {};
                 this.materialCosts = settings.materialCosts || {};
+                // Support nouveau format (dict) et ancien format (scalaire, ignoré)
+                this.baseItemPrices = (settings.baseItemPrices && typeof settings.baseItemPrices === 'object')
+                    ? settings.baseItemPrices
+                    : {};
                 console.log('Settings loaded:', settings);
             } catch (e) {
                 console.error('Error loading settings:', e);
@@ -406,9 +442,22 @@ export class DataService {
     saveSettings() {
         const settings = {
             upgradeCosts: this.upgradeCosts,
-            materialCosts: this.materialCosts
+            materialCosts: this.materialCosts,
+            baseItemPrices: this.baseItemPrices
         };
         localStorage.setItem('upways-settings', JSON.stringify(settings));
+    }
+
+    /**
+     * Gestion du forgeron de guilde
+     */
+    updateBaseItemPrice(itemId, price) {
+        this.baseItemPrices[itemId] = parseFloat(price) || 0;
+        this.saveSettings();
+    }
+
+    getBaseItemPrice(itemId) {
+        return this.baseItemPrices[itemId] ?? 0;
     }
 
     /**
@@ -490,6 +539,7 @@ export class DataService {
      * Récupère le chemin de l'image d'un objet d'amélioration par son nom interne
      */
     getUpgradeItemImagePath(internalName) {
+        if (internalName === "Forgeron de guilde") return 'data/guild_blacksmith.png';
         const itemId = this.UPGRADE_ITEM_IDS[internalName];
         return itemId ? `data/item/${itemId}.png` : '';
     }

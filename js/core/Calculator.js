@@ -391,6 +391,9 @@ export class FindBestStrategy {
         return;
       }
 
+      // `level` est l'indice ABSOLU (0 = +0→+1, 3 = +3→+4, etc.)
+      // Le Parchemin de Guerre est éligible aux niveaux 0–3 (fixedRates de longueur 4).
+      // La Pierre magique est utilisable à partir du palier +4 (indice > 3).
       let baseItems = level <= 3 ? scrolls : scrollsAfter3;
       const filteredItems = this.filterDominatedItems(level, baseItems);
 

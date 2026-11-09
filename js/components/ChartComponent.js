@@ -2,6 +2,8 @@
  * Composant de gestion des graphiques - Version 8.2
  * Ajout du zoom interactif et amélioration de l'interactivité
  */
+import { formatCompactNumber, formatNumber } from '../utils/formatters.js';
+
 export class ChartComponent {
     constructor(translator) {
         this.translator = translator;
@@ -348,7 +350,16 @@ export class ChartComponent {
         
         this.currentMeanTrials = meanTrials;
         this.currentMedianTrials = medianTrials;
-        
+        this.isGuildStrategy = strategy.type === 'hybrid' && strategy.itemsMode === true;
+
+        // Mettre à jour le sous-titre selon le type de scénario
+        const subtitleEl = document.querySelector('.chart-subtitle');
+        if (subtitleEl) {
+            const key = this.isGuildStrategy ? 'chartSubtitleGuild' : 'chartSubtitle';
+            subtitleEl.textContent = this.translator.t(key);
+            subtitleEl.setAttribute('data-i18n', key);
+        }
+
         // Vérifier que les points sont valides
         if (!points || points.length === 0) {
             console.error('No valid points generated');
@@ -387,9 +398,11 @@ export class ChartComponent {
             return this.generateSimpleDistributionPoints(strategy);
         }
         
-        // IMPORTANT: Le nombre minimum de tentatives est le nombre de niveaux à franchir
-        const minTrialsRequired = (strategy.endLevel - strategy.startLevel);
-        
+        // Le minimum varie selon le mode :
+        // - mode objets (forgeron de guilde) : au moins 1 objet
+        // - mode tentatives (autres scénarios) : au moins (endLevel - startLevel) tentatives
+        const minTrialsRequired = strategy.minAttemptsForChart ?? (strategy.endLevel - strategy.startLevel);
+
         // Parcourir la distribution en commençant au minimum requis
         for (let i = minTrialsRequired; i < distribution.length; i++) {
             const pmf = distribution[i];
@@ -417,9 +430,9 @@ export class ChartComponent {
         const points = [];
         const totalTrials = strategy.totalTrials || 100;
         
-        // IMPORTANT: Le nombre minimum de tentatives est le nombre de niveaux à franchir
-        const minTrialsRequired = (strategy.endLevel - strategy.startLevel);
-        
+        // Le minimum varie selon le mode (cf. generateDistributionPoints)
+        const minTrialsRequired = strategy.minAttemptsForChart ?? (strategy.endLevel - strategy.startLevel);
+
         // Approximation avec une distribution normale-like
         const mean = Math.max(totalTrials, minTrialsRequired);
         const std = Math.sqrt(mean) * 2; // Approximation
@@ -592,8 +605,10 @@ export class ChartComponent {
             displayColors: false,
             callbacks: {
                 title: (context) => {
+                    const lang = this.translator?.getLanguage?.() || 'fr';
                     const trials = Math.round(context[0].parsed.x);
-                    return `${this.translator.t('xAxisLabel')}: ${trials}`;
+                    const labelKey = this.currentStrategy?.itemsMode ? 'xAxisLabelItems' : 'xAxisLabel';
+                    return `${this.translator.t(labelKey)}: ${formatNumber(trials, lang)}`;
                 },
                 label: (context) => {
                     const prob = context.parsed.y;
@@ -606,7 +621,8 @@ export class ChartComponent {
                     if (meanTrials && meanTrials > 0) {
                         const trials = Math.round(context.parsed.x);
                         const ratio = trials / meanTrials;
-                        return `(${(ratio * 100).toFixed(0)}% ${this.translator.t('avgTrials').toLowerCase()})`;
+                        const trialsKey = this.isGuildStrategy ? 'avgItemsShort' : 'avgTrials';
+                        return `(${(ratio * 100).toFixed(0)}% ${this.translator.t(trialsKey).toLowerCase()})`;
                     }
                     return '';
                 }
@@ -631,7 +647,7 @@ export class ChartComponent {
                 borderDash: [5, 5],
                 label: {
                     enabled: true,
-                    content: this.translator.t('avgTrials'),
+                    content: this.translator.t(this.isGuildStrategy ? 'avgItemsShort' : 'avgTrials'),
                     position: 'start',
                     backgroundColor: 'rgba(245, 158, 11, 0.8)',
                     color: 'white',
@@ -771,14 +787,24 @@ export class ChartComponent {
                 type: 'linear',
                 title: {
                     display: true,
-                    text: this.translator.t('xAxisLabel'),
+                    text: this.currentStrategy?.itemsMode
+                        ? this.translator.t('xAxisLabelItems')
+                        : this.translator.t('xAxisLabel'),
                     color: '#94a3b8',
                     font: { size: 14, weight: 'bold' }
                 },
                 ticks: {
-                    callback: (value) => Math.round(value),
+                    callback: (value) => {
+                        const lang = this.translator?.getLanguage?.() || 'fr';
+                        const rounded = Math.round(value);
+                        // Notation compacte au-delà de 10 000 pour éviter l'encombrement
+                        // (ex : +20+ ou mode items), sinon séparateur de milliers standard
+                        if (rounded >= 10000) return formatCompactNumber(rounded, lang);
+                        return formatNumber(rounded, lang);
+                    },
                     color: '#94a3b8',
-                    font: { size: 12 }
+                    font: { size: 12 },
+                    maxRotation: 0
                 },
                 grid: {
                     color: 'rgba(148, 163, 184, 0.1)',
@@ -831,14 +857,16 @@ export class ChartComponent {
         if (!this.chartLegend) return;
         
         // Pour la vue distribution, afficher des statistiques différentes
+        const isGuild = this.isGuildStrategy;
+        const avgTrialsKey = isGuild ? 'avgItemsShort' : 'avgTrials';
         if (!this.showCumulative) {
             const mode = this.findMode(points);
             const std = strategy.intervals?.total?.std || null;
-            
+
             this.chartLegend.innerHTML = `
                 <div class="legend-grid">
                     <div class="legend-item mean">
-                        <span class="legend-label">${this.translator.t('avgTrials')}:</span>
+                        <span class="legend-label">${this.translator.t(avgTrialsKey)}:</span>
                         <span class="legend-value">${Math.round(meanTrials)}</span>
                     </div>
                     ${medianTrials ? `
@@ -887,11 +915,11 @@ export class ChartComponent {
             keyPoints.push({ 
                 x: Math.round(meanTrials), 
                 label: `${Math.round((meanTrials / p.p50) * 50)}%`,
-                description: `(${this.translator.t('avgTrials')})`,
-                type: 'mean' 
+                description: `(${this.translator.t(avgTrialsKey)})`,
+                type: 'mean'
             });
-            
-            if (p.p95) keyPoints.push({ 
+
+            if (p.p95) keyPoints.push({
                 x: Math.round(p.p95), 
                 label: '95%',
                 description: `(${this.translator.t('percentile95')})`,
@@ -901,7 +929,7 @@ export class ChartComponent {
             // Fallback si pas de percentiles
             keyPoints.push(
                 { x: Math.round(meanTrials * 0.5), label: '50%', description: '', type: 'estimate' },
-                { x: Math.round(meanTrials), label: '100%', description: `(${this.translator.t('avgTrials')})`, type: 'mean' },
+                { x: Math.round(meanTrials), label: '100%', description: `(${this.translator.t(avgTrialsKey)})`, type: 'mean' },
                 { x: Math.round(meanTrials * 1.5), label: '150%', description: '', type: 'estimate' },
                 { x: Math.round(meanTrials * 2), label: '200%', description: '', type: 'estimate' }
             );
@@ -944,7 +972,7 @@ export class ChartComponent {
                             displayClass = 'median';
                             break;
                         case 'mean':
-                            displayLabel = this.translator.t('avgTrials');
+                            displayLabel = this.translator.t(avgTrialsKey);
                             displayClass = 'mean';
                             break;
                         default:

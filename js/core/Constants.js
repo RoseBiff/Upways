@@ -40,3 +40,11 @@ export const SCROLLS = {
 };
 
 export const SCROLL_LIMIT = 9;
+
+/**
+ * Version et date du moteur de calcul (affichées en footer).
+ * À mettre à jour lorsqu'une correction ou une amélioration mathématique est déployée
+ * (voir README pour l'historique).
+ */
+export const ENGINE_VERSION = '3.3.1';
+export const ENGINE_BUILD_DATE = '2026-04-16';

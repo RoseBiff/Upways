@@ -9,6 +9,26 @@
     <meta name="description" content="Calculez la meilleure stratégie pour améliorer vos objets dans Metin2. Économisez temps et yang avec Upways, l'optimiseur d'amélioration gratuit.">
     <meta name="keywords" content="metin2, upways, amélioration, upgrade, calculateur, optimiseur">
     <link rel="canonical" href="https://metin2upways.com">
+
+    <!-- Open Graph / Link preview (mis à jour dynamiquement selon ?lang=) -->
+    <meta property="og:type"        content="website">
+    <meta property="og:site_name"   content="Upways">
+    <meta property="og:url"         content="https://metin2upways.com">
+    <meta property="og:title"       content="Upways - Calculateur amélioration Metin2">
+    <meta property="og:description" content="Calculez la meilleure stratégie pour améliorer vos objets dans Metin2. Économisez temps et yang avec Upways, l'optimiseur d'amélioration gratuit.">
+    <meta property="og:image"       content="https://metin2upways.com/logo.svg">
+    <meta property="og:locale"      content="fr_FR">
+    <meta property="og:locale:alternate" content="en_US">
+    <meta property="og:locale:alternate" content="ro_RO">
+    <meta property="og:locale:alternate" content="tr_TR">
+    <meta property="og:locale:alternate" content="de_DE">
+
+    <!-- Twitter / X card -->
+    <meta name="twitter:card"        content="summary">
+    <meta name="twitter:site"        content="@metin2upways">
+    <meta name="twitter:title"       content="Upways - Calculateur amélioration Metin2">
+    <meta name="twitter:description" content="Calculez la meilleure stratégie pour améliorer vos objets dans Metin2. Économisez temps et yang avec Upways, l'optimiseur d'amélioration gratuit.">
+    <meta name="twitter:image"       content="https://metin2upways.com/logo.svg">
     
     <!-- Alternate languages -->
     <link rel="alternate" hreflang="fr" href="https://metin2upways.com/?lang=fr">
@@ -104,6 +124,13 @@
                     </div>
                 </div>
                 
+                <button class="icon-btn" id="tutorialReplayBtn" title="Revoir le tutoriel" data-i18n-title="tutorialReplayTitle">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+                        <line x1="12" y1="17" x2="12.01" y2="17"/>
+                    </svg>
+                </button>
                 <button class="icon-btn" id="resetBtn" title="Réinitialiser" data-i18n-title="resetTitle">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
@@ -130,9 +157,7 @@
         <!-- Onglet Configuration -->
         <section class="tab-content active" id="configTab">
 
-
-
-            <!-- Section de présentation et conseils -->
+            <!-- Section de présentation et conseils (en haut) -->
             <div class="welcome-section">
                 <div class="welcome-card">
                     <div class="welcome-header">
@@ -144,46 +169,213 @@
                             L'outil ultime pour optimiser vos améliorations dans Metin2
                         </p>
                     </div>
-                    
+
                     <div class="welcome-content">
                         <p class="welcome-description" data-i18n="welcomeDescription">
-                            Upways calcule mathématiquement la meilleure stratégie pour améliorer vos équipements. 
-                            Basé sur des milliers de données réelles, notre algorithme vous aide à économiser temps et yang 
+                            Upways calcule mathématiquement la meilleure stratégie pour améliorer vos équipements.
+                            Basé sur des milliers de données réelles, notre algorithme vous aide à économiser temps et yang
                             en trouvant le chemin optimal pour atteindre le niveau d'amélioration souhaité.
                         </p>
-                        
+
+                        <!-- Wizard de configuration -->
+                        <div class="wizard-container">
+                            <div class="wizard-timeline">
+                                <div class="wizard-step-dot active" data-step="1">
+                                    <div class="step-circle"><span class="step-num">1</span></div>
+                                    <span class="step-label" data-i18n="wizardStep1">Objet</span>
+                                </div>
+                                <div class="wizard-line"></div>
+                                <div class="wizard-step-dot" data-step="2">
+                                    <div class="step-circle"><span class="step-num">2</span></div>
+                                    <span class="step-label" data-i18n="wizardStep2">Niveau</span>
+                                </div>
+                                <div class="wizard-line"></div>
+                                <div class="wizard-step-dot" data-step="3">
+                                    <div class="step-circle"><span class="step-num">3</span></div>
+                                    <span class="step-label" data-i18n="wizardStep3">Prix</span>
+                                </div>
+                            </div>
+
+                            <div class="wizard-body">
+                                <!-- Étape 1 : Sélection de l'objet -->
+                                <div class="wizard-panel active" id="wizardStep1">
+                                    <div class="search-container">
+                                        <input type="text" id="objectSearch" class="search-input"
+                                            data-i18n-placeholder="searchPlaceholder"
+                                            placeholder="Rechercher un objet..."
+                                            autocomplete="off"
+                                            autocorrect="off"
+                                            autocapitalize="off"
+                                            spellcheck="false"
+                                            name="upways-object-search-no-history"
+                                            role="combobox"
+                                            aria-autocomplete="list">
+                                        <div class="search-results" id="searchResults" style="display:none;"></div>
+                                    </div>
+                                    <div class="selected-item" id="selectedItem" style="display:none;">
+                                        <img id="itemImage" class="item-image" src="" alt="">
+                                        <div class="item-info">
+                                            <span id="itemName" class="item-name"></span>
+                                        </div>
+                                    </div>
+                                    <div class="recent-items" id="recentItems" style="display:none;">
+                                        <h4 class="recent-title" data-i18n="recentItems">Objets récents</h4>
+                                        <div class="recent-items-list" id="recentItemsList"></div>
+                                    </div>
+                                    <div class="wizard-nav wizard-nav-right">
+                                        <button class="btn btn-primary" id="wizardNext1" disabled
+                                            data-i18n="next">Suivant</button>
+                                    </div>
+                                </div>
+
+                                <!-- Étape 2 : Sélection des niveaux -->
+                                <div class="wizard-panel" id="wizardStep2">
+                                    <div class="level-selectors-wizard">
+                                        <div class="level-selector-wizard">
+                                            <label data-i18n="fromLevel">De</label>
+                                            <select id="startLevel" class="level-select-large">
+                                                <option value="0">+0</option>
+                                                <option value="1">+1</option>
+                                                <option value="2">+2</option>
+                                                <option value="3">+3</option>
+                                                <option value="4">+4</option>
+                                                <option value="5">+5</option>
+                                                <option value="6">+6</option>
+                                                <option value="7">+7</option>
+                                                <option value="8">+8</option>
+                                            </select>
+                                        </div>
+                                        <div class="level-arrow-wizard">
+                                            <div class="wizard-arrow">
+                                                <div class="wizard-arrow-flow"></div>
+                                            </div>
+                                        </div>
+                                        <div class="level-selector-wizard">
+                                            <label data-i18n="toLevel">À</label>
+                                            <select id="endLevel" class="level-select-large">
+                                                <option value="1">+1</option>
+                                                <option value="2">+2</option>
+                                                <option value="3">+3</option>
+                                                <option value="4">+4</option>
+                                                <option value="5">+5</option>
+                                                <option value="6">+6</option>
+                                                <option value="7">+7</option>
+                                                <option value="8">+8</option>
+                                                <option value="9" selected>+9</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="wizard-nav wizard-nav-between">
+                                        <button class="btn btn-secondary" id="wizardPrev2"
+                                            data-i18n="back">Retour</button>
+                                        <button class="btn btn-primary" id="wizardNext2"
+                                            data-i18n="next">Suivant</button>
+                                    </div>
+                                </div>
+
+                                <!-- Étape 3 : Prix et lancement -->
+                                <div class="wizard-panel" id="wizardStep3">
+                                    <div>
+                                        <h4 class="config-section-title" data-i18n="upgradeItems">Objets d'amélioration</h4>
+                                        <div id="upgradeItemPrices"></div>
+                                    </div>
+
+                                    <div id="materialSection" style="display:none;">
+                                        <h4 class="config-section-title" data-i18n="materials">Matériaux</h4>
+                                        <div id="materialPrices"></div>
+                                    </div>
+
+                                    <div id="guildBlacksmithSection" class="guild-blacksmith-config" style="display:none;">
+                                        <div class="guild-toggle-row">
+                                            <span class="guild-section-title" data-i18n="guildBlacksmithSection">Forgeron de guilde</span>
+                                        </div>
+                                        <p class="guild-desc" data-i18n="guildBlacksmithDesc">
+                                            Démarre au forgeron de guilde (+10% de taux), bascule vers les parchemins dès que c'est plus rentable. L'objet peut être détruit. Disponible jusqu'à +9.
+                                        </p>
+                                        <div class="guild-price-row">
+                                            <div class="price-item">
+                                                <img id="guildItemIcon" class="price-icon" src="" alt="" style="display:none;">
+                                                <label class="guild-price-label" data-i18n="baseItemPrice">Prix de l'objet vierge +0</label>
+                                                <input type="number" id="baseItemPriceInput" class="price-input"
+                                                    value="0" min="0" step="0.1">
+                                                <span class="currency">M</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="wizard-nav wizard-nav-between">
+                                        <button class="btn btn-secondary" id="wizardPrev3"
+                                            data-i18n="back">Retour</button>
+                                        <button class="btn btn-primary btn-launch" id="analyzeBtn" disabled
+                                            data-i18n="runAnalysis">Lancer l'analyse</button>
+                                    </div>
+
+                                    <div class="config-actions">
+                                        <button class="btn btn-secondary btn-small" id="exportConfigBtn">
+                                            <svg class="btn-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                                <polyline points="7 10 12 15 17 10"/>
+                                                <line x1="12" y1="15" x2="12" y2="3"/>
+                                            </svg>
+                                            <span data-i18n="exportConfig">Exporter config</span>
+                                        </button>
+                                        <button class="btn btn-secondary btn-small" id="importConfigBtn">
+                                            <svg class="btn-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                                <polyline points="7 10 12 5 17 10"/>
+                                                <line x1="12" y1="3" x2="12" y2="15"/>
+                                            </svg>
+                                            <span data-i18n="importConfig">Importer config</span>
+                                        </button>
+                                        <input type="file" id="importConfigInput" accept=".json" style="display:none;">
+                                        <button class="btn btn-secondary btn-small" id="shareConfigBtn" data-i18n-title="shareConfigHint" title="">
+                                            <svg class="btn-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <circle cx="18" cy="5" r="3"/>
+                                                <circle cx="6" cy="12" r="3"/>
+                                                <circle cx="18" cy="19" r="3"/>
+                                                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+                                                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+                                            </svg>
+                                            <span data-i18n="shareConfig">Partager un lien</span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+
                         <div class="tips-container">
                             <h3 class="tips-title" data-i18n="tipsTitle">💡 Conseils d'utilisation</h3>
-                            
+
                             <div class="tips-grid">
                                 <div class="tip-card">
                                     <div class="tip-icon">📊</div>
                                     <div class="tip-content">
                                         <h4 data-i18n="tip1Title">Configurez vos prix</h4>
                                         <p data-i18n="tip1Text">
-                                            Entrez les prix actuels du marché pour obtenir une estimation précise du coût total. 
+                                            Entrez les prix actuels du marché pour obtenir une estimation précise du coût total.
                                             Les prix sont sauvegardés automatiquement.
                                         </p>
                                     </div>
                                 </div>
-                                
+
                                 <div class="tip-card">
                                     <div class="tip-icon">🎯</div>
                                     <div class="tip-content">
                                         <h4 data-i18n="tip2Title">Stratégie optimale vs personnalisée</h4>
                                         <p data-i18n="tip2Text">
-                                            La stratégie optimale minimise le coût moyen. La stratégie personnalisée 
+                                            La stratégie optimale minimise le coût moyen. La stratégie personnalisée
                                             vous permet d'ajuster selon vos préférences et ressources disponibles.
                                         </p>
                                     </div>
                                 </div>
-                                
+
                                 <div class="tip-card">
                                     <div class="tip-icon">📈</div>
                                     <div class="tip-content">
                                         <h4 data-i18n="tip3Title">Comprenez les intervalles</h4>
                                         <p data-i18n="tip3Text">
-                                            Les intervalles montrent la variation possible. 50% des joueurs réussissent 
+                                            Les intervalles montrent la variation possible. 50% des joueurs réussissent
                                             dans la médiane, 95% dans l'intervalle affiché.
                                         </p>
                                     </div>
@@ -194,141 +386,6 @@
                 </div>
             </div>
 
-
-
-            <div class="config-grid">
-                <!-- Sélection d'objet -->
-                <div class="config-section">
-                    <div class="section-card">
-                        <h2 class="section-title" data-i18n="selectItem">Sélection de l'objet</h2>
-                        
-                        <div class="search-container">
-                            <input type="text" id="objectSearch" class="search-input" 
-                                   placeholder="Rechercher un objet..." 
-                                   data-i18n-placeholder="searchPlaceholder">
-                            <div class="search-results" id="searchResults"></div>
-                        </div>
-
-                        <!-- Historique des objets récents -->
-                        <div class="recent-items" id="recentItems" style="display: none;">
-                            <h3 class="subsection-title" data-i18n="recentItems">Objets récents</h3>
-                            <div class="recent-items-list" id="recentItemsList"></div>
-                        </div>
-
-                        <div class="selected-item" id="selectedItem" style="display: none;">
-                            <img id="itemImage" class="item-image" src="" alt="">
-                            <div class="item-info">
-                                <h3 id="itemName" class="item-name"></h3>
-                                <span class="item-badge" data-i18n="selected">Sélectionné</span>
-                            </div>
-                        </div>
-
-                        <!-- Sélection des niveaux -->
-                        <div class="level-selection" id="levelSelection">
-                            <h3 class="subsection-title" data-i18n="upgradeLevels">Niveaux d'amélioration</h3>
-                            <div class="level-selectors">
-                                <div class="level-selector">
-                                    <label data-i18n="fromLevel">De</label>
-                                    <select id="startLevel" class="level-select">
-                                        <option value="0">+0</option>
-                                        <option value="1">+1</option>
-                                        <option value="2">+2</option>
-                                        <option value="3">+3</option>
-                                        <option value="4">+4</option>
-                                        <option value="5">+5</option>
-                                        <option value="6">+6</option>
-                                        <option value="7">+7</option>
-                                        <option value="8">+8</option>
-                                        <option value="9">+9</option>
-                                        <option value="10">+10</option>
-                                        <option value="11">+11</option>
-                                        <option value="12">+12</option>
-                                        <option value="13">+13</option>
-                                        <option value="14">+14</option>
-                                        <option value="15">+15</option>
-                                        <option value="16">+16</option>
-                                        <option value="17">+17</option>
-                                        <option value="18">+18</option>
-                                        <option value="19">+19</option>
-                                        <option value="20">+20</option>
-                                    </select>
-                                </div>
-                                <div class="level-arrow">→</div>
-                                <div class="level-selector">
-                                    <label data-i18n="toLevel">À</label>
-                                    <select id="endLevel" class="level-select">
-                                        <option value="1">+1</option>
-                                        <option value="2">+2</option>
-                                        <option value="3">+3</option>
-                                        <option value="4">+4</option>
-                                        <option value="5">+5</option>
-                                        <option value="6">+6</option>
-                                        <option value="7">+7</option>
-                                        <option value="8">+8</option>
-                                        <option value="9" selected>+9</option>
-                                        <option value="10">+10</option>
-                                        <option value="11">+11</option>
-                                        <option value="12">+12</option>
-                                        <option value="13">+13</option>
-                                        <option value="14">+14</option>
-                                        <option value="15">+15</option>
-                                        <option value="16">+16</option>
-                                        <option value="17">+17</option>
-                                        <option value="18">+18</option>
-                                        <option value="19">+19</option>
-                                        <option value="20">+20</option>
-                                        <option value="21">+21</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Configuration des prix -->
-                <div class="config-section">
-                    <div class="section-card">
-                        <h2 class="section-title" data-i18n="priceConfig">Configuration des prix</h2>
-                        
-                        <!-- Prix des objets d'amélioration -->
-                        <div class="price-section">
-                            <h3 class="subsection-title" data-i18n="upgradeItems">Objets d'amélioration</h3>
-                            <div class="price-grid" id="upgradeItemPrices">
-                                <!-- Généré dynamiquement -->
-                            </div>
-                        </div>
-
-                        <!-- Prix des matériaux -->
-                        <div class="price-section" id="materialSection" style="display: none;">
-                            <h3 class="subsection-title" data-i18n="materials">Matériaux</h3>
-                            <div class="price-grid" id="materialPrices">
-                                <!-- Généré dynamiquement -->
-                            </div>
-                        </div>
-                        
-                        <!-- Boutons d'import/export -->
-                        <div class="config-import-export">
-                            <button class="btn btn-secondary btn-small" id="exportConfigBtn">
-                                <span class="btn-icon">💾</span>
-                                <span data-i18n="exportConfig">Exporter config</span>
-                            </button>
-                            <button class="btn btn-secondary btn-small" id="importConfigBtn">
-                                <span class="btn-icon">📁</span>
-                                <span data-i18n="importConfig">Importer config</span>
-                            </button>
-                            <input type="file" id="importConfigInput" accept=".json" style="display: none;">
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Bouton d'analyse -->
-            <div class="config-actions">
-                <button class="btn btn-primary btn-large" id="analyzeBtn" disabled>
-                    <span class="btn-icon">🚀</span>
-                    <span data-i18n="runAnalysis">Lancer l'analyse</span>
-                </button>
-            </div>
         </section>
 
         <!-- Onglet Analyse -->
@@ -359,73 +416,137 @@
                         <span class="level-end">+9</span>
                     </div>
                 </div>
+                <div class="analysis-nav-wizard">
+                    <div class="analysis-nav-step" data-goto-step="1">
+                        <div class="step-circle"><span class="step-num">1</span></div>
+                        <span class="step-label" data-i18n="wizardStep1">Objet</span>
+                    </div>
+                    <div class="analysis-nav-line"></div>
+                    <div class="analysis-nav-step" data-goto-step="2">
+                        <div class="step-circle"><span class="step-num">2</span></div>
+                        <span class="step-label" data-i18n="wizardStep2">Niveau</span>
+                    </div>
+                    <div class="analysis-nav-line"></div>
+                    <div class="analysis-nav-step" data-goto-step="3">
+                        <div class="step-circle"><span class="step-num">3</span></div>
+                        <span class="step-label" data-i18n="wizardStep3">Prix</span>
+                    </div>
+                </div>
             </div>
 
-            <!-- Résumé des stratégies -->
-            <div class="strategies-summary">
-                <div class="strategy-card optimal" data-strategy="optimal">
-                    <div class="strategy-header">
-                        <span class="strategy-icon">⭐</span>
-                        <h3 data-i18n="optimal">Optimale</h3>
+            <!-- Panneau scénarios + chemin d'amélioration -->
+            <div class="scenarios-panel" id="scenariosPanel">
+
+                <!-- Cartes de sélection de scénario (côte à côte) -->
+                <div class="strategies-comparison" id="strategiesComparison">
+                    <div class="strategy-card active" data-tab="optimal" id="stratCard-optimal" role="button" tabindex="0">
+                        <span class="strategy-ear-left"></span>
+                        <span class="strategy-ear-right"></span>
+                        <div class="strategy-header">
+                            <span class="strategy-icon">⭐</span>
+                            <h3 data-i18n="optimal">Optimale</h3>
+                        </div>
+                        <div class="strategy-card-stats" id="cardStats-optimal"></div>
                     </div>
+                    <div class="strategy-card custom-tab" data-tab="custom" id="stratCard-custom" role="button" tabindex="0">
+                        <span class="strategy-ear-left"></span>
+                        <span class="strategy-ear-right"></span>
+                        <div class="strategy-header">
+                            <span class="strategy-icon">🎨</span>
+                            <h3 data-i18n="custom">Personnalisée</h3>
+                        </div>
+                        <div class="strategy-card-stats" id="cardStats-custom"></div>
+                    </div>
+                    <div class="strategy-card guild-tab" data-tab="guildBlacksmith" id="stratCard-guildBlacksmith" role="button" tabindex="0" style="display:none;">
+                        <span class="strategy-ear-left"></span>
+                        <span class="strategy-ear-right"></span>
+                        <div class="strategy-header">
+                            <span class="strategy-icon">🔨</span>
+                            <h3 data-i18n="guildBlacksmith">Forgeron de guilde</h3>
+                            <span class="tab-warning-icon" title=""></span>
+                        </div>
+                        <div class="strategy-card-stats" id="cardStats-guildBlacksmith"></div>
+                    </div>
+                    <!-- Fond glissant de l'onglet actif -->
+                    <div class="tab-slider" id="tabSlider"></div>
                 </div>
 
-                <div class="strategy-card" data-strategy="custom">
-                    <div class="strategy-header">
-                        <span class="strategy-icon">🎨</span>
-                        <h3 data-i18n="custom">Personnalisée</h3>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Détails de la stratégie sélectionnée -->
-            <div class="strategy-details" id="strategyDetails">
-                <!-- Chemin d'amélioration -->
-                <div class="detail-section">
-                    <h3 class="detail-title" data-i18n="upgradePath">Chemin d'amélioration</h3>
-                    <div id="upgradePath">
-                        <!-- Généré dynamiquement -->
-                    </div>
-                </div>
-
-                <!-- Détails en grille -->
-                <div class="detail-grid">
-                    <!-- Objets requis -->
-                    <div class="detail-card">
-                        <h4 data-i18n="requiredItems">Objets requis</h4>
-                        <div class="items-list" id="requiredItems">
-                            <!-- Généré dynamiquement -->
-                        </div>
-                    </div>
-
-                    <!-- Matériaux requis -->
-                    <div class="detail-card">
-                        <h4 data-i18n="requiredMaterials">Matériaux requis</h4>
-                        <div class="items-list" id="requiredMaterials">
-                            <!-- Généré dynamiquement -->
-                        </div>
-                    </div>
+                <!-- Onglets cachés (compatibilité interne) -->
+                <div class="scenario-tabs" id="scenarioTabs" style="display:none;">
+                    <button class="scenario-tab active" data-tab="optimal">
+                        <span class="tab-icon">⭐</span>
+                        <span class="tab-name" data-i18n="optimal">Optimale</span>
+                        <span class="tab-cost" id="tabCostOptimal"></span>
+                    </button>
+                    <button class="scenario-tab" data-tab="custom">
+                        <span class="tab-icon">🎨</span>
+                        <span class="tab-name" data-i18n="custom">Personnalisée</span>
+                        <span class="tab-cost" id="tabCostCustom"></span>
+                    </button>
+                    <button class="scenario-tab guild-tab" data-tab="guildBlacksmith" style="display:none;">
+                        <span class="tab-icon">🔨</span>
+                        <span class="tab-name" data-i18n="guildBlacksmith">Forgeron de guilde</span>
+                        <span class="tab-cost" id="tabCostGuild"></span>
+                    </button>
                 </div>
 
-                <!-- Graphique Tentatives vs Probabilité -->
-                <div class="chart-section">
-                    <div class="chart-header">
-                        <div>
-                            <h3 class="chart-title" data-i18n="chartTitle">Analyse de probabilité d'amélioration</h3>
-                            <p class="chart-subtitle" data-i18n="chartSubtitle">
-                                Evolution de la probabilité de succès selon le nombre de tentatives
-                            </p>
-                        </div>
-                        <div class="chart-controls">
-                            <!-- Le bouton de toggle sera ajouté ici dynamiquement -->
-                        </div>
+                <!-- Contenu des scénarios -->
+                <div class="scenario-pane active" id="pane-optimal">
+                    <div class="pane-stats-section">
+                        <div class="pane-stats"></div>
                     </div>
-                    <div class="chart-container">
-                        <canvas id="probabilityChart"></canvas>
+                    <div class="pane-path-section">
+                        <h3 class="detail-title" data-i18n="upgradePath">Chemin d'amélioration</h3>
+                        <div class="pane-path-header"></div>
+                        <div class="pane-path"></div>
                     </div>
-                    <div class="chart-legend" id="chartLegend">
-                        <!-- Généré dynamiquement -->
+                    <div class="pane-preparation"></div>
+                </div>
+
+                <div class="scenario-pane" id="pane-custom" style="display:none;">
+                    <div class="pane-stats-section">
+                        <div class="pane-stats"></div>
                     </div>
+                    <div class="pane-path-section">
+                        <h3 class="detail-title" data-i18n="upgradePath">Chemin d'amélioration</h3>
+                        <div class="pane-path-header"></div>
+                        <div class="pane-path"></div>
+                    </div>
+                    <div class="pane-preparation"></div>
+                </div>
+
+                <div class="scenario-pane" id="pane-guildBlacksmith" style="display:none;">
+                    <div class="pane-path-section">
+                        <h3 class="detail-title" data-i18n="upgradePath">Chemin d'amélioration</h3>
+                        <div class="pane-path-header"></div>
+                        <div class="pane-path"></div>
+                    </div>
+                    <div class="pane-preparation"></div>
+                </div>
+
+            </div><!-- /scenarios-panel -->
+
+            <!-- Graphique (commun à tous les onglets) -->
+            <div class="chart-section" id="strategyDetails">
+                <div class="chart-header">
+                    <div>
+                        <h3 class="chart-title" data-i18n="chartTitle">Analyse de probabilité d'amélioration</h3>
+                        <p class="chart-subtitle" data-i18n="chartSubtitle">
+                            Evolution de la probabilité de succès selon le nombre de tentatives
+                        </p>
+                    </div>
+                    <div class="chart-controls">
+                        <!-- Le bouton de toggle sera ajouté ici dynamiquement -->
+                    </div>
+                </div>
+                <div class="chart-stats" id="chartStatsContainer">
+                    <!-- Statistiques de distribution (générées dynamiquement) -->
+                </div>
+                <div class="chart-container">
+                    <canvas id="probabilityChart"></canvas>
+                </div>
+                <div class="chart-legend" id="chartLegend">
+                    <!-- Généré dynamiquement -->
                 </div>
             </div>
         </section>
@@ -435,6 +556,7 @@
     <footer class="footer">
         <p>Made by RoseBiff • EasyL • ArcMeurtrier</p>
         <p><a href="https://metin2upways.com" target="_blank">metin2upways.com</a></p>
+        <p class="footer-engine-info" id="engineInfo" title=""></p>
     </footer>
 
     <!-- Tooltip global -->
@@ -447,8 +569,72 @@
 
     <!-- Loading -->
     <div class="loading-overlay" id="loadingOverlay">
-        <div class="loading-spinner"></div>
-        <p data-i18n="calculating">Calcul en cours...</p>
+        <!-- Mode normal (changement de langue, recalcul) -->
+        <div class="loading-spinner loading-default-only"></div>
+        <p class="loading-default-only" data-i18n="calculating">Calcul en cours...</p>
+
+        <!-- Mode launch (lancement de l'analyse) -->
+        <div class="launch-visual">
+            <div class="launch-stars" id="launchStars"></div>
+            <div class="launch-rocket-anim">🚀</div>
+            <p class="launch-label" data-i18n="calculating">Calcul en cours...</p>
+            <div class="launch-dots">
+                <div class="launch-dot"></div>
+                <div class="launch-dot"></div>
+                <div class="launch-dot"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- G2 : Overlay du tutoriel premier lancement -->
+    <div class="tutorial-overlay" id="tutorialOverlay" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="tutorialBubbleTitle">
+        <!-- Voile sombre en 4 quadrants (cadre de spotlight ajustable) -->
+        <div class="tutorial-backdrop">
+            <div class="tutorial-backdrop-part tutorial-backdrop-top"></div>
+            <div class="tutorial-backdrop-part tutorial-backdrop-right"></div>
+            <div class="tutorial-backdrop-part tutorial-backdrop-bottom"></div>
+            <div class="tutorial-backdrop-part tutorial-backdrop-left"></div>
+        </div>
+        <!-- Anneau lumineux pulsant autour de la cible -->
+        <div class="tutorial-spotlight-ring" id="tutorialRing"></div>
+        <!-- Bulle d'info avec flèche -->
+        <div class="tutorial-bubble" id="tutorialBubble" role="document">
+            <div class="tutorial-bubble-arrow" id="tutorialBubbleArrow"></div>
+            <div class="tutorial-bubble-header">
+                <span class="tutorial-bubble-step" id="tutorialBubbleStep">1 / 8</span>
+                <h3 class="tutorial-bubble-title" id="tutorialBubbleTitle"></h3>
+            </div>
+            <div class="tutorial-bubble-body" id="tutorialBubbleBody"></div>
+            <div class="tutorial-bubble-wait-hint" id="tutorialBubbleWaitHint" hidden>
+                <span class="tutorial-wait-pulse" aria-hidden="true"></span>
+                <span class="tutorial-wait-text" id="tutorialBubbleWaitText"></span>
+            </div>
+            <div class="tutorial-bubble-progress">
+                <div class="tutorial-bubble-progress-bar" id="tutorialBubbleProgressBar"></div>
+            </div>
+            <div class="tutorial-bubble-footer">
+                <button type="button" class="tutorial-btn tutorial-btn-skip" id="tutorialSkipBtn" data-i18n="tutorialSkip">Passer</button>
+                <div class="tutorial-bubble-nav">
+                    <button type="button" class="tutorial-btn tutorial-btn-prev" id="tutorialPrevBtn" data-i18n="tutorialPrev">Précédent</button>
+                    <button type="button" class="tutorial-btn tutorial-btn-next" id="tutorialNextBtn" data-i18n="tutorialNext">Suivant</button>
+                </div>
+            </div>
+        </div>
+        <!-- Modal de bienvenue (étape 0, plein écran centré) -->
+        <div class="tutorial-welcome" id="tutorialWelcome">
+            <div class="tutorial-welcome-card">
+                <div class="tutorial-welcome-sparkles" aria-hidden="true">
+                    <span></span><span></span><span></span><span></span><span></span><span></span>
+                </div>
+                <div class="tutorial-welcome-icon" aria-hidden="true">🎯</div>
+                <h2 class="tutorial-welcome-title" id="tutorialWelcomeTitle" data-i18n="tutorialWelcomeTitle">Bienvenue sur Upways</h2>
+                <p class="tutorial-welcome-subtitle" id="tutorialWelcomeSubtitle" data-i18n="tutorialWelcomeSubtitle">Laissez-nous vous faire un tour rapide — moins de 60 secondes.</p>
+                <div class="tutorial-welcome-actions">
+                    <button type="button" class="tutorial-btn tutorial-btn-primary tutorial-btn-start" id="tutorialStartBtn" data-i18n="tutorialStart">Commencer le tour</button>
+                    <button type="button" class="tutorial-btn tutorial-btn-ghost" id="tutorialSkipWelcomeBtn" data-i18n="tutorialSkipWelcome">Plus tard</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Chargement du module principal avec type="module" -->

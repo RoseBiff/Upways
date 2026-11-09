@@ -442,6 +442,533 @@ export class StrategyService {
   }
 
   /**
+   * Calcule les tentatives individuelles attendues pour la phase guilde
+   * via la formule récursive correcte (destruction = retour à +0) :
+   *   E_k = (1 + (1 − P_k) × Σ_{i<k} E_i) / P_k
+   *   Total = Σ E_k
+   */
+  _computeGuildExpectedAttempts(cStar, guildRates) {
+    let total = 0;
+    for (let k = 0; k < cStar; k++) {
+      const P_k = guildRates[k] / 100;
+      const E_k = P_k >= 1 ? 1 : (1 + (1 - P_k) * total) / P_k;
+      total += E_k;
+    }
+    return total;
+  }
+
+  /**
+   * Construit la PMF exacte des tentatives individuelles pour la phase guilde.
+   * Modèle : chaque "run" d'item utilise 1 à cStar tentatives individuelles.
+   *   - Échec au palier k  → k+1 tentatives (niveaux 0..k, destruction au niveau k)
+   *   - Succès complet     → cStar tentatives exactement (1 par palier)
+   * On calcule la somme composée (compound distribution) via DP.
+   * maxT est calculé dynamiquement à partir des tentatives attendues pour couvrir la queue.
+   */
+  _buildGuildPhasePMF(cStar, guildRates, pReachGuild, pSuccessGuild) {
+    // Calcul de la moyenne via la formule récursive exacte pour dimensionner maxT correctement
+    const guildExpAttempts = this._computeGuildExpectedAttempts(cStar, guildRates);
+    // 20× la moyenne couvre largement le 99e percentile pour toutes les distributions pratiques
+    // On plafonne à 200 000 pour éviter les problèmes mémoire sur des objets extrêmement difficiles
+    const maxT = Math.min(
+      Math.max(cStar + 1, Math.ceil(guildExpAttempts * 20), 5000),
+      200000
+    );
+
+    const pmf  = new Float64Array(maxT + 1);
+
+    if (pSuccessGuild >= 1) {
+      // Taux 100% à tous les niveaux : exactement cStar tentatives garanties
+      if (cStar <= maxT) pmf[cStar] = 1;
+      return Array.from(pmf);
+    }
+
+    // PMF d'un run raté (conditionnel sur l'échec)
+    // P(run raté prend n=k+1 tentatives) = pReachGuild[k]*(1−rate_k)/(1−pSuccessGuild)
+    const qFail = 1 - pSuccessGuild;
+    const failPMF = new Float64Array(cStar + 1); // failPMF[1..cStar]
+    for (let k = 0; k < cStar; k++) {
+      const n = k + 1;
+      const p = pReachGuild[k] * (1 - guildRates[k] / 100);
+      failPMF[n] = p / qFail;
+    }
+
+    // DP : P(T=t) = Σ_{j=0}^{∞} P(N=j+1) * P(Σ_j_runs_ratés = t−cStar)
+    // où P(N=j+1) = qFail^j * pSuccessGuild
+    let failConv = new Float64Array(1);
+    failConv[0] = 1.0; // j=0 : somme vide = 0
+
+    for (let j = 0; ; j++) {
+      const pJ = Math.pow(qFail, j) * pSuccessGuild;
+      if (pJ < 1e-10) break;
+
+      // Contribution : j runs ratés + 1 réussi (=cStar tentatives)
+      for (let s = 0; s < failConv.length; s++) {
+        if (failConv[s] <= 0) continue;
+        const t = s + cStar;
+        if (t <= maxT) pmf[t] += pJ * failConv[s];
+      }
+
+      // Convoluer failConv avec failPMF pour j+1
+      const nextLen = failConv.length + cStar;
+      if (nextLen > maxT + 1) break;
+      const next = new Float64Array(nextLen);
+      for (let s = 0; s < failConv.length; s++) {
+        if (failConv[s] <= 0) continue;
+        for (let n = 1; n <= cStar; n++) {
+          if (failPMF[n] > 0 && s + n < nextLen) {
+            next[s + n] += failConv[s] * failPMF[n];
+          }
+        }
+      }
+      failConv = next;
+    }
+
+    return Array.from(pmf);
+  }
+
+  /**
+   * Convolution discrète de deux PMF (indexées depuis 0)
+   */
+  _convolveDistributions(pmf1, pmf2) {
+    const len1 = pmf1.length;
+    const len2 = pmf2.length;
+    const maxLen = Math.min(len1 + len2 - 1, 200001);
+    const result = new Float64Array(maxLen);
+
+    for (let i = 0; i < len1; i++) {
+      if (!pmf1[i] || pmf1[i] <= 0) continue;
+      for (let j = 0; j < len2; j++) {
+        if (!pmf2[j] || pmf2[j] <= 0) continue;
+        const idx = i + j;
+        if (idx < maxLen) result[idx] += pmf1[i] * pmf2[j];
+      }
+    }
+
+    return Array.from(result);
+  }
+
+  /**
+   * Calcule le scénario du forgeron de guilde
+   *
+   * Mécanisme : on part d'un objet +0, chaque échec détruit l'objet (on repart de +0).
+   * Taux = baseRate[k] + 10 (plafonné à 100), uniquement pour niveaux 0 → endLevel ≤ 9.
+   *
+   * Modèle mathématique :
+   *   p_k = min(100, baseRate[k] + 10) / 100
+   *   P_reach[k] = ∏(i=0..k-1) p_i  (prob d'atteindre le niveau k dans une tentative)
+   *   P_success = P_reach[endLevel]
+   *   E[coût par tentative] = B + ∑ P_reach[k] * otherCosts[k]
+   *   E[coût total] = (1 / P_success) * E[coût par tentative]
+   */
+  /**
+   * Calcule le scénario hybride forgeron de guilde + parchemins optimaux
+   *
+   * Principe : pour chaque niveau de basculement c (0 ≤ c ≤ endLevel),
+   *   - Phase 1 (guilde) : partir de +0, utiliser le forgeron de guilde jusqu'à +c
+   *     (taux base+10, destruction sur échec → modèle géométrique)
+   *   - Phase 2 (parchemins) : utiliser les parchemins optimaux de +c à +endLevel
+   *     (Chaîne de Markov, dégradation sur échec)
+   * On cherche c* = argmin( Cost_guilde(c) + Cost_parchemins(c) )
+   */
+  async calculateHybridGuildStrategy(itemId, endLevel, baseItemPrice) {
+    const itemData = await this.dataService.getItemById(itemId);
+    if (!itemData) throw new Error('Item not found');
+
+    const { scrollCosts, otherCosts, baseRates } = await this.prepareCosts(
+      itemData, Math.max(endLevel, SCROLL_LIMIT + 1)
+    );
+
+    // Multiplicateur du coût yang pour le forgeron de guilde (arme ×2, armure ×1,5, bijou ×2,5)
+    const guildMultiplierInfo = this.dataService.getGuildMultiplier(itemId);
+    const guildMultiplier     = guildMultiplierInfo?.multiplier ?? 1;
+
+    // Pré-calcul des coûts yang et matériaux par palier (en millions)
+    const yangCosts = new Array(endLevel).fill(0);
+    const matCosts  = new Array(endLevel).fill(0);
+    for (let k = 0; k < endLevel; k++) {
+      const ld    = itemData[(k + 1).toString()] || {};
+      yangCosts[k] = (ld.yang_cost || 0) / 1000000;
+      matCosts[k]  = await this.calculateMaterialCost(ld.materials || {});
+    }
+
+    // ----------------------------------------------------------------
+    // ACTIONS DISPONIBLES À CHAQUE PALIER
+    //
+    // type 'guild' : taux de base + 10 %, échec → objet détruit (retour +0)
+    // type 'retro' : taux du parchemin, échec → rétrogradation (k→k-1, min 0)
+    // type 'stay'  : taux de base, échec → reste au palier k (pierre magique)
+    // ----------------------------------------------------------------
+    const bsRates = SCROLLS[SCROLL_IDS.BLACKSMITH_MANUAL].fixedRates;
+    const dgRates = SCROLLS[SCROLL_IDS.DRAGON_GOD_SCROLL].fixedRates;
+    const wrRates = SCROLLS[SCROLL_IDS.WAR_SCROLL].fixedRates;
+
+    const actions = [
+      {
+        id:      'guild',
+        name:    'Forgeron de guilde',
+        getRate: k => Math.min(1, ((baseRates[k] || 0) + 10) / 100),
+        // Le yang est multiplié selon le type d'objet ; les matériaux sont inchangés
+        getCost: k => (yangCosts[k] * guildMultiplier) + (matCosts[k] || 0),
+        type:    'guild'
+      },
+      {
+        id:      SCROLL_IDS.WAR_SCROLL,
+        getRate: k => (k < wrRates.length && wrRates[k] > 0) ? wrRates[k] / 100 : -1,
+        getCost: k => (otherCosts[k] || 0) + (scrollCosts[SCROLL_IDS.WAR_SCROLL] || 0),
+        type:    'retro'
+      },
+      {
+        id:      SCROLL_IDS.BLACKSMITH_MANUAL,
+        getRate: k => k < bsRates.length ? bsRates[k] / 100 : -1,
+        getCost: k => (otherCosts[k] || 0) + (scrollCosts[SCROLL_IDS.BLACKSMITH_MANUAL] || 0),
+        type:    'retro'
+      },
+      {
+        id:      SCROLL_IDS.DRAGON_GOD_SCROLL,
+        getRate: k => k < dgRates.length ? dgRates[k] / 100 : -1,
+        getCost: k => (otherCosts[k] || 0) + (scrollCosts[SCROLL_IDS.DRAGON_GOD_SCROLL] || 0),
+        type:    'retro'
+      },
+      {
+        id:      SCROLL_IDS.BLESSING_SCROLL,
+        getRate: k => Math.max(0.001, (baseRates[k] || 0)) / 100,
+        getCost: k => (otherCosts[k] || 0) + (scrollCosts[SCROLL_IDS.BLESSING_SCROLL] || 0),
+        type:    'retro'
+      },
+      {
+        id:      SCROLL_IDS.MAGIC_STONE,
+        getRate: k => Math.max(0.001, (baseRates[k] || 0)) / 100,
+        getCost: k => (otherCosts[k] || 0) + (scrollCosts[SCROLL_IDS.MAGIC_STONE] || 0),
+        type:    'stay'
+      }
+    ];
+
+    // ----------------------------------------------------------------
+    // ITÉRATION DE VALEUR (équations de Bellman)
+    //
+    // V[k] = coût total espéré optimal pour aller du palier k au palier
+    //        cible, en ayant déjà l'objet au palier k.
+    //
+    // Formules par type d'action :
+    //   guild : V[k] = c + p·V[k+1] + (1−p)·(I + V[0])
+    //   retro : V[k] = c + p·V[k+1] + (1−p)·V[max(0,k−1)]
+    //           → cas k=0 : forme fermée V[0] = c/p + V[1]
+    //   stay  : V[k] = c/p + V[k+1]  (forme fermée)
+    //
+    // On itère jusqu'à convergence (garanti car toutes les proba > 0).
+    // ----------------------------------------------------------------
+    const EPS      = 1e-9;
+    const MAX_ITER = 10000;
+
+    const V      = new Array(endLevel + 1).fill(1e12);
+    const policy = new Array(endLevel).fill(null);
+    V[endLevel]  = 0;
+
+    for (let iter = 0; iter < MAX_ITER; iter++) {
+      let maxChange = 0;
+
+      // Itération de Gauss-Seidel : k décroissant pour exploiter V[k+1] à jour
+      for (let k = endLevel - 1; k >= 0; k--) {
+        let bestQ = Infinity, bestAction = null;
+
+        for (const action of actions) {
+          const p = action.getRate(k);
+          if (p < 0) continue; // indisponible
+
+          const c = action.getCost(k);
+          let Q;
+
+          if (action.type === 'guild') {
+            Q = c + p * V[k + 1] + (1 - p) * (baseItemPrice + V[0]);
+          } else if (action.type === 'stay') {
+            // pierre magique : forme fermée (p > 0 garanti)
+            Q = c / p + V[k + 1];
+          } else {
+            // retro : cas k=0 spécial (rétrogradation reste à 0 → même que stay)
+            Q = k === 0
+              ? c / p + V[k + 1]
+              : c + p * V[k + 1] + (1 - p) * V[k - 1];
+          }
+
+          if (Q < bestQ) { bestQ = Q; bestAction = action; }
+        }
+
+        maxChange   = Math.max(maxChange, Math.abs(V[k] - bestQ));
+        V[k]        = bestQ;
+        policy[k]   = bestAction;
+      }
+
+      if (maxChange < EPS) break;
+    }
+
+    // Coût total espéré = objet initial + V[0] (V[0] inclut déjà le coût des
+    // objets de remplacement en cas de destruction au forgeron de guilde)
+    const totalCost = baseItemPrice + V[0];
+
+    // ----------------------------------------------------------------
+    // PROBABILITÉ DE SUCCÈS PAR OBJET : q = r[0]
+    //
+    // r[k] = probabilité que l'objet COURANT (sans en racheter un neuf)
+    //        parvienne jusqu'au palier cible depuis le palier k.
+    //
+    //   guild : r[k] = p · r[k+1]                     (échec = destruction)
+    //   retro : r[k] = p·r[k+1] + (1−p)·r[max(0,k−1)]
+    //           → cas k=0 : r[0] = r[1]  (forme fermée)
+    //   stay  : r[k] = r[k+1]                          (réussite certaine à terme)
+    //
+    // Le nombre d'objets consommés suit alors une loi géométrique de paramètre q.
+    // ----------------------------------------------------------------
+    const r     = new Array(endLevel + 1).fill(0);
+    r[endLevel] = 1;
+
+    for (let iter = 0; iter < MAX_ITER; iter++) {
+      let maxChange = 0;
+      for (let k = endLevel - 1; k >= 0; k--) {
+        const action = policy[k];
+        if (!action) { r[k] = 0; continue; }
+        const p = action.getRate(k);
+        let newR;
+
+        if (action.type === 'guild') {
+          newR = p * r[k + 1];
+        } else if (action.type === 'stay') {
+          newR = r[k + 1];
+        } else {
+          newR = k === 0 ? r[1] : p * r[k + 1] + (1 - p) * r[k - 1];
+        }
+
+        maxChange = Math.max(maxChange, Math.abs(r[k] - newR));
+        r[k]      = newR;
+      }
+      if (maxChange < EPS) break;
+    }
+
+    const hasGuild = policy.some(a => a?.type === 'guild');
+    // Sans forgeron de guilde, l'objet n'est jamais détruit → q = 1
+    const q = hasGuild ? Math.max(0, Math.min(1, r[0])) : 1;
+
+    // ----------------------------------------------------------------
+    // TENTATIVES ESPÉRÉES PAR PALIER (système linéaire couplé)
+    //
+    // n_k = nombre espéré de tentatives au palier k par objet acheté,
+    //       en suivant la politique policy[], depuis l'état +0.
+    //
+    // Formulation A · n = b, avec b_0 = 1, b_{k>0} = 0 :
+    //
+    //   diag[k] = p_k   si 'stay' ou ('retro' et k==0)  (boucle interne)
+    //           = 1     sinon
+    //   A[k][k-1] = −p_{k-1}                            (succès k-1 → k)
+    //   A[k][k+1] = −(1−p_{k+1})  si 'retro' et k+1>0  (rétrogradation k+1 → k)
+    //
+    // Résolution : élimination de Gauss–Jordan avec pivot partiel.
+    //
+    // Seuls les paliers 'retro' utilisent ce résultat ; 'stay' a 1/p comme
+    // forme fermée exacte, et 'guild' est géré via guildReach dans
+    // displayRequiredMaterials.
+    // ----------------------------------------------------------------
+    const geoMeanEarly = q > 0 ? 1 / q : Infinity;
+    const visitsSolved = new Array(endLevel).fill(0);
+    if (endLevel > 0) {
+      const N = endLevel;
+      // Matrice augmentée [A | b], taille N × (N+1)
+      const aug = Array.from({ length: N }, () => new Array(N + 1).fill(0));
+
+      for (let k = 0; k < N; k++) {
+        const act = policy[k];
+        if (!act) { aug[k][k] = 1; continue; }
+        const p_k = act.getRate(k);
+
+        // Terme diagonal : p_k si boucle interne, 1 sinon
+        aug[k][k] = (act.type === 'stay' || (act.type === 'retro' && k === 0)) ? p_k : 1;
+
+        // Contribution de n_{k-1} via succès au palier k-1
+        if (k > 0 && policy[k - 1]) {
+          aug[k][k - 1] = -policy[k - 1].getRate(k - 1);
+        }
+
+        // Contribution de n_{k+1} via rétrogradation au palier k+1 → k
+        if (k + 1 < N && policy[k + 1] && policy[k + 1].type === 'retro' && (k + 1) > 0) {
+          aug[k][k + 1] = -(1 - policy[k + 1].getRate(k + 1));
+        }
+
+        // Second membre
+        aug[k][N] = k === 0 ? 1 : 0;
+      }
+
+      // Élimination de Gauss–Jordan avec pivot partiel
+      for (let col = 0; col < N; col++) {
+        // Chercher la ligne de pivot
+        let pivot = col;
+        for (let row = col + 1; row < N; row++) {
+          if (Math.abs(aug[row][col]) > Math.abs(aug[pivot][col])) pivot = row;
+        }
+        [aug[col], aug[pivot]] = [aug[pivot], aug[col]];
+
+        if (Math.abs(aug[col][col]) < 1e-12) continue;
+
+        // Réduire toutes les autres lignes
+        for (let row = 0; row < N; row++) {
+          if (row === col || Math.abs(aug[row][col]) < 1e-15) continue;
+          const f = aug[row][col] / aug[col][col];
+          for (let c = col; c <= N; c++) aug[row][c] -= f * aug[col][c];
+        }
+      }
+
+      // Extraire la solution
+      for (let k = 0; k < N; k++) {
+        if (Math.abs(aug[k][k]) > 1e-12) {
+          visitsSolved[k] = Math.max(0, aug[k][N] / aug[k][k]);
+        }
+      }
+    }
+
+    // ----------------------------------------------------------------
+    // CONSTRUCTION DU CHEMIN
+    // ----------------------------------------------------------------
+    const path              = [];
+    const fullPath          = [];
+    const waypoints         = [];
+    const extendedWaypoints = new Array(endLevel).fill(0);
+
+    for (let k = 0; k < endLevel; k++) {
+      const action = policy[k];
+      if (!action) continue;
+
+      const p       = action.getRate(k);
+      const pPct    = Math.round(p * 1000) / 10;  // pourcentage, 1 décimale
+      const yangRaw = (itemData[(k + 1).toString()] || {}).yang_cost || 0;
+      const matC    = matCosts[k];
+      const upgC    = action.type === 'guild' ? 0 : (scrollCosts[action.id] || 0);
+      // Pour le forgeron de guilde, appliquer le multiplicateur au yang
+      const yangForDisplay = action.type === 'guild' ? yangCosts[k] * guildMultiplier : yangCosts[k];
+      const totalLvl = yangForDisplay + matC + upgC;
+
+      // Waypoint : nombre de tentatives attendues à ce palier sur l'ensemble de la stratégie.
+      // - guild : 1 par objet (guildReach × expectedItems dans displayRequiredMaterials gère la mise à l'échelle)
+      // - stay  : 1/p (forme fermée exacte, pas de couplage inter-paliers)
+      // - retro : visitsSolved[k] × (1/q), issu du système linéaire couplé de la chaîne de Markov
+      const wp = action.type === 'guild' ? 1
+               : action.type === 'stay'  ? (p > 0 ? 1 / p : 1)
+               : /* retro */ (visitsSolved[k] > 0 && isFinite(geoMeanEarly)
+                   ? visitsSolved[k] * geoMeanEarly
+                   : (p > 0 ? 1 / p : 1));
+
+      const internalName = action.type === 'guild'
+        ? 'Forgeron de guilde'
+        : (this.dataService.idToInternalName?.[action.id] || String(action.id));
+
+      fullPath.push(internalName);
+      waypoints.push(wp);
+      extendedWaypoints[k] = wp;
+
+      path.push({
+        level:              k + 1,
+        name:               internalName,
+        rate:               pPct,
+        noDowngrade:        action.type !== 'retro',
+        expectedTrials:     wp,
+        yangCost:           yangRaw,
+        yangCostInMillions: yangForDisplay,
+        materialCost:       matC,
+        upgradeCost:        upgC,
+        totalCost:          totalLvl
+      });
+    }
+
+    // ----------------------------------------------------------------
+    // DISTRIBUTION GÉOMÉTRIQUE (nombre d'objets consommés)
+    //
+    // Si le forgeron de guilde est utilisé : chaque objet réussit avec
+    // probabilité q (indépendamment). Nombre d'objets ~ Géométrique(q).
+    //
+    // Si aucun palier n'utilise le forgeron : q = 1, l'objet ne peut pas
+    // être détruit → on retombe sur la stratégie parchemins pure.
+    // ----------------------------------------------------------------
+    if (!hasGuild) {
+      // Aucune destruction possible → résultat parchemins pur
+      const finder   = new FindBestStrategy(0, endLevel, scrollCosts, otherCosts, baseRates);
+      const strat    = finder.findBest();
+      const calc     = new Calculator(strat);
+      const fallback = await this.formatResult(strat, calc, itemData, 0, endLevel, 'hybrid-scroll');
+      return { ...fallback, type: 'hybrid' };
+    }
+
+    const geoPct = (pct) => {
+      if (q >= 1) return 1;
+      if (pct <= 0) return 1;
+      if (pct >= 100) return Infinity;
+      return Math.ceil(Math.log(1 - pct / 100) / Math.log(1 - q));
+    };
+
+    const geoDistrib = [0];
+    const geoCdfArr  = [{ x: 0, y: 0 }];
+    let cumul = 0;
+    for (let n = 1; cumul < 0.9999 && n <= 500000; n++) {
+      const pmf = Math.pow(1 - q, n - 1) * q;
+      geoDistrib.push(pmf);
+      cumul += pmf;
+      geoCdfArr.push({ x: n, y: cumul * 100 });
+    }
+
+    const geoMean = q > 0 ? 1 / q : Infinity;
+    const geoStd  = q > 0 ? Math.sqrt(1 - q) / q : Infinity;
+
+    const itemsIntervals = {
+      mean: geoMean,
+      std:  geoStd,
+      ci95: { lower: geoPct(5), upper: geoPct(95) },
+      percentiles: {
+        p5:  geoPct(5),
+        p25: geoPct(25),
+        p50: geoPct(50),
+        p75: geoPct(75),
+        p95: geoPct(95)
+      }
+    };
+
+    const byLevelIntervals = waypoints.map(mean => ({
+      mean,
+      std:  Math.sqrt(mean),
+      ci95: { lower: Math.max(0, mean - 1.96 * Math.sqrt(mean)), upper: mean + 1.96 * Math.sqrt(mean) }
+    }));
+
+    console.log('MDP Guild strategy résultat:', {
+      q:             (q * 100).toFixed(4) + ' %',
+      expectedItems: geoMean.toFixed(2),
+      p50:           geoPct(50) + ' objets',
+      p95:           geoPct(95) + ' objets',
+      totalCost:     totalCost.toFixed(2) + ' M',
+      policy:        policy.map((a, k) => `+${k}→+${k + 1}: ${a?.id === 'guild' ? 'Guilde' : a?.id}`)
+    });
+
+    return {
+      type:               'hybrid',
+      startLevel:         0,
+      endLevel,
+      baseItemPrice,
+      path,
+      fullPath,
+      waypoints,
+      extendedWaypoints,
+      totalTrials:        geoMean,
+      pSuccessGuild:      q,
+      itemsMode:          true,
+      minAttemptsForChart: 1,
+      totalCost,
+      expectedItems:      geoMean,
+      distribution:       geoDistrib,
+      intervals: {
+        total:   itemsIntervals,
+        byLevel: byLevelIntervals
+      },
+      riskLevel:          this.calculateRiskLevel(geoStd / geoMean),
+      guildMultiplierInfo,
+      calculateTrialsProbabilities: () => geoCdfArr
+    };
+  }
+
+  /**
    * Calcule le coût des matériaux
    */
   async calculateMaterialCost(materials) {
