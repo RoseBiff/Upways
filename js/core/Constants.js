@@ -54,7 +54,7 @@ export const ENGINE_BUILD_DATE = '2026-04-16';
  * son « Website ID » puis mettre en ligne. Voir README > Mesure d'audience.
  */
 export const ANALYTICS = {
-    websiteId: '',                                   // ← identifiant du site Umami
+    websiteId: '5b0525cd-90e3-4541-81cf-edbd1d846a94', // identifiant du site Umami (public, visible dans la page)
     scriptUrl: 'https://cloud.umami.is/script.js',
     domains: 'metin2upways.com,www.metin2upways.com' // les visites en local ne sont pas comptées
 };
