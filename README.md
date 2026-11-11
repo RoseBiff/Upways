@@ -62,8 +62,13 @@ Deux outils gratuits, sans cookies, complémentaires :
 
 ## Mise en ligne
 
-Le dossier contient maintenant un historique Git (`.git/`) : **ne pas l'envoyer** sur l'hébergement
-(il contient tout l'historique du code). `tests/` et ce README peuvent partir sans risque.
+Automatique : chaque `git push` sur `main` déclenche Cloudflare (Workers Builds), qui lance les tests
+(`node --test`) puis publie le site (`npx wrangler deploy`). Si un test échoue, rien ne part en ligne.
+Suivi : Cloudflare → Workers & Pages → le Worker → Deployments, et une coche verte ou une croix rouge
+à côté du commit sur GitHub.
+
+- `wrangler.jsonc` : nom du Worker (identique à celui du tableau de bord) et dossier publié.
+- `.assetsignore` : ce qui n'est pas publié (tests, README, fichiers Git, pense-bête…).
 
 ## Historique
 

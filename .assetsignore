@@ -1,0 +1,20 @@
+# Fichiers du dépôt qui ne sont PAS publiés sur metin2upways.com (même syntaxe que .gitignore)
+
+# Git et configuration
+.git
+.github
+.gitignore
+.assetsignore
+.wrangler
+node_modules
+wrangler.jsonc
+
+# Développement
+tests
+README.md
+
+# Fichiers personnels et système
+Comment ALLUMER le site.txt
+desktop.ini
+Thumbs.db
+.DS_Store

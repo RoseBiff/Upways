@@ -10,3 +10,6 @@ Thumbs.db
 
 # Pense-bête local (reste sur le PC, pas sur GitHub)
 Comment ALLUMER le site.txt
+
+# Dossier temporaire de Wrangler (outil Cloudflare)
+.wrangler/
