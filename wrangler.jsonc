@@ -2,7 +2,7 @@
 // Cloudflare lance « node --test » puis « npx wrangler deploy » avec ce fichier.
 {
   // Doit être EXACTEMENT le nom du Worker dans Cloudflare (Workers & Pages)
-  "name": "upways",
+  "name": "metin2upways",
   "compatibility_date": "2026-11-11",
   "assets": {
     // Le site, c'est le dossier du dépôt ; .assetsignore liste ce qui n'est pas publié
