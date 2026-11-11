@@ -989,8 +989,7 @@ body {
     transform: translateY(-50%);
     border-radius: 2px;
     box-shadow: 0 0 10px rgba(99, 102, 241, 0.3);
-    background-size: 200% 100%;
-    animation: shimmer-line 3s linear infinite;
+    /* Pas de reflet animé : il redessinait les cartes de stratégie en continu */
 }
 
 .strategy-card.active .interval-line {
@@ -4134,7 +4133,10 @@ select:focus-visible {
     width: 200%;
     height: 200%;
     background: radial-gradient(circle, rgba(var(--primary-rgb), 0.05) 0%, transparent 70%);
-    animation: pulse-glow 8s ease-in-out infinite alternate;
+    /* Lueur fixe : animée, elle occupait le processeur en continu (≈ 30 % d'un cœur)
+       pour une variation imperceptible */
+    opacity: 0.45;
+    transform: scale(1.05);
     pointer-events: none;
 }
 
@@ -6748,8 +6750,8 @@ html:not(:hover) .path-step:hover {
     position: absolute;
     pointer-events: none;
     background: rgba(10, 14, 24, 0.48);
-    backdrop-filter: blur(0.8px);
-    -webkit-backdrop-filter: blur(0.8px);
+    /* Pas de backdrop-filter : un flou sur tout l'écran (même de 0,8 px, invisible)
+       faisait tomber le tutoriel à ~20 images/s */
     transition: top 380ms cubic-bezier(0.4, 0, 0.2, 1),
                 left 380ms cubic-bezier(0.4, 0, 0.2, 1),
                 width 380ms cubic-bezier(0.4, 0, 0.2, 1),
