@@ -69,6 +69,9 @@ Suivi : Cloudflare → Workers & Pages → le Worker → Deployments, et une coc
 
 - `wrangler.jsonc` : nom du Worker (identique à celui du tableau de bord) et dossier publié.
 - `.assetsignore` : ce qui n'est pas publié (tests, README, fichiers Git, pense-bête…).
+- `scripts/stamp-date.mjs` : lancé à chaque mise en ligne, il écrit la date du jour dans le pied de
+  page (« Site mis à jour le… ») et dans `sitemap.xml`. La date du moteur de calcul
+  (`ENGINE_BUILD_DATE`, `js/core/Constants.js`) ne change qu'à la main, quand les calculs changent.
 
 ## Historique
 

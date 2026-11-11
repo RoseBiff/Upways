@@ -11,6 +11,7 @@ wrangler.jsonc
 
 # Développement
 tests
+scripts
 README.md
 
 # Fichiers personnels et système

@@ -20,6 +20,7 @@ import { Calculator } from './core/Calculator.js';
 import { Strategy } from './core/Strategy.js';
 import { FindBestStrategy } from './core/Calculator.js';
 import { ENGINE_VERSION, ENGINE_BUILD_DATE } from './core/Constants.js';
+import { SITE_UPDATED } from './core/build-info.js';
 
 /**
  * Application principale Upways - Version 3.0 avec nouvelles mécaniques
@@ -451,14 +452,18 @@ class UpwaysApp {
         const el = document.getElementById('engineInfo');
         if (!el) return;
         const lang = this.translator.getLanguage();
-        const label = this.translator.t('engineLabel');
-        const updatedOn = this.translator.t('engineUpdatedOn');
         // Date formatée selon la locale (ex : "16 avril 2026" / "April 16, 2026")
-        const formattedDate = new Date(ENGINE_BUILD_DATE + 'T00:00:00').toLocaleDateString(lang, {
+        const fmt = (iso) => new Date(iso + 'T00:00:00').toLocaleDateString(lang, {
             year: 'numeric', month: 'long', day: 'numeric'
         });
-        el.textContent = `${label} v${ENGINE_VERSION} · ${updatedOn} ${formattedDate}`;
-        el.title = `Build ${ENGINE_BUILD_DATE}`;
+        const engine = `${this.translator.t('engineLabel')} v${ENGINE_VERSION}`;
+        const engineDate = `${this.translator.t('engineUpdatedOn')} ${fmt(ENGINE_BUILD_DATE)}`;
+        // En ligne : date de la dernière mise en ligne (écrite au déploiement) ;
+        // la date du moteur de calcul reste au survol. En local : date du moteur.
+        el.textContent = SITE_UPDATED
+            ? `${this.translator.t('siteUpdatedOn')} ${fmt(SITE_UPDATED)} · ${engine}`
+            : `${engine} · ${engineDate}`;
+        el.title = `${engine} · ${engineDate}`;
     }
 
     switchTab(tab) {

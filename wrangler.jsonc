@@ -4,6 +4,8 @@
   // Doit être EXACTEMENT le nom du Worker dans Cloudflare (Workers & Pages)
   "name": "metin2upways",
   "compatibility_date": "2026-11-11",
+  // Avant chaque mise en ligne : date du jour dans le pied de page et le sitemap
+  "build": { "command": "node scripts/stamp-date.mjs" },
   "assets": {
     // Le site, c'est le dossier du dépôt ; .assetsignore liste ce qui n'est pas publié
     "directory": "."
