@@ -223,6 +223,17 @@ class UpwaysApp {
         // Reset
         document.getElementById('resetBtn').addEventListener('click', () => this.resetAll());
 
+        // Bandeau « prix manquants » → retour à l'étape Prix, sur le premier champ vide
+        document.getElementById('priceReminderBtn')?.addEventListener('click', () => {
+            this.analytics.track('rappel prix', { prix: this._lastPriceState?.etat || 'inconnu' });
+            this.switchTab('config');
+            this.configComponent.goToStep(3, true);
+            setTimeout(() => {
+                const first = this.configComponent.getPriceFillState().empty[0];
+                if (first) { first.focus(); first.select?.(); }
+            }, 350);
+        });
+
         // Raccourcis navigation analyse → config
         document.querySelectorAll('.analysis-nav-step[data-goto-step]').forEach(dot => {
             dot.addEventListener('click', () => {
@@ -422,6 +433,7 @@ class UpwaysApp {
 
     updateLanguage() {
         const lang = this.translator.getLanguage();
+        this._renderPriceReminder();
         
         // Mettre à jour l'URL
         const url = new URL(window.location);
@@ -582,6 +594,8 @@ class UpwaysApp {
                 prix_source: prices.remplis === 0 ? 'aucun'
                     : (this.pricesEditedThisSession ? 'saisis' : 'memorises')
             });
+            this._lastPriceState = prices;
+            this._renderPriceReminder();
 
             const elapsedTime = Date.now() - startTime;
             if (this.config.enableDebugLogs) {
@@ -604,14 +618,28 @@ class UpwaysApp {
      * Compte les champs de l'étape « Prix » : objets d'amélioration + matériaux affichés.
      */
     _priceSnapshot() {
-        const inputs = [
-            ...document.querySelectorAll('#upgradeItemPrices .price-input:not(.moonlight-price)'),
-            ...document.querySelectorAll('#materialSection:not([style*="none"]) #materialPrices .price-input')
-        ];
-        const total = inputs.length;
-        const remplis = inputs.filter(i => (parseFloat(i.value) || 0) > 0).length;
-        const etat = remplis === 0 ? 'aucun' : (remplis === total ? 'complet' : 'partiel');
+        const { etat, remplis, total } = this.configComponent.getPriceFillState();
         return { etat, remplis, total };
+    }
+
+    /**
+     * Bandeau sur les résultats quand des prix manquent (le coût est alors sous-estimé).
+     */
+    _renderPriceReminder() {
+        const box = document.getElementById('priceReminder');
+        const text = document.getElementById('priceReminderText');
+        if (!box || !text) return;
+        const s = this._lastPriceState;
+        if (!s || s.total === 0 || s.etat === 'complet') {
+            box.hidden = true;
+            return;
+        }
+        const key = s.etat === 'aucun' ? 'priceReminderNone' : 'priceReminderPartial';
+        text.textContent = this.translator.t(key)
+            .replace('{missing}', s.total - s.remplis)
+            .replace('{total}', s.total);
+        box.classList.toggle('price-reminder-none', s.etat === 'aucun');
+        box.hidden = false;
     }
 
     /**

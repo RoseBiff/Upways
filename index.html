@@ -305,6 +305,8 @@
                                         </div>
                                     </div>
 
+                                    <div class="price-hint" id="priceHint" role="status" aria-live="polite" hidden></div>
+
                                     <div class="wizard-nav wizard-nav-between">
                                         <button class="btn btn-secondary" id="wizardPrev3"
                                             data-i18n="back">Retour</button>
@@ -401,6 +403,13 @@
                         <line x1="12" y1="15" x2="12" y2="3"/>
                     </svg>
                 </button>
+            </div>
+
+            <!-- Rappel : prix manquants (coût sous-estimé) -->
+            <div class="price-reminder" id="priceReminder" role="status" hidden>
+                <span class="price-reminder-icon" aria-hidden="true">!</span>
+                <span class="price-reminder-text" id="priceReminderText"></span>
+                <button class="btn btn-primary btn-small" id="priceReminderBtn" data-i18n="priceReminderBtn">Renseigner mes prix</button>
             </div>
 
             <div class="selected-item" id="analysisSelectedItem" style="display: none;">

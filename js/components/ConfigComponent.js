@@ -51,6 +51,14 @@ export class ConfigComponent {
         document.getElementById('wizardPrev2')?.addEventListener('click', () => this.goToStep(1, true));
         document.getElementById('wizardPrev3')?.addEventListener('click', () => this.goToStep(2, true));
 
+        // Indicateur « x prix sur y renseignés », mis à jour à chaque saisie
+        const step3 = document.getElementById('wizardStep3');
+        if (step3) {
+            ['input', 'change'].forEach(type => step3.addEventListener(type, e => {
+                if (e.target.classList && e.target.classList.contains('price-input')) this.updatePriceHint();
+            }));
+        }
+
         // Clic sur les points d'étape : navigation arrière uniquement
         document.querySelectorAll('.wizard-step-dot').forEach(dot => {
             const dotStep = parseInt(dot.dataset.step);
@@ -81,6 +89,7 @@ export class ConfigComponent {
         if (current) current.classList.remove('active', 'slide-back');
 
         this.currentStep = step;
+        if (step === 3) this.updatePriceHint();
         if (!backwards) {
             // Entonnoir : jusqu'où vont les visiteurs dans l'assistant (une fois par session)
             window.app?.analytics?.trackOnce(`etape-${step}`, 'etape', { etape: step });
@@ -478,6 +487,56 @@ export class ConfigComponent {
         
         // Attacher les événements spéciaux pour Parchemin du Dieu Dragon
         this.attachDragonScrollEvents();
+        this.updatePriceHint();
+    }
+
+    /**
+     * État des prix de l'étape 3 : objets d'amélioration + matériaux affichés.
+     * Un champ à 0 est considéré comme non renseigné.
+     * @returns {{etat: 'aucun'|'partiel'|'complet', remplis: number, total: number, empty: HTMLInputElement[]}}
+     */
+    getPriceFillState() {
+        const materialsShown = this.elements.materialSection && this.elements.materialSection.style.display !== 'none';
+        const inputs = [
+            ...document.querySelectorAll('#upgradeItemPrices .price-input:not(.moonlight-price)'),
+            ...(materialsShown ? document.querySelectorAll('#materialPrices .price-input') : [])
+        ];
+        const empty = inputs.filter(i => !((parseFloat(i.value) || 0) > 0));
+        const total = inputs.length;
+        const remplis = total - empty.length;
+        const etat = remplis === 0 ? 'aucun' : (remplis === total ? 'complet' : 'partiel');
+        return { etat, remplis, total, empty };
+    }
+
+    /**
+     * Incite à renseigner les prix : message sous les champs + champs vides surlignés.
+     */
+    updatePriceHint() {
+        const state = this.getPriceFillState();
+        document.querySelectorAll('#wizardStep3 .price-input.price-missing')
+            .forEach(i => i.classList.remove('price-missing'));
+
+        const hint = document.getElementById('priceHint');
+        if (!hint) return state;
+        if (state.total === 0) {
+            hint.hidden = true;
+            return state;
+        }
+        const key = { aucun: 'priceHintNone', partiel: 'priceHintPartial', complet: 'priceHintComplete' }[state.etat];
+        hint.textContent = this.translator.t(key)
+            .replace('{filled}', state.remplis)
+            .replace('{total}', state.total);
+        hint.className = `price-hint price-hint-${state.etat}`;
+        hint.hidden = false;
+
+        if (state.etat !== 'complet') {
+            state.empty.forEach(i => {
+                i.classList.add('price-missing');
+                // Le prix du Dieu Dragon se saisit aussi via les coffres rayon de lune
+                if (i.id === 'dragonScrollPrice') document.getElementById('moonlightPrice')?.classList.add('price-missing');
+            });
+        }
+        return state;
     }
 
     /**
@@ -489,6 +548,7 @@ export class ConfigComponent {
         const materials = await this.getAllMaterialsWithImages();
         if (materials.length === 0) {
             this.elements.materialSection.style.display = 'none';
+            this.updatePriceHint();
             return;
         }
 
@@ -508,6 +568,7 @@ export class ConfigComponent {
         this.elements.materialPrices.querySelectorAll('.price-input').forEach(input => {
             input.addEventListener('change', () => this.updatePrice(input));
         });
+        this.updatePriceHint();
     }
 
     /**
