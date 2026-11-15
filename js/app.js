@@ -34,6 +34,7 @@ class UpwaysApp {
         this.strategyService = new StrategyService(this.dataService);
         this.exportService = new ExportService(this.formatters, this.translator);
         this.analytics = new AnalyticsService(); // inactif tant que l'identifiant Umami est vide
+        this.pricesEditedThisSession = false;   // un prix a-t-il été saisi pendant cette visite ?
         this.uiState = new UIState();
 
         // Composants
@@ -389,6 +390,10 @@ class UpwaysApp {
     }
 
     onConfigChanged(change) {
+        if (change.type === 'price' || change.type === 'guildBlacksmith') {
+            this.pricesEditedThisSession = true;
+            this.analytics.trackOnce('prix-modifie', 'prix modifie', { objet: Number(this.currentItemId) || 0 });
+        }
         if (change.type === 'levels') {
             this.strategies = {};
 
@@ -564,12 +569,18 @@ class UpwaysApp {
             setTimeout(() => analysisTab?.classList.remove('revealing'), 700);
 
             const analysedName = this.formatters.removeUpgradeLevel(this.dataService.itemNames[this.currentItemId] || '');
+            const prices = this._priceSnapshot();
             this.analytics.track('analyse', {
                 objet: Number(this.currentItemId),
                 nom: analysedName,
                 de: startLevel,
                 a: endLevel,
-                langue: this.translator.getLanguage()
+                langue: this.translator.getLanguage(),
+                prix: prices.etat,                 // aucun | partiel | complet
+                prix_remplis: prices.remplis,      // nombre de champs de prix > 0
+                prix_champs: prices.total,         // nombre de champs affichés
+                prix_source: prices.remplis === 0 ? 'aucun'
+                    : (this.pricesEditedThisSession ? 'saisis' : 'memorises')
             });
 
             const elapsedTime = Date.now() - startTime;
@@ -586,6 +597,21 @@ class UpwaysApp {
             this.uiState.hideLoading();
             if (overlay) overlay.classList.remove('launch-mode', 'curtain-exit');
         }
+    }
+
+    /**
+     * État des prix au moment de lancer l'analyse (pour la mesure d'audience).
+     * Compte les champs de l'étape « Prix » : objets d'amélioration + matériaux affichés.
+     */
+    _priceSnapshot() {
+        const inputs = [
+            ...document.querySelectorAll('#upgradeItemPrices .price-input:not(.moonlight-price)'),
+            ...document.querySelectorAll('#materialSection:not([style*="none"]) #materialPrices .price-input')
+        ];
+        const total = inputs.length;
+        const remplis = inputs.filter(i => (parseFloat(i.value) || 0) > 0).length;
+        const etat = remplis === 0 ? 'aucun' : (remplis === total ? 'complet' : 'partiel');
+        return { etat, remplis, total };
     }
 
     /**

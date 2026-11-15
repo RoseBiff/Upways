@@ -1,3 +1,5 @@
+const SUPPORTED_LANGS = ['fr', 'en', 'de', 'tr', 'ro'];
+
 /**
  * Service de gestion des données - Version complète avec nouvelle mécanique
  */
@@ -7,7 +9,9 @@ export class DataService {
         this.equipmentRefines = null;
         this.refineProto = null;
         this.itemNames = {};
-        this.currentLang = 'fr';
+        // Même langue que l'interface dès le départ (sinon les noms d'objets
+        // restaient en français pour un visiteur revenant en allemand, anglais…)
+        this.currentLang = this.loadLanguage();
         
         // Cache pour les items
         this.itemsCache = new Map();
@@ -491,7 +495,25 @@ export class DataService {
      * Charge la langue sauvegardée
      */
     loadLanguage() {
-        return localStorage.getItem('upways-lang') || 'fr';
+        let saved = null;
+        try { saved = localStorage.getItem('upways-lang'); } catch (e) { /* stockage indisponible */ }
+        if (saved && SUPPORTED_LANGS.includes(saved)) return saved;
+        return DataService.detectBrowserLanguage();
+    }
+
+    /**
+     * Première visite : langue du navigateur si le site la propose, sinon anglais.
+     * (Le choix n'est pas mémorisé tant que le visiteur ne choisit pas lui-même.)
+     */
+    static detectBrowserLanguage() {
+        const prefs = (typeof navigator !== 'undefined')
+            ? (navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language])
+            : [];
+        for (const pref of prefs) {
+            const code = String(pref || '').toLowerCase().split('-')[0];
+            if (SUPPORTED_LANGS.includes(code)) return code;
+        }
+        return prefs.length ? 'en' : 'fr';
     }
 
     /**

@@ -81,6 +81,10 @@ export class ConfigComponent {
         if (current) current.classList.remove('active', 'slide-back');
 
         this.currentStep = step;
+        if (!backwards) {
+            // Entonnoir : jusqu'où vont les visiteurs dans l'assistant (une fois par session)
+            window.app?.analytics?.trackOnce(`etape-${step}`, 'etape', { etape: step });
+        }
 
         // Afficher le nouveau panel
         const next = document.getElementById(`wizardStep${step}`);
