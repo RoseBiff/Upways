@@ -92,7 +92,8 @@ export class ConfigComponent {
         if (step === 3) this.updatePriceHint();
         if (!backwards) {
             // Entonnoir : jusqu'où vont les visiteurs dans l'assistant (une fois par session)
-            window.app?.analytics?.trackOnce(`etape-${step}`, 'etape', { etape: step });
+            // Un nom d'événement par étape : les entonnoirs Umami ne filtrent que par nom
+            window.app?.analytics?.trackOnce(`etape-${step}`, `etape ${step}`, { etape: step });
         }
 
         // Afficher le nouveau panel

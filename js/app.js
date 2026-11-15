@@ -594,6 +594,10 @@ class UpwaysApp {
                 prix_source: prices.remplis === 0 ? 'aucun'
                     : (this.pricesEditedThisSession ? 'saisis' : 'memorises')
             });
+            if (prices.remplis > 0) {
+                // Événement séparé pour pouvoir en faire la dernière marche d'un entonnoir Umami
+                this.analytics.track('analyse avec prix', { prix: prices.etat, objet: Number(this.currentItemId) });
+            }
             this._lastPriceState = prices;
             this._renderPriceReminder();
 
