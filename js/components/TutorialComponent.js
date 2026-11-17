@@ -782,7 +782,7 @@ export class TutorialComponent {
             },
             // 3) ⭐ Pierre philosophale : le chemin d'amélioration ⭐
             {
-                target: () => document.querySelector('.scenario-pane.active .pane-path-section')
+                target: () => document.querySelector('#scenariosPanel .scenario-pane.active .pane-path-section')
                            || document.querySelector('.pane-path-section'),
                 titleKey: 'tutorialStepPathTitle',
                 bodyKey:  'tutorialStepPathBody',
@@ -790,7 +790,7 @@ export class TutorialComponent {
             },
             // 4) Liste de préparation (plus bas dans le panneau)
             {
-                target: () => document.querySelector('.scenario-pane.active .pane-preparation'),
+                target: () => document.querySelector('#scenariosPanel .scenario-pane.active .pane-preparation'),
                 titleKey: 'tutorialStep9Title',
                 bodyKey:  'tutorialStep9Body',
                 placement: 'top'

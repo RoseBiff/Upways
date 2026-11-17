@@ -1,6 +1,6 @@
 # Dossier `data/`
 
-Tout ce qui alimente le simulateur d'amélioration (refine) Metin2.
+Tout ce qui alimente le simulateur d'amélioration (refine) Metin2, plus les icônes de l'onglet Familiers.
 
 ## `refine_proto.json` — catalogue des paliers
 
@@ -39,6 +39,12 @@ Un fichier par langue, mapping vnum → nom jeu.
 "10": "Épée+0",
 "20": "Épée longue+0"
 ```
+
+## `pets/` et `pet-skills/` — icônes de l'onglet Familiers
+
+`pets/<clé>.png` (80×100, apparence du familier) et `pet-skills/<clé>.png` (32×32, icône de compétence),
+nommés par les clés de `js/core/PetSkills.js` (ex. `monkey.png`, `berserker.png`). Source : wiki Metin2 FR.
+Les valeurs et les noms des familiers et des compétences sont dans `js/core/PetSkills.js`, pas ici.
 
 ## `guild_blacksmith.png`
 

@@ -29,11 +29,53 @@ l'écart ; si le changement est voulu, mettre à jour la valeur de référence d
 
 | Dossier | Contenu |
 |---|---|
-| `js/core/` | Moteur de calcul (Calculator, Strategy), DM/DC (`DmDcProbabilities.js`), budget (`Budget.js`), traductions |
+| `js/core/` | Moteur de calcul (Calculator, Strategy), DM/DC (`DmDcProbabilities.js`), budget (`Budget.js`), familiers (`PetSkills.js`), traductions |
 | `js/services/` | Données, stratégies, export image, mesure d'audience |
-| `js/components/` | Interface (recherche, configuration, analyse, graphiques, DM/DC, tutoriel) |
+| `js/components/` | Interface (recherche, configuration, analyse, graphiques, DM/DC, tutoriel, familiers) |
 | `data/` | Paliers d'amélioration, noms d'objets (5 langues), icônes — voir `data/README.md` |
 | `tests/` | Tests de référence |
+
+## Outils (onglets de l'en-tête)
+
+Le site regroupe deux outils, choisis par les onglets de l'en-tête :
+
+- **Amélioration** (`/`) : l'optimiseur d'amélioration.
+- **Familiers** (`/?tool=pets`), deux sous-outils choisis par des cartes reliées au panneau :
+  - **Compétences** (mis de côté : masqué tant que `PETS_SKILLS_ENABLED` vaut `false` dans
+    `js/app.js` ; code et données conservés) : deux réglages seulement, les compétences comparées (par défaut 5, voir
+    `DEFAULT_SKILLS`) et le type (T8 par défaut). Puis : (1) le maximum au niveau 105 de chaque familier
+    pour ces compétences, trié sur la compétence détaillée ; (2) un clic sur une compétence montre sa
+    progression du niveau 81 au 105 en escalier, avec les niveaux où elle augmente — les familiers aux
+    valeurs identiques sont regroupés ; (3) sa valeur au niveau 105 de T1 à T8. Valeurs pour une
+    compétence au niveau 20.
+    Code : `js/components/PetsComponent.js` ; données et noms dans les 5 langues : `js/core/PetSkills.js` ;
+    icônes : `data/pets/` et `data/pet-skills/`. Au survol d'une icône de compétence : infobulle du livre
+    façon jeu (icône, nom du livre, description) — textes dans
+    `js/core/PetSkillInfo.js` (wikis FR et EN ; roumain, turc et allemand traduits),
+    affichage `js/components/SkillTooltip.js`.
+  - **Mon familier** (`/?tool=pets&view=tracker`) : verdict (bon ou mauvais familier ?) à partir du
+    type, de l'âge, du niveau et de la seule valeur affichée aujourd'hui pour PV / Défense / PM (et stats
+    Champion). Score de chaque stat : place de la valeur affichée entre le minimum et le maximum
+    possibles pour un familier du même type, niveau et âge avec la base moyenne (milieu de la
+    fourchette) — 0 % = gain minimum à chaque palier, 50 % = gain moyen, 100 % = gain maximum ; le
+    verdict global est la moyenne des scores. Second score : position parmi tous les familiers,
+    tous niveaux confondus, entre le plus faible possible (niveau 1, 0 jour, base minimum) et le plus
+    fort possible (niveau 105, 800 jours, meilleur type, base et gains maximum). La base à l'éclosion et les paliers précédents sont
+    facultatifs (ils ne changent pas le verdict). Avec eux : détail palier par palier, score des
+    paliers seuls. Aussi : projection au niveau 105 (moyenne, minimum et maximum possibles),
+    comparaison avec un T6 / T7 / T8 moyen du même âge, et pour chaque compétence choisie sa valeur
+    (niveau de compétence 20, unité %, m ou sans unité) selon le niveau du familier et ses prochains
+    paliers. Hypothèse d'âge : tous les paliers sont comptés avec l'âge saisi (bonus plafonné à
+    800 jours). Calculs : `js/core/PetGrowth.js` (fourchettes des 8 types, bonus d'âge) ; interface :
+    `js/components/PetTrackerComponent.js`. Les relevés restent dans le navigateur (`localStorage`),
+    avec export / import JSON.
+
+Les valeurs des familiers viennent du wiki Metin2 FR (« Page de test »). Pour corriger une valeur,
+modifier la série concernée dans `js/core/PetSkills.js` (les écarts connus avec le wiki sont listés en
+tête du fichier), puis lancer `node --test`.
+
+Pour ajouter un outil : un lien `.tool-tab` dans l'en-tête de `index.html`, une vue `<main>` à côté de
+`#upgradeView` et `#petsView`, et son cas dans `showTool()` (`js/app.js`).
 
 ## Ajouter une arme à DM/DC
 
@@ -55,10 +97,30 @@ Deux outils gratuits, sans cookies, complémentaires :
 
 1. **Cloudflare Web Analytics** (visites, pays, mobile/ordinateur, sites d'origine) : aucun code.
    Tableau de bord Cloudflare → Workers & Pages → projet → Metrics → Web Analytics → Enable.
-2. **Umami** (ce que font les visiteurs : objets analysés, langues, export, partage, budget, DM/DC) :
+2. **Umami** (ce que font les visiteurs : objets analysés, langues, export, partage, budget, DM/DC,
+   familiers) :
    créer un compte gratuit sur https://umami.is (offre Hobby), ajouter le site `metin2upways.com`,
    copier son « Website ID » dans `ANALYTICS.websiteId` (`js/core/Constants.js`), puis mettre en ligne.
    Tant que l'identifiant est vide, rien n'est chargé ni envoyé. Les visites en local ne sont pas comptées.
+
+   Événements des outils et des familiers :
+
+   | Événement | Quand | Données |
+   |---|---|---|
+   | `outil` | changement d'outil dans l'en-tête | `outil` |
+   | `familiers onglet` | carte Compétences / Mon familier | `onglet` |
+   | `familiers competence` | compétence ajoutée / retirée de la comparaison | `competence`, `action` |
+   | `familiers competences` | boutons Toutes / Aucune / Par défaut | `action` |
+   | `familiers type` | type choisi (T1 à T8) | `type` |
+   | `familiers detail` | compétence détaillée (clic sur sa colonne) | `competence` |
+   | `familiers infobulle` | survol de l'icône d'une compétence (une fois par compétence) | `competence` |
+   | `suivi familier` | ajout, exemple, suppression, export, import | `action` (+ `familiers`) |
+   | `suivi type` / `suivi race` / `suivi stat` | type choisi, race choisie, stat consultée | `type` / `race` / `stat` |
+   | `suivi valeur` | première valeur saisie pour une stat, valeur du jour ou palier (une fois par visite) | `stat`, `saisie`, `type` |
+   | `suivi base` | base à l'éclosion renseignée (une fois par visite et par stat) | `stat` |
+   | `suivi competence` | compétence choisie dans un emplacement | `competence` |
+   | `suivi verdict` | premier verdict d'un familier (une fois par visite) | `type`, `verdict`, `exemple`, `base` |
+   | `suivi alerte` | alerte « risque de finir sous un T6 / T8 moyen » affichée | `stat`, `type` |
 
 ## Mise en ligne
 

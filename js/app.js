@@ -10,6 +10,9 @@ import { AnalysisComponent } from './components/AnalysisComponent.js';
 import { ChartComponent } from './components/ChartComponent.js';
 import { TutorialComponent } from './components/TutorialComponent.js';
 import { DmDcComponent } from './components/DmDcComponent.js';
+import { PetsComponent } from './components/PetsComponent.js';
+import { PetTrackerComponent } from './components/PetTrackerComponent.js';
+import { SkillTooltip } from './components/SkillTooltip.js';
 
 import { Translator } from './utils/translator.js';
 import { Formatters } from './utils/formatters.js';
@@ -21,6 +24,12 @@ import { Strategy } from './core/Strategy.js';
 import { FindBestStrategy } from './core/Calculator.js';
 import { ENGINE_VERSION, ENGINE_BUILD_DATE } from './core/Constants.js';
 import { SITE_UPDATED } from './core/build-info.js';
+
+/**
+ * Familiers > « Compétences » : mis de côté pour l'instant (le code est conservé).
+ * Passer à true pour réafficher l'onglet à côté de « Mon familier ».
+ */
+const PETS_SKILLS_ENABLED = false;
 
 /**
  * Application principale Upways - Version 3.0 avec nouvelles mécaniques
@@ -44,6 +53,13 @@ class UpwaysApp {
         this.chartComponent = null;
         this.tutorialComponent = null;
         this.dmdcComponent = null;
+        this.petsComponent = null;
+        this.petTrackerComponent = null;
+
+        // Outil affiché (onglets de l'en-tête) : 'upgrade' (amélioration) ou 'pets' (familiers)
+        this.currentTool = 'upgrade';
+        this.petsView = PETS_SKILLS_ENABLED ? 'matrix' : 'tracker';   // sous-outil Familiers : 'matrix' (compétences) ou 'tracker' (mon familier)
+        this.tutorialChecked = false;
 
         // État de l'application
         this.currentItemId = null;
@@ -85,6 +101,35 @@ class UpwaysApp {
                 keywords: "metin2, upways, verbesserung, upgrade, rechner, optimierer"
             }
         };
+
+        // SEO de l'outil Familiers (?tool=pets)
+        this.seoPetsData = {
+            fr: {
+                title: "Upways - Suivi de familier Metin2 | Bon ou mauvais familier ?",
+                description: "Renseigne le type, l'âge, le niveau et les stats de ton familier Metin2 : Upways te dit s'il est bon ou mauvais et le compare aux autres familiers.",
+                keywords: "metin2, familier, pet, suivi, stats, type, âge, upways"
+            },
+            en: {
+                title: "Upways - Metin2 Pet Tracker | Is your pet good or bad?",
+                description: "Enter your Metin2 pet's type, age, level and stats: Upways tells you whether it's good or bad and compares it with other pets.",
+                keywords: "metin2, pet, pet tracker, stats, type, age, upways"
+            },
+            ro: {
+                title: "Upways - Urmărirea însoțitorului Metin2 | Însoțitor bun sau slab?",
+                description: "Introdu tipul, vârsta, nivelul și statisticile însoțitorului tău Metin2: Upways îți spune dacă e bun sau slab și îl compară cu alți însoțitori.",
+                keywords: "metin2, însoțitor, pet, statistici, tip, vârstă, upways"
+            },
+            tr: {
+                title: "Upways - Metin2 Pet Takibi | Petin iyi mi kötü mü?",
+                description: "Metin2 petinin türünü, yaşını, seviyesini ve statlarını gir: Upways iyi mi kötü mü olduğunu söyler ve diğer petlerle karşılaştırır.",
+                keywords: "metin2, pet, pet takibi, stat, tür, yaş, upways"
+            },
+            de: {
+                title: "Upways - Metin2 Pet-Tracker | Ist dein Pet gut oder schlecht?",
+                description: "Gib Typ, Alter, Level und Werte deines Metin2-Pets ein: Upways sagt dir, ob es gut oder schlecht ist, und vergleicht es mit anderen Pets.",
+                keywords: "metin2, pet, pet-tracker, werte, typ, alter, upways"
+            }
+        };
         
         // Initialisation
         this.init();
@@ -116,13 +161,9 @@ class UpwaysApp {
                 }, 150);
             }
 
-            // G2 : Démarrer le tutoriel au premier lancement (hors flux de partage)
-            // On laisse quelques centaines de ms pour que l'UI soit totalement rendue.
-            if (!this._pendingSharedConfig) {
-                setTimeout(() => {
-                    this.tutorialComponent?.start({ force: false });
-                }, 600);
-            }
+            // Outil demandé par l'URL (?tool=pets) ; le tutoriel de l'outil Amélioration
+            // démarre au premier affichage de celui-ci (voir showTool)
+            this.showTool(this.currentTool, { push: false });
         } catch (error) {
             console.error('Initialization error:', error);
             this.uiState.showToast('error', this.translator.t('errorAnalysis'));
@@ -132,6 +173,10 @@ class UpwaysApp {
     handleUrlParams() {
         const urlParams = new URLSearchParams(window.location.search);
         const lang = urlParams.get('lang');
+
+        // Outil affiché : ?tool=pets → Familiers, sinon Amélioration ; ?view=tracker → Mon familier
+        this.currentTool = this.toolFromUrl();
+        this.petsView = this.petsViewFromUrl();
 
         if (lang && this.translator.isLanguageAvailable(lang)) {
             this.translator.setLanguage(lang);
@@ -201,6 +246,14 @@ class UpwaysApp {
         // Section Probabilités DM/DC (onglet Analyse, objets concernés uniquement)
         this.dmdcComponent = new DmDcComponent(this.translator);
 
+        // Outil Familiers (construit à son premier affichage)
+        this.petsComponent = new PetsComponent(this.translator, this.analytics);
+        this.skillTooltip = new SkillTooltip(this.translator, this.analytics);   // infobulle des livres de compétence
+        this.petTrackerComponent = new PetTrackerComponent(
+            this.translator, this.analytics, this.uiState,
+            (summary) => this.updatePetsTrackerBadge(summary)
+        );
+
         // Configuration initiale
         this.analysisComponent.setShowIntervals(this.config.showIntervals);
     }
@@ -208,6 +261,42 @@ class UpwaysApp {
     attachGlobalEvents() {
         // Sélecteur de langue
         this.initCustomLanguageSelector();
+
+        // Onglets des outils (en-tête) : changement d'outil sans recharger la page.
+        // Ctrl/Cmd/Maj + clic ou clic molette : le lien s'ouvre normalement.
+        document.querySelectorAll('.tool-tab[data-tool]').forEach(tab => {
+            tab.addEventListener('click', (e) => {
+                if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+                e.preventDefault();
+                this.showTool(tab.dataset.tool);
+            });
+        });
+
+        // Sous-outils Familiers : cartes « Mon familier » / « Compétences » (celle-ci seulement si activée)
+        if (PETS_SKILLS_ENABLED) {
+            document.getElementById('petsTabMatrix').hidden = false;
+            document.getElementById('petsTabTracker').classList.remove('tab-last');
+            document.getElementById('petsPaneTracker').classList.remove('attach-right');
+        }
+        document.querySelectorAll('.pets-subtab[data-pets-view]').forEach(card => {
+            card.addEventListener('click', () => this.showPetsView(card.dataset.petsView));
+            card.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    this.showPetsView(card.dataset.petsView);
+                } else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+                    const next = card.dataset.petsView === 'matrix' ? 'tracker' : 'matrix';
+                    this.showPetsView(next);
+                    document.querySelector(`.pets-subtab[data-pets-view="${next}"]`)?.focus();
+                }
+            });
+        });
+
+        // Boutons Précédent / Suivant du navigateur entre les outils
+        window.addEventListener('popstate', () => {
+            this.petsView = this.petsViewFromUrl();
+            this.showTool(this.toolFromUrl(), { push: false });
+        });
 
         // Navigation
         document.querySelectorAll('.nav-btn').forEach(btn => {
@@ -314,11 +403,22 @@ class UpwaysApp {
 
     updateSEO() {
         const lang = this.translator.getLanguage();
-        const seo = this.seoData[lang] || this.seoData.fr;
+        const seoSource = this.currentTool === 'pets' ? this.seoPetsData : this.seoData;
+        const seo = seoSource[lang] || seoSource.fr;
 
         const localeMap = { fr: 'fr_FR', en: 'en_US', ro: 'ro_RO', tr: 'tr_TR', de: 'de_DE' };
         const baseUrl = 'https://metin2upways.com';
-        const pageUrl = lang === 'fr' ? baseUrl : `${baseUrl}/?lang=${lang}`;
+        const pageUrl = this.toolUrl(this.currentTool, lang, baseUrl);
+
+        // Versions linguistiques de l'outil affiché
+        document.querySelectorAll('link[rel="alternate"][hreflang]').forEach(link => {
+            const hreflang = link.getAttribute('hreflang');
+            const query = new URLSearchParams();
+            if (this.currentTool === 'pets') query.set('tool', 'pets');
+            if (hreflang !== 'x-default') query.set('lang', hreflang);
+            const q = query.toString();
+            link.href = q ? `${baseUrl}/?${q}` : baseUrl;
+        });
 
         // Titre + description standard
         document.title = seo.title + ' | ' + new Date().getFullYear();
@@ -468,6 +568,18 @@ class UpwaysApp {
             this.chartComponent.updateLanguage();
         }
 
+        if (this.petsComponent) {
+            this.petsComponent.updateLanguage();
+        }
+        if (this.petTrackerComponent) {
+            this.petTrackerComponent.updateLanguage();
+        }
+
+        // Liens des onglets d'outils : gardent la langue (ouverture dans un nouvel onglet, partage)
+        document.querySelectorAll('.tool-tab[data-tool]').forEach(tab => {
+            tab.setAttribute('href', this.toolUrl(tab.dataset.tool, lang));
+        });
+
         // Footer : moteur de calcul (version + date de mise à jour)
         this.updateEngineInfo();
     }
@@ -488,6 +600,117 @@ class UpwaysApp {
             ? `${this.translator.t('siteUpdatedOn')} ${fmt(SITE_UPDATED)} · ${engine}`
             : `${engine} · ${engineDate}`;
         el.title = `${engine} · ${engineDate}`;
+    }
+
+    /** Outil demandé par l'URL */
+    toolFromUrl() {
+        return new URLSearchParams(window.location.search).get('tool') === 'pets' ? 'pets' : 'upgrade';
+    }
+
+    /** Sous-outil Familiers demandé par l'URL (?view=tracker) */
+    petsViewFromUrl() {
+        if (!PETS_SKILLS_ENABLED) return 'tracker';
+        return new URLSearchParams(window.location.search).get('view') === 'tracker' ? 'tracker' : 'matrix';
+    }
+
+    /**
+     * Affiche un sous-outil de Familiers : tableau des compétences ou suivi de mon familier.
+     * La carte choisie se soude au panneau du dessous (comme les cartes de stratégie).
+     */
+    showPetsView(view, { push = true } = {}) {
+        if (!PETS_SKILLS_ENABLED) view = 'tracker';
+        else if (view !== 'tracker') view = 'matrix';
+        const changed = view !== this.petsView;
+        this.petsView = view;
+
+        document.querySelectorAll('.pets-subtab[data-pets-view]').forEach(card => {
+            const active = card.dataset.petsView === view;
+            card.classList.toggle('active', active);
+            card.setAttribute('aria-selected', String(active));
+            card.tabIndex = active ? 0 : -1;
+        });
+        document.getElementById('petsPaneMatrix').hidden = view !== 'matrix';
+        document.getElementById('petsPaneTracker').hidden = view !== 'tracker';
+
+        if (view === 'matrix') this.petsComponent?.mount();
+        else this.petTrackerComponent?.mount();
+
+        if (push) {
+            const url = new URL(window.location);
+            if (view === 'tracker' && PETS_SKILLS_ENABLED) url.searchParams.set('view', 'tracker');
+            else url.searchParams.delete('view');
+            if (url.href !== window.location.href) window.history.pushState({ tool: 'pets', view }, '', url);
+        }
+        if (changed && push) {
+            this.analytics.track('familiers onglet', { onglet: view === 'tracker' ? 'mon familier' : 'competences' });
+        }
+    }
+
+    /** Petit résumé du familier suivi sur la carte « Mon familier » */
+    updatePetsTrackerBadge(summary) {
+        const badge = document.getElementById('petsTrackerBadge');
+        if (!badge) return;
+        if (!summary) { badge.hidden = true; badge.textContent = ''; return; }
+        badge.hidden = false;
+        badge.className = `pets-subtab-badge${summary.verdict ? ` is-${summary.verdict}` : ''}`;
+        badge.textContent = `${summary.name} · ${summary.verdict ? summary.verdictLabel : summary.type}`;
+    }
+
+    /** Adresse d'un outil dans une langue ('' = chemin relatif, sinon adresse complète) */
+    toolUrl(tool, lang, base = '') {
+        const query = new URLSearchParams();
+        if (tool === 'pets') query.set('tool', 'pets');
+        if (lang && lang !== 'fr') query.set('lang', lang);
+        const q = query.toString();
+        if (!base) return q ? `/?${q}` : '/';
+        return q ? `${base}/?${q}` : base;
+    }
+
+    /**
+     * Affiche un outil (onglets de l'en-tête).
+     * @param {'upgrade'|'pets'} tool
+     * @param {{push?: boolean}} options push=false : ne pas ajouter d'entrée à l'historique
+     */
+    showTool(tool, { push = true } = {}) {
+        if (tool !== 'pets') tool = 'upgrade';
+        const changed = tool !== this.currentTool;
+        this.currentTool = tool;
+        document.body.dataset.tool = tool;
+
+        document.querySelectorAll('.tool-tab[data-tool]').forEach(tab => {
+            const active = tab.dataset.tool === tool;
+            tab.classList.toggle('active', active);
+            if (active) tab.setAttribute('aria-current', 'page');
+            else tab.removeAttribute('aria-current');
+        });
+        document.getElementById('upgradeView').hidden = tool !== 'upgrade';
+        document.getElementById('petsView').hidden = tool !== 'pets';
+
+        if (tool === 'pets') this.showPetsView(this.petsView, { push: false });
+
+        if (push) {
+            const url = new URL(window.location);
+            if (tool === 'pets') {
+                url.searchParams.set('tool', 'pets');
+                if (this.petsView === 'tracker' && PETS_SKILLS_ENABLED) url.searchParams.set('view', 'tracker');
+            } else {
+                url.searchParams.delete('tool');
+                url.searchParams.delete('view');
+            }
+            if (url.href !== window.location.href) window.history.pushState({ tool }, '', url);
+        }
+        this.updateSEO();
+
+        if (changed && push) {
+            window.scrollTo({ top: 0 });
+            this.analytics.track('outil', { outil: tool });
+        }
+
+        // Tutoriel de l'outil Amélioration : au premier affichage de celui-ci (s'il n'a jamais été vu)
+        if (tool === 'upgrade' && !this.tutorialChecked) {
+            this.tutorialChecked = true;
+            setTimeout(() => this.tutorialComponent?.start({ force: false }), 600);
+        }
     }
 
     switchTab(tab) {

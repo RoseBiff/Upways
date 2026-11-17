@@ -54,7 +54,7 @@ export class AnalysisComponent {
             if (key !== this.currentStrategy) window.app?.analytics?.track('strategie', { type: key });
             this.selectStrategy(key);
         };
-        document.querySelectorAll('.strategy-card[data-tab]').forEach(card => {
+        document.querySelectorAll('#strategiesComparison .strategy-card[data-tab]').forEach(card => {
             card.addEventListener('click', () => chooseStrategy(card.dataset.tab));
             card.addEventListener('keydown', e => {
                 if (e.key === 'Enter' || e.key === ' ') {
@@ -220,14 +220,14 @@ export class AnalysisComponent {
      * .tab-last) et rend droit le coin du panneau (.attach-left / .attach-right).
      */
     syncTabEdges() {
-        const cards = [...document.querySelectorAll('.strategy-card[data-tab]')]
+        const cards = [...document.querySelectorAll('#strategiesComparison .strategy-card[data-tab]')]
             .filter(card => card.style.display !== 'none');
         cards.forEach((card, i) => {
             card.classList.toggle('tab-first', i === 0);
             card.classList.toggle('tab-last', i === cards.length - 1);
         });
         const activeCard = cards.find(card => card.classList.contains('active'));
-        document.querySelectorAll('.scenario-pane').forEach(pane => {
+        document.querySelectorAll('#scenariosPanel .scenario-pane').forEach(pane => {
             const active = pane.classList.contains('active');
             pane.classList.toggle('attach-left', active && !!activeCard?.classList.contains('tab-first'));
             pane.classList.toggle('attach-right', active && !!activeCard?.classList.contains('tab-last'));
@@ -1571,7 +1571,7 @@ export class AnalysisComponent {
         });
 
         // Mettre à jour les cartes de scénario
-        document.querySelectorAll('.strategy-card[data-tab]').forEach(card => {
+        document.querySelectorAll('#strategiesComparison .strategy-card[data-tab]').forEach(card => {
             const active = card.dataset.tab === key;
             card.classList.toggle('active', active);
             card.setAttribute('aria-pressed', String(active));
@@ -1580,7 +1580,7 @@ export class AnalysisComponent {
         // Basculer les panneaux + variantes de couleur
         const isGuild  = key === 'guildBlacksmith';
         const isCustom = key === 'custom';
-        document.querySelectorAll('.scenario-pane').forEach(pane => {
+        document.querySelectorAll('#scenariosPanel .scenario-pane').forEach(pane => {
             const active = pane.id === `pane-${key}`;
             pane.style.display = active ? '' : 'none';
             pane.classList.toggle('active', active);

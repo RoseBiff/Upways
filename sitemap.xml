@@ -70,4 +70,74 @@
         <xhtml:link rel="alternate" hreflang="de" href="https://metin2upways.com/?lang=de"/>
         <xhtml:link rel="alternate" hreflang="x-default" href="https://metin2upways.com/"/>
     </url>
+    
+    <!-- Outil Familiers, version française -->
+    <url>
+        <loc>https://metin2upways.com/?tool=pets</loc>
+        <lastmod>2024-12-19</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.8</priority>
+        <xhtml:link rel="alternate" hreflang="fr" href="https://metin2upways.com/?tool=pets"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://metin2upways.com/?tool=pets&amp;lang=en"/>
+        <xhtml:link rel="alternate" hreflang="ro" href="https://metin2upways.com/?tool=pets&amp;lang=ro"/>
+        <xhtml:link rel="alternate" hreflang="tr" href="https://metin2upways.com/?tool=pets&amp;lang=tr"/>
+        <xhtml:link rel="alternate" hreflang="de" href="https://metin2upways.com/?tool=pets&amp;lang=de"/>
+        <xhtml:link rel="alternate" hreflang="x-default" href="https://metin2upways.com/?tool=pets"/>
+    </url>
+    
+    <!-- Outil Familiers, version anglaise -->
+    <url>
+        <loc>https://metin2upways.com/?tool=pets&amp;lang=en</loc>
+        <lastmod>2024-12-19</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.7</priority>
+        <xhtml:link rel="alternate" hreflang="fr" href="https://metin2upways.com/?tool=pets"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://metin2upways.com/?tool=pets&amp;lang=en"/>
+        <xhtml:link rel="alternate" hreflang="ro" href="https://metin2upways.com/?tool=pets&amp;lang=ro"/>
+        <xhtml:link rel="alternate" hreflang="tr" href="https://metin2upways.com/?tool=pets&amp;lang=tr"/>
+        <xhtml:link rel="alternate" hreflang="de" href="https://metin2upways.com/?tool=pets&amp;lang=de"/>
+        <xhtml:link rel="alternate" hreflang="x-default" href="https://metin2upways.com/?tool=pets"/>
+    </url>
+    
+    <!-- Outil Familiers, version roumaine -->
+    <url>
+        <loc>https://metin2upways.com/?tool=pets&amp;lang=ro</loc>
+        <lastmod>2024-12-19</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.7</priority>
+        <xhtml:link rel="alternate" hreflang="fr" href="https://metin2upways.com/?tool=pets"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://metin2upways.com/?tool=pets&amp;lang=en"/>
+        <xhtml:link rel="alternate" hreflang="ro" href="https://metin2upways.com/?tool=pets&amp;lang=ro"/>
+        <xhtml:link rel="alternate" hreflang="tr" href="https://metin2upways.com/?tool=pets&amp;lang=tr"/>
+        <xhtml:link rel="alternate" hreflang="de" href="https://metin2upways.com/?tool=pets&amp;lang=de"/>
+        <xhtml:link rel="alternate" hreflang="x-default" href="https://metin2upways.com/?tool=pets"/>
+    </url>
+    
+    <!-- Outil Familiers, version turque -->
+    <url>
+        <loc>https://metin2upways.com/?tool=pets&amp;lang=tr</loc>
+        <lastmod>2024-12-19</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.7</priority>
+        <xhtml:link rel="alternate" hreflang="fr" href="https://metin2upways.com/?tool=pets"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://metin2upways.com/?tool=pets&amp;lang=en"/>
+        <xhtml:link rel="alternate" hreflang="ro" href="https://metin2upways.com/?tool=pets&amp;lang=ro"/>
+        <xhtml:link rel="alternate" hreflang="tr" href="https://metin2upways.com/?tool=pets&amp;lang=tr"/>
+        <xhtml:link rel="alternate" hreflang="de" href="https://metin2upways.com/?tool=pets&amp;lang=de"/>
+        <xhtml:link rel="alternate" hreflang="x-default" href="https://metin2upways.com/?tool=pets"/>
+    </url>
+    
+    <!-- Outil Familiers, version allemande -->
+    <url>
+        <loc>https://metin2upways.com/?tool=pets&amp;lang=de</loc>
+        <lastmod>2024-12-19</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.7</priority>
+        <xhtml:link rel="alternate" hreflang="fr" href="https://metin2upways.com/?tool=pets"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://metin2upways.com/?tool=pets&amp;lang=en"/>
+        <xhtml:link rel="alternate" hreflang="ro" href="https://metin2upways.com/?tool=pets&amp;lang=ro"/>
+        <xhtml:link rel="alternate" hreflang="tr" href="https://metin2upways.com/?tool=pets&amp;lang=tr"/>
+        <xhtml:link rel="alternate" hreflang="de" href="https://metin2upways.com/?tool=pets&amp;lang=de"/>
+        <xhtml:link rel="alternate" hreflang="x-default" href="https://metin2upways.com/?tool=pets"/>
+    </url>
 </urlset>
