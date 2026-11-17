@@ -103,18 +103,22 @@ Deux outils gratuits, sans cookies, complémentaires :
    copier son « Website ID » dans `ANALYTICS.websiteId` (`js/core/Constants.js`), puis mettre en ligne.
    Tant que l'identifiant est vide, rien n'est chargé ni envoyé. Les visites en local ne sont pas comptées.
 
+   Pages : l'outil Familiers partage la page d'accueil (`/?tool=pets`) ; il est envoyé à Umami sous
+   l'adresse `/familiers` (fonction `umamiPageUrl`, `js/services/AnalyticsService.js`), ses événements
+   aussi. Dans Umami : Pages → `/familiers` pour les visites ; Événements pour l'usage détaillé.
+
    Événements des outils et des familiers :
 
    | Événement | Quand | Données |
    |---|---|---|
    | `outil` | changement d'outil dans l'en-tête | `outil` |
-   | `familiers onglet` | carte Compétences / Mon familier | `onglet` |
+   | `familiers onglet` | carte Compétences / Mon familier (seulement si Compétences est affiché) | `onglet` |
    | `familiers competence` | compétence ajoutée / retirée de la comparaison | `competence`, `action` |
    | `familiers competences` | boutons Toutes / Aucune / Par défaut | `action` |
    | `familiers type` | type choisi (T1 à T8) | `type` |
    | `familiers detail` | compétence détaillée (clic sur sa colonne) | `competence` |
    | `familiers infobulle` | survol de l'icône d'une compétence (une fois par compétence) | `competence` |
-   | `suivi familier` | ajout, exemple, suppression, export, import | `action` (+ `familiers`) |
+   | `suivi familier` | ajout, exemple, choix d'un familier, suppression, export, import | `action` (+ `familiers`) |
    | `suivi type` / `suivi race` / `suivi stat` | type choisi, race choisie, stat consultée | `type` / `race` / `stat` |
    | `suivi valeur` | première valeur saisie pour une stat, valeur du jour ou palier (une fois par visite) | `stat`, `saisie`, `type` |
    | `suivi base` | base à l'éclosion renseignée (une fois par visite et par stat) | `stat` |

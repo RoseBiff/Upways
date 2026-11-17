@@ -303,3 +303,16 @@ test('suivi familier : une base saisie (même aberrante) ne change pas les famil
     assert.equal(aberrante.score, sans.score);
     assert.deepEqual(aberrante.allPets, sans.allPets);
 });
+
+test('mesure d\'audience : l\'outil Familiers est compté comme la page /familiers', async () => {
+    const { umamiPageUrl } = await import('../js/services/AnalyticsService.js');
+    assert.equal(umamiPageUrl('/?tool=pets'), '/familiers');
+    assert.equal(umamiPageUrl('/?tool=pets&lang=en'), '/familiers?lang=en');
+    assert.equal(umamiPageUrl('/?lang=de&tool=pets&view=tracker'), '/familiers?lang=de');
+    assert.equal(umamiPageUrl('https://metin2upways.com/?tool=pets&lang=ro'), 'https://metin2upways.com/familiers?lang=ro');
+    assert.equal(umamiPageUrl('/?lang=en'), '/?lang=en');               // Amélioration : inchangé
+    assert.equal(umamiPageUrl('https://www.google.com/'), 'https://www.google.com/');
+    assert.equal(umamiPageUrl(''), '');
+    assert.equal(umamiPageUrl(undefined), undefined);
+});
+
