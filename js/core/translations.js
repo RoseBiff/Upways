@@ -326,6 +326,11 @@ export const translations = {
 
         // G2 — Tutoriel premier lancement
         tutorialReplayTitle: "Revoir le tutoriel",
+
+        // Discord
+        discordJoin: "Rejoindre le Discord",
+        discordCtaTitle: "Une idée, un bug, une donnée fausse ?",
+        discordCtaText: "Dis-le sur le Discord d'Upways : suggestions, signalements et annonces des mises à jour.",
         tutorialWelcomeTitle: "Bienvenue sur Upways !",
         tutorialWelcomeSubtitle: "Laisse-nous te faire un tour rapide — moins d'une minute pour maîtriser l'outil et optimiser ton prochain upgrade.",
         tutorialStart: "Commencer le tour",
@@ -684,6 +689,11 @@ export const translations = {
 
         // G2 — First-launch tutorial
         tutorialReplayTitle: "Replay the tutorial",
+
+        // Discord
+        discordJoin: "Join the Discord",
+        discordCtaTitle: "An idea, a bug, wrong data?",
+        discordCtaText: "Tell us on the Upways Discord: suggestions, reports and update announcements.",
         tutorialWelcomeTitle: "Welcome to Upways!",
         tutorialWelcomeSubtitle: "Let us show you around — less than a minute to master the tool and optimize your next upgrade.",
         tutorialStart: "Start the tour",
@@ -1042,6 +1052,11 @@ export const translations = {
 
         // G2 — Tutorial la prima lansare
         tutorialReplayTitle: "Revezi tutorialul",
+
+        // Discord
+        discordJoin: "Intră pe Discord",
+        discordCtaTitle: "O idee, un bug, date greșite?",
+        discordCtaText: "Spune-ne pe Discordul Upways: sugestii, raportări și anunțuri despre actualizări.",
         tutorialWelcomeTitle: "Bine ai venit pe Upways!",
         tutorialWelcomeSubtitle: "Lasă-ne să îți facem un tur rapid — sub un minut pentru a stăpâni instrumentul și a-ți optimiza următorul upgrade.",
         tutorialStart: "Începe turul",
@@ -1400,6 +1415,11 @@ export const translations = {
 
         // G2 — İlk açılış eğitimi
         tutorialReplayTitle: "Eğitimi tekrar izle",
+
+        // Discord
+        discordJoin: "Discord'a katıl",
+        discordCtaTitle: "Bir fikir, bir hata, yanlış veri mi?",
+        discordCtaText: "Upways Discord'unda bize yaz: öneriler, bildirimler ve güncelleme duyuruları.",
         tutorialWelcomeTitle: "Upways'e hoş geldin!",
         tutorialWelcomeSubtitle: "Seni hızlıca gezdirelim — aracı öğrenmek ve bir sonraki yükseltmeni optimize etmek bir dakikadan az sürer.",
         tutorialStart: "Tura başla",
@@ -1749,6 +1769,11 @@ export const translations = {
 
         // G2 — Erst-Start-Tutorial
         tutorialReplayTitle: "Tutorial erneut abspielen",
+
+        // Discord
+        discordJoin: "Dem Discord beitreten",
+        discordCtaTitle: "Eine Idee, ein Bug, falsche Daten?",
+        discordCtaText: "Sag es uns auf dem Upways-Discord: Vorschläge, Meldungen und Update-Ankündigungen.",
         tutorialWelcomeTitle: "Willkommen bei Upways!",
         tutorialWelcomeSubtitle: "Lass dich kurz herumführen — in weniger als einer Minute beherrschst du das Tool und optimierst dein nächstes Upgrade.",
         tutorialStart: "Tour starten",

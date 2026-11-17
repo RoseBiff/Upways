@@ -3,7 +3,8 @@
  *
  * Ne fait rien tant que ANALYTICS.websiteId est vide (voir js/core/Constants.js).
  * Les pages vues sont comptées automatiquement par Umami ; ce service ajoute
- * quelques événements utiles : objet analysé, langue, export, partage, budget, DM/DC.
+ * quelques événements utiles : objet analysé, langue, export, partage, budget, DM/DC,
+ * clic vers le Discord.
  */
 import { ANALYTICS } from '../core/Constants.js';
 

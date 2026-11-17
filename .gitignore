@@ -13,3 +13,8 @@ Comment ALLUMER le site.txt
 
 # Dossier temporaire de Wrangler (outil Cloudflare)
 .wrangler/
+
+discordbot.txt
+
+# Cache Python (scripts/discord)
+__pycache__/

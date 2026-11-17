@@ -223,6 +223,13 @@ class UpwaysApp {
         // Reset
         document.getElementById('resetBtn').addEventListener('click', () => this.resetAll());
 
+        // Liens vers le Discord (en-tête, fin d'analyse, pied de page) : d'où vient le clic
+        document.querySelectorAll('a[data-discord-source]').forEach(link => {
+            link.addEventListener('click', () => {
+                this.analytics.track('discord', { source: link.dataset.discordSource });
+            });
+        });
+
         // Bandeau « prix manquants » → retour à l'étape Prix, sur le premier champ vide
         document.getElementById('priceReminderBtn')?.addEventListener('click', () => {
             this.analytics.track('rappel prix', { prix: this._lastPriceState?.etat || 'inconnu' });

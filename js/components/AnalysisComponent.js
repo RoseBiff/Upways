@@ -206,8 +206,32 @@ export class AnalysisComponent {
             this.selectStrategy('optimal');
         }
 
+        // Le nombre d'onglets visibles a pu changer : recalculer ceux du bord
+        this.syncTabEdges();
+
         // Mettre à jour les stats de toutes les cartes
         this.updateAllCardStats();
+    }
+
+    /**
+     * Repère les onglets du bord (2 ou 3 onglets visibles selon l'objet).
+     * Quand l'onglet choisi est au bord, son trait file droit dans celui du
+     * panneau : le CSS supprime alors le coin inversé de ce côté (.tab-first /
+     * .tab-last) et rend droit le coin du panneau (.attach-left / .attach-right).
+     */
+    syncTabEdges() {
+        const cards = [...document.querySelectorAll('.strategy-card[data-tab]')]
+            .filter(card => card.style.display !== 'none');
+        cards.forEach((card, i) => {
+            card.classList.toggle('tab-first', i === 0);
+            card.classList.toggle('tab-last', i === cards.length - 1);
+        });
+        const activeCard = cards.find(card => card.classList.contains('active'));
+        document.querySelectorAll('.scenario-pane').forEach(pane => {
+            const active = pane.classList.contains('active');
+            pane.classList.toggle('attach-left', active && !!activeCard?.classList.contains('tab-first'));
+            pane.classList.toggle('attach-right', active && !!activeCard?.classList.contains('tab-last'));
+        });
     }
 
     /**
@@ -220,58 +244,6 @@ export class AnalysisComponent {
             if (!cardStats || !strategy) return;
             cardStats.innerHTML = this.buildPaneStatsHtml(key, strategy, true);
         });
-        // Positionner le slider après le rendu
-        requestAnimationFrame(() => this.slideTabSlider(this.currentStrategy, true));
-    }
-
-    /**
-     * Déplace le fond coloré (tab-slider) vers la carte du scénario donné.
-     * @param {string} key   – clé du scénario ('optimal', 'custom', 'guildBlacksmith')
-     * @param {boolean} instant – true pour un placement immédiat (sans animation)
-     */
-    slideTabSlider(key, instant = false) {
-        const slider = document.getElementById('tabSlider');
-        const card   = document.getElementById(`stratCard-${key}`);
-        const grid   = document.getElementById('strategiesComparison');
-        if (!slider || !card || !grid) return;
-
-        const gridRect = grid.getBoundingClientRect();
-        const cardRect = card.getBoundingClientRect();
-
-        // Coordonnées relatives à la grille
-        const left   = cardRect.left - gridRect.left;
-        const top    = cardRect.top  - gridRect.top;
-        const width  = cardRect.width;
-        const height = cardRect.height;
-
-        // Désactiver la transition pour le placement initial
-        if (instant) {
-            slider.style.transition = 'none';
-        }
-
-        slider.style.left   = `${left}px`;
-        slider.style.top    = `${top}px`;
-        slider.style.width  = `${width}px`;
-        slider.style.height = `${height}px`;
-
-        // Variante de couleur du slider
-        slider.classList.toggle('guild', key === 'guildBlacksmith');
-        slider.classList.toggle('custom', key === 'custom');
-
-        // Réactiver la transition après le placement initial
-        if (instant) {
-            // Force le reflow avant de réactiver
-            slider.offsetHeight;  // eslint-disable-line no-unused-expressions
-            slider.style.transition = '';
-        }
-
-        // Mettre à jour sur redimensionnement (une seule fois)
-        if (!this._sliderRO) {
-            this._sliderRO = new ResizeObserver(() => {
-                requestAnimationFrame(() => this.slideTabSlider(this.currentStrategy, true));
-            });
-            this._sliderRO.observe(grid);
-        }
     }
 
     /**
@@ -1600,11 +1572,10 @@ export class AnalysisComponent {
 
         // Mettre à jour les cartes de scénario
         document.querySelectorAll('.strategy-card[data-tab]').forEach(card => {
-            card.classList.toggle('active', card.dataset.tab === key);
+            const active = card.dataset.tab === key;
+            card.classList.toggle('active', active);
+            card.setAttribute('aria-pressed', String(active));
         });
-
-        // Glisser le slider vers la carte active
-        this.slideTabSlider(key);
 
         // Basculer les panneaux + variantes de couleur
         const isGuild  = key === 'guildBlacksmith';
@@ -1616,6 +1587,7 @@ export class AnalysisComponent {
             pane.classList.toggle('guild-pane', active && isGuild);
             pane.classList.toggle('custom-pane', active && isCustom);
         });
+        this.syncTabEdges();
 
         // Pointer les éléments vers le panneau actif
         const pane = document.getElementById(`pane-${key}`);

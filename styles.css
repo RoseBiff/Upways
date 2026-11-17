@@ -755,50 +755,6 @@ body {
     margin-bottom: 2.5rem;
 }
 
-.strategy-card {
-    background: linear-gradient(135deg, var(--bg-card), rgba(30, 41, 59, 0.7));
-    border: 1.5px solid var(--border-color);
-    border-radius: var(--radius-lg);
-    cursor: pointer;
-    transition: all var(--transition-base);
-    position: relative;
-    box-shadow: var(--shadow-sm);
-}
-
-.strategy-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(135deg, transparent, rgba(var(--primary-rgb), 0.03));
-    opacity: 0;
-    transition: opacity var(--transition-base);
-}
-
-.strategy-card:hover {
-    transform: translateY(-4px);
-    box-shadow: var(--shadow-xl);
-    border-color: rgba(var(--primary-rgb), 0.3);
-}
-
-.strategy-card:hover::before {
-    opacity: 1;
-}
-
-.strategy-card.active {
-    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-    border-color: transparent;
-    color: white;
-    box-shadow: 0 10px 30px -5px rgba(var(--primary-rgb), 0.5);
-}
-
-.strategy-card.active::before {
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), transparent);
-    opacity: 1;
-}
-
 /* Header de la carte */
 .strategy-header {
     display: flex;
@@ -3953,10 +3909,9 @@ select:focus-visible {
     outline-offset: 0;
 }
 
-/* Pas de contour au clic sur les cartes de stratégie / panneaux de scénario
-   (elles ont role="button" + tabindex, ce qui provoque un focus ring peu élégant). */
-.strategy-card:focus,
-.strategy-card:focus-visible,
+/* Pas de contour au clic sur les cartes de stratégie / panneaux de scénario.
+   (Au clavier, les cartes gardent un anneau arrondi : voir « CHOIX DE LA STRATÉGIE ».) */
+.strategy-card:focus:not(:focus-visible),
 .scenario-pane:focus,
 .scenario-pane:focus-visible,
 .scenario-tab:focus,
@@ -4732,303 +4687,432 @@ html:not(:hover) .path-step:hover {
    SYSTÈME DE SÉLECTION DE SCÉNARIOS — Cartes sélecteur
    ============================================================ */
 
+/* ============================================================
+   CHOIX DE LA STRATÉGIE — onglets reliés au panneau de détail
+   ─ L'onglet choisi descend jusqu'au panneau et se fond dedans (même fond,
+     trait continu, coins inversés à la jonction) : on voit que c'est lui
+     qui pilote le bloc du dessous.
+   ─ Les autres onglets sont des cartes posées sur le fond de la page,
+     détachées du panneau. Il n'y a aucun cadre derrière la rangée.
+   ─ 2 ou 3 onglets selon l'objet : ils se partagent la largeur.
+   ─ Tout est en CSS. Le JS indique seulement quel onglet est au bord
+     (.tab-first / .tab-last, .attach-left / .attach-right sur le panneau).
+   ============================================================ */
+
 .scenarios-panel {
-    background: var(--surface, #1e293b);
-    border: 1px solid var(--border-color, #334155);
-    border-radius: 12px;
-    overflow: hidden;
-    overflow: clip; /* voir .welcome-card */
+    --tab-line: 1.5px;                /* épaisseur du trait onglet + panneau */
+    --tab-ear: 12px;                  /* rayon des coins inversés */
+    --tab-gap: 12px;                  /* espace entre un onglet au repos et le panneau */
+    --tab-surface: var(--bg-card);    /* fond commun à l'onglet choisi et au panneau */
+    --tab-rest-line: #2b3648;         /* trait des onglets au repos, bas du panneau */
     min-width: 0;
     margin-bottom: 1.5rem;
 }
 
-/* ============================================================
-   GRILLE DE COMPARAISON — Onglets de navigateur
-   ─ La carte active est « soudée » au panneau de contenu.
-   ─ Les cartes inactives sont en retrait (second plan, plus sombres).
-   ─ Des « oreilles » radial-gradient imitent l'incurvation inversée
-     des vrais onglets de navigateur (coins bas vers l'extérieur).
-   ============================================================ */
-
-/* -- Taille des oreilles (coins inversés) -- */
-:root {
-    --tab-ear-size: 10px;
+/* Couleur propre à chaque stratégie, partagée par l'onglet et son panneau.
+   --accent-line est opaque : les traits se superposent à la jonction. */
+.strategy-card,
+.scenario-pane {
+    --accent-rgb: var(--primary-rgb);
+    --accent-line: #5a5fd6;
+}
+.strategy-card.custom-tab,
+.scenario-pane.custom-pane {
+    --accent-rgb: 148, 163, 184;   /* acier */
+    --accent-line: #6f7c92;
+}
+.strategy-card.guild-tab,
+.scenario-pane.guild-pane {
+    --accent-rgb: 251, 191, 36;    /* or */
+    --accent-line: #b8912c;
 }
 
 .strategies-comparison {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 1rem;
-    padding: 1.25rem 1.25rem 0;
-    background: var(--surface, #1e293b);
-    position: relative;
-    z-index: 2;
-    /* Toutes les cartes à la même hauteur */
+    display: flex;
     align-items: stretch;
+    gap: 0.75rem;
+    position: relative;
+    z-index: 1;   /* l'onglet choisi passe par-dessus le trait haut du panneau */
 }
 
-/* ── Base de toutes les cartes dans la grille ── */
-.strategies-comparison .strategy-card {
-    cursor: pointer;
-    transition: background 0.25s ease, border-color 0.25s ease,
-                box-shadow 0.25s ease, opacity 0.25s ease;
-    /* Pas de transition sur transform → pas de soulèvement */
-    transform: none !important;
-    /* Flex colonne pour que les stats remplissent l'espace */
+/* ── Onglet au repos : carte détachée ── */
+.strategy-card {
+    --card-radius: var(--radius-xl, 1rem);
+    --card-pad-bottom: 1.1rem;
+    flex: 1 1 0;
+    min-width: 0;
+    position: relative;
     display: flex;
     flex-direction: column;
+    gap: 0.8rem;
+    margin-bottom: var(--tab-gap);
+    padding: 1rem 1.15rem var(--card-pad-bottom);
+    background: rgba(30, 41, 59, 0.55);
+    border: var(--tab-line) solid var(--tab-rest-line);
+    border-radius: var(--card-radius);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: border-color 0.2s ease, background-color 0.2s ease,
+                box-shadow 0.25s ease, transform 0.2s ease;
+    -webkit-tap-highlight-color: transparent;
 }
 
-/* Les stats poussent vers le bas pour aligner les cartes */
-.strategies-comparison .strategy-card .strategy-card-stats {
-    margin-top: auto;
+/* Survol : la carte se soulève, avec une aura dans la couleur de sa stratégie.
+   Elle a ses quatre coins arrondis, donc le halo suit l'arrondi. */
+.strategy-card:not(.active):hover {
+    background: rgba(30, 41, 59, 0.9);
+    border-color: rgba(var(--accent-rgb), 0.6);
+    box-shadow: 0 0 0 1px rgba(var(--accent-rgb), 0.18),
+                0 6px 26px -4px rgba(var(--accent-rgb), 0.42);
+    transform: translateY(-2px);
+}
+.strategy-card:not(.active):active {
+    transform: translateY(0);
 }
 
-/* Neutraliser le hover global qui soulève */
-.strategies-comparison .strategy-card:hover {
-    transform: none !important;
-}
-
-/* ═══════════════════════════════════════════════════════
-   CARTE INACTIVE — Second plan, plus sombre, derrière
-   ═══════════════════════════════════════════════════════ */
-
-.strategies-comparison .strategy-card:not(.active) {
-    /* Fond plus sombre que le panneau de contenu */
-    background: rgba(0, 0, 0, 0.25);
-    border: 1.5px solid rgba(255, 255, 255, 0.05);
+/* ── Onglet choisi : soudé au panneau ── */
+.strategy-card.active {
+    /* Il descend de --tab-gap et recouvre le trait haut du panneau */
+    margin-bottom: calc(-1 * var(--tab-line));
+    padding-bottom: calc(var(--card-pad-bottom) + var(--tab-gap) + 2 * var(--tab-line));
+    background: var(--tab-surface);
+    border-color: var(--accent-line);
     border-bottom: none;
-    border-bottom-left-radius: 0;
-    border-bottom-right-radius: 0;
-    color: var(--text-muted, #64748b);
-    opacity: 0.7;
-    /* Décalé visuellement vers le bas pour passer « derrière » le panneau */
-    position: relative;
+    border-radius: var(--card-radius) var(--card-radius) 0 0;
+    color: #fff;
+    cursor: default;
+    animation: tabPlugIn 220ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+/* Au clic : l'onglet part de sa position de carte détachée et descend se
+   brancher sur le panneau. La somme marge + espacement reste constante,
+   donc rien ne bouge autour pendant l'animation. */
+@keyframes tabPlugIn {
+    from {
+        margin-bottom: var(--tab-gap);
+        padding-bottom: calc(var(--card-pad-bottom) + var(--tab-line));
+        border-bottom-left-radius: var(--card-radius);
+        border-bottom-right-radius: var(--card-radius);
+    }
+}
+/* La teinte se déploie du haut vers le bas */
+@keyframes tabTintDown {
+    from { clip-path: inset(0 0 100% 0); }
+    to   { clip-path: inset(0 0 0 0); }
+}
+/* Les coins inversés n'apparaissent qu'une fois l'onglet arrivé sur le panneau */
+@keyframes tabEarsIn {
+    0%, 70% { opacity: 0; }
+    100%    { opacity: 1; }
+}
+
+/* Teinte de l'onglet choisi : forte en haut, elle s'éteint avant la jonction */
+.strategy-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    border-radius: calc(var(--card-radius) - var(--tab-line)) calc(var(--card-radius) - var(--tab-line)) 0 0;
+    background: linear-gradient(180deg,
+        rgba(var(--accent-rgb), 0.36) 0%,
+        rgba(var(--accent-rgb), 0.16) 45%,
+        rgba(var(--accent-rgb), 0) 82%);
+    opacity: 0;
+    transition: opacity 0.25s ease;
+    pointer-events: none;
+}
+.strategy-card.active::before {
+    opacity: 1;
+    animation: tabTintDown 320ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+/* Coins inversés : deux quarts de cercle qui prolongent le trait de l'onglet
+   vers le trait haut du panneau, de chaque côté. */
+.strategy-card.active::after {
+    --ear-left: var(--tab-ear);
+    --ear-right: var(--tab-ear);
+    --ear-stops:
+        transparent calc(var(--tab-ear) - var(--tab-line) - 0.5px),
+        var(--accent-line) calc(var(--tab-ear) - var(--tab-line)),
+        var(--accent-line) var(--tab-ear),
+        var(--tab-surface) calc(var(--tab-ear) + 0.5px);
+    content: '';
+    position: absolute;
+    left: calc(-1 * var(--tab-ear));
+    right: calc(-1 * var(--tab-ear));
+    bottom: 0;
+    height: var(--tab-ear);
+    background:
+        radial-gradient(circle at 0 0, var(--ear-stops)) left top / var(--ear-left) 100% no-repeat,
+        radial-gradient(circle at 100% 0, var(--ear-stops)) right top / var(--ear-right) 100% no-repeat;
+    pointer-events: none;
+    animation: tabEarsIn 220ms linear both;
+}
+/* Au bord, pas de coin inversé : le trait de l'onglet file droit dans celui du panneau */
+.strategy-card.active.tab-first::after {
+    --ear-left: 0px;
+}
+.strategy-card.active.tab-last::after {
+    --ear-right: 0px;
+}
+
+.strategy-card > * {
+    position: relative;   /* au-dessus de la teinte */
     z-index: 1;
 }
 
-.strategies-comparison .strategy-card:not(.active):hover {
-    opacity: 0.9;
-    background: rgba(0, 0, 0, 0.18);
-    border-color: rgba(255, 255, 255, 0.12);
-    box-shadow: none;
+/* Navigation au clavier : anneau qui suit l'arrondi */
+.strategy-card:focus-visible {
+    outline: 2px solid rgba(var(--accent-rgb), 0.9);
+    outline-offset: 3px;
 }
 
-/* ═══════════════════════════════════════════════════════
-   CARTE ACTIVE — Onglet premier plan, soudé au contenu
-   Le fond vient du .tab-slider derrière ; la carte est
-   transparente pour laisser le slider briller à travers.
-   ═══════════════════════════════════════════════════════ */
-
-.strategies-comparison .strategy-card.active {
-    background: transparent;
-    border: 1.5px solid rgba(var(--primary-rgb), 0.5);
+/* ── En-tête : icône + nom ── */
+.strategy-card .strategy-header {
+    padding: 0;
     border-bottom: none;
-    border-bottom-left-radius: 0;
-    border-bottom-right-radius: 0;
-    position: relative;
-    z-index: 4;
-    color: white;
-    box-shadow: none;
-    overflow: visible;
+    gap: 0.55rem;
+    min-width: 0;
+}
+.strategy-card .strategy-header h3 {
+    font-size: 1.05rem;
+    line-height: 1.25;
+    min-width: 0;
+    /* Un nom long passe à la ligne (césure si besoin) au lieu d'être tronqué */
+    overflow-wrap: anywhere;
+    -webkit-hyphens: auto;
+    hyphens: auto;
 }
 
-/* Masquer le ::before overlay du .strategy-card de base */
-.strategies-comparison .strategy-card.active::before {
-    display: none;
+/* ── Chiffres de l'onglet ── */
+.strategy-card .strategy-card-stats {
+    margin-top: auto;   /* onglets de même hauteur : les chiffres restent alignés */
+}
+.strategy-card .strategy-card-stats .pane-stats-inner {
+    gap: 0.7rem;
+    margin-bottom: 0;
 }
 
-/*
- * Bande de masquage — couvre la bordure haute du contenu
- * pile sous la carte active pour une jonction invisible.
- */
-.strategies-comparison .strategy-card.active::after {
-    content: '';
-    position: absolute;
-    bottom: -2px;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: var(--surface, #1e293b);
-    z-index: 5;
+/* Coût : libellé au-dessus, valeur en grand, pastille de comparaison à côté */
+.strategy-card .strategy-card-stats .pane-main-cost {
+    gap: 0.15rem 0.7rem;
+    align-items: center;
 }
-
-/* ── Custom active — variante acier ── */
-.strategies-comparison .strategy-card.custom-tab.active {
-    border-color: rgba(148, 163, 184, 0.5);
-    border-bottom: none;
+.strategy-card .strategy-card-stats .pane-cost-label {
+    flex-basis: 100%;
+    min-width: 0;
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    overflow-wrap: anywhere;   /* libellés longs (allemand) dans un onglet étroit */
+    -webkit-hyphens: auto;
+    hyphens: auto;
 }
-
-/* ── Guild active — variante dorée ── */
-.strategies-comparison .strategy-card.guild-tab.active {
-    border-color: rgba(251, 191, 36, 0.5);
-    border-bottom: none;
-}
-
-/* ═══════════════════════════════════════════════════════
-   TAB-SLIDER — Fond coloré glissant derrière la carte active
-   Positionné en absolu dans la grille, ses coordonnées
-   sont mises à jour par JS. La transition CSS fait le reste.
-   ═══════════════════════════════════════════════════════ */
-
-.tab-slider {
-    position: absolute;
-    top: 0; left: 0;
-    width: 0; height: 0;
-    background: linear-gradient(180deg,
-        rgba(var(--primary-rgb), 0.45) 0%,
-        rgba(var(--primary-rgb), 0.3) 55%,
-        rgba(var(--primary-rgb), 0.08) 85%,
-        transparent 100%);
-    border-radius: var(--radius-lg, 12px) var(--radius-lg, 12px) 0 0;
-    z-index: 3;    /* derrière la carte (z:4) mais devant le fond */
-    pointer-events: none;
-    transition: left 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-                top 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-                width 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-                height 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-                background 0.35s ease;
-    box-shadow: 0 -4px 16px -4px rgba(var(--primary-rgb), 0.15);
-}
-
-/* Variante acier/métal pour le scénario personnalisé */
-.tab-slider.custom {
-    background: linear-gradient(180deg,
-        rgba(148, 163, 184, 0.4) 0%,
-        rgba(148, 163, 184, 0.25) 55%,
-        rgba(148, 163, 184, 0.06) 85%,
-        transparent 100%);
-    box-shadow: 0 -4px 16px -4px rgba(148, 163, 184, 0.15);
-}
-
-/* Variante dorée pour le forgeron de guilde */
-.tab-slider.guild {
-    background: linear-gradient(180deg,
-        rgba(184, 134, 11, 0.4) 0%,
-        rgba(184, 134, 11, 0.25) 55%,
-        rgba(184, 134, 11, 0.06) 85%,
-        transparent 100%);
-    box-shadow: 0 -4px 16px -4px rgba(251, 191, 36, 0.15);
-}
-
-/* ═══════════════════════════════════════════════════════
-   OREILLES — Incurvation inversée aux coins bas
-   Deux pseudo-éléments positionnés juste à l'extérieur
-   de la carte active, utilisant radial-gradient pour
-   découper un quart de cercle dans le fond du panneau.
-   ═══════════════════════════════════════════════════════ */
-
-/* Oreilles cachées sur les cartes inactives */
-.strategy-ear-left,
-.strategy-ear-right {
-    display: none;
-}
-
-/*
- * Chaque oreille est un carré de --tab-ear-size × --tab-ear-size
- * placé juste à l'extérieur du coin inférieur de la carte.
- * Un radial-gradient trace un quart de cercle transparent (= la courbe)
- * sur un fond --surface (= le panneau en dessous).
- * z-index: 5 — au-dessus du slider (3) pour masquer son coin,
- * mais sous la bande ::after (5) … on les met au même niveau.
- */
-.strategies-comparison .strategy-card.active .strategy-ear-left,
-.strategies-comparison .strategy-card.active .strategy-ear-right {
-    display: block;
-    position: absolute;
-    bottom: 0;
-    width: var(--tab-ear-size);
-    height: var(--tab-ear-size);
-    z-index: 5;
-    pointer-events: none;
-}
-
-/* Oreille gauche : quart de cercle en haut-droite du carré */
-.strategies-comparison .strategy-card.active .strategy-ear-left {
-    right: 100%;
-    background: radial-gradient(circle at 100% 0%,
-        transparent var(--tab-ear-size),
-        var(--surface, #1e293b) calc(var(--tab-ear-size) + 0.5px));
-}
-
-/* Oreille droite : quart de cercle en haut-gauche du carré */
-.strategies-comparison .strategy-card.active .strategy-ear-right {
-    left: 100%;
-    background: radial-gradient(circle at 0% 0%,
-        transparent var(--tab-ear-size),
-        var(--surface, #1e293b) calc(var(--tab-ear-size) + 0.5px));
-}
-
-/* ── Stats dans la carte ── */
-.strategy-card-stats {
-    padding: 0.75rem 1.25rem 1rem;
-    margin: 0 0.5rem 0.5rem;
-    background: rgba(0, 0, 0, 0.2);
-    border-radius: var(--radius-md, 8px);
-}
-
-.strategy-card-stats .pane-cost-value {
-    font-size: 1.35rem;
+.strategy-card .strategy-card-stats .pane-cost-value {
+    font-size: 1.75rem;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
     white-space: nowrap;
+    color: var(--text-primary);
+}
+.strategy-card.active .pane-cost-value {
+    color: #fff;
+}
+/* Pastille « plus / moins économique » : passe à la ligne dans un onglet étroit */
+.strategy-card .strategy-card-stats .guild-cheaper-badge,
+.strategy-card .strategy-card-stats .guild-expensive-badge {
+    max-width: 100%;
+    line-height: 1.3;
+    white-space: normal;
 }
 
-/* Empêcher le wrap du coût dans les cartes */
-.strategy-card-stats .pane-main-cost {
-    flex-wrap: nowrap;
-    overflow: hidden;
-}
-
-/* Grille de stats compacte dans les cartes */
-.strategy-card-stats .stats-grid {
-    gap: 6px;
-}
-
-.strategy-card-stats .stat-value {
-    font-size: 1rem;
-    white-space: nowrap;
-}
-
-.strategy-card-stats .stat-label {
-    font-size: 0.65rem;
-    white-space: nowrap;
-}
-
-/* Masquer les éléments lourds dans les cartes (intervalles, légende) */
-.strategy-card-stats .interval-display,
-.strategy-card-stats .stats-legend {
-    display: none;
-}
-
-/* Alléger la zone stats dans les cartes */
-.strategy-card-stats .pane-trials-stats {
-    background: transparent;
+/* Moyenne / médiane : deux tuiles côte à côte */
+.strategy-card .strategy-card-stats .pane-trials-stats {
+    padding: 0;
+    background: none;
     border: none;
-    padding: 0.4rem 0 0;
     border-radius: 0;
 }
-
-.strategies-comparison .strategy-card:not(.active) .pane-cost-value {
-    background: none;
-    -webkit-text-fill-color: var(--text-muted, #64748b);
-    color: var(--text-muted, #64748b);
+.strategy-card .strategy-card-stats .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+}
+.strategy-card .strategy-card-stats .stat-item,
+.strategy-card .strategy-card-stats .stat-item.highlight {
+    padding: 0.5rem 0.6rem 0.55rem;
+    background: rgba(148, 163, 184, 0.07);
+    border: 1px solid rgba(148, 163, 184, 0.14);
+    border-radius: 0.6rem;
+    text-align: center;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+.strategy-card.active .strategy-card-stats .stat-item,
+.strategy-card.active .strategy-card-stats .stat-item.highlight {
+    background: rgba(var(--accent-rgb), 0.16);
+    border-color: rgba(var(--accent-rgb), 0.4);
+}
+.strategy-card .strategy-card-stats .stat-label {
+    margin-bottom: 0.15rem;
+    font-size: 0.72rem;
+    font-weight: 500;
+    line-height: 1.3;
+    color: var(--text-muted);
+    opacity: 1;
+}
+.strategy-card.active .strategy-card-stats .stat-label {
+    color: var(--text-secondary);
+}
+.strategy-card .strategy-card-stats .stat-value {
+    font-size: 1.15rem;
+    font-weight: 700;
+    line-height: 1.2;
+    white-space: nowrap;
+    color: var(--text-primary);
+}
+.strategy-card.active .strategy-card-stats .stat-value {
+    color: #fff;
 }
 
-/* ============================================================
-   PANNEAU DE CONTENU — Bordure haute continue le cadre.
-   Le ::after de la carte active masque le segment sous elle.
-   ============================================================ */
-
-.scenario-pane.active {
-    border-top: 1.5px solid rgba(var(--primary-rgb), 0.5);
-    padding-top: 1rem;
+/* Le détail (intervalles, légende) n'est affiché que dans le panneau */
+.strategy-card .strategy-card-stats .interval-display,
+.strategy-card .strategy-card-stats .stats-legend {
+    display: none;
 }
 
-.scenario-pane.active.custom-pane {
-    border-top-color: rgba(148, 163, 184, 0.5);
+/* ── Panneau de détail : même fond que l'onglet choisi ; son trait part de la
+   couleur de la stratégie en haut et s'estompe en descendant ── */
+.scenario-pane {
+    min-width: 0;
+    border: var(--tab-line) solid transparent;
+    border-radius: var(--radius-xl, 1rem);
+    background:
+        linear-gradient(var(--tab-surface), var(--tab-surface)) padding-box,
+        linear-gradient(180deg,
+            var(--accent-line) 0,
+            var(--accent-line) 2.5rem,
+            var(--tab-rest-line) 14rem) border-box;
+    overflow: hidden;
+    overflow: clip; /* voir .welcome-card */
+}
+/* L'onglet choisi est au bord : le coin du panneau devient droit pour le prolonger */
+.scenario-pane.attach-left {
+    border-top-left-radius: 0;
+}
+.scenario-pane.attach-right {
+    border-top-right-radius: 0;
 }
 
-.scenario-pane.active.guild-pane {
-    border-top-color: rgba(251, 191, 36, 0.5);
+/* ── Tablette : un peu resserré ── */
+@media (max-width: 900px) {
+    .strategies-comparison {
+        gap: 0.6rem;
+    }
+    .strategy-card {
+        --card-pad-bottom: 1rem;
+        padding: 0.9rem 0.9rem var(--card-pad-bottom);
+    }
+    .strategy-card .strategy-header {
+        gap: 0.45rem;
+    }
+    .strategy-card .strategy-header h3 {
+        font-size: 0.95rem;
+    }
+    .strategy-card .strategy-icon {
+        font-size: 1.05rem;
+    }
+    .strategy-card .strategy-card-stats .pane-cost-value {
+        font-size: 1.5rem;
+    }
+    .strategy-card .strategy-card-stats .stat-value {
+        font-size: 1.05rem;
+    }
+}
+
+/* ── Téléphone : les onglets restent côte à côte, en version compacte ── */
+@media (max-width: 720px) {
+    .scenarios-panel {
+        --tab-ear: 8px;
+        --tab-gap: 8px;
+    }
+    .strategies-comparison {
+        gap: 0.4rem;
+    }
+    .strategy-card {
+        --card-radius: 0.75rem;
+        --card-pad-bottom: 0.6rem;
+        gap: 0.55rem;
+        padding: 0.65rem 0.55rem var(--card-pad-bottom);
+    }
+    .strategy-card .strategy-header {
+        align-items: flex-start;
+        gap: 0.3rem;
+    }
+    .strategy-card .strategy-header h3 {
+        font-size: 0.8rem;
+    }
+    .strategy-card .strategy-icon {
+        font-size: 0.9rem;
+        line-height: 1.1;
+    }
+    .strategy-card .strategy-card-stats .pane-stats-inner {
+        gap: 0.5rem;
+    }
+    .strategy-card .strategy-card-stats .pane-cost-label {
+        font-size: 0.55rem;
+        letter-spacing: 0.04em;
+    }
+    .strategy-card .strategy-card-stats .pane-cost-value {
+        font-size: 1.1rem;
+    }
+    .strategy-card .strategy-card-stats .guild-cheaper-badge,
+    .strategy-card .strategy-card-stats .guild-expensive-badge {
+        padding: 0.15rem 0.35rem;
+        font-size: 0.58rem;
+    }
+    /* Tuiles empilées : libellé à gauche, valeur à droite */
+    .strategy-card .strategy-card-stats .stats-grid {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0.3rem;
+    }
+    .strategy-card .strategy-card-stats .stat-item,
+    .strategy-card .strategy-card-stats .stat-item.highlight {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 0 0.3rem;
+        padding: 0.28rem 0.4rem;
+        border-radius: 0.45rem;
+    }
+    .strategy-card .strategy-card-stats .stat-label {
+        margin-bottom: 0;
+        font-size: 0.62rem;
+    }
+    .strategy-card .strategy-card-stats .stat-value {
+        font-size: 0.82rem;
+    }
+    .scenario-pane {
+        border-radius: 0.75rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .strategy-card,
+    .strategy-card::before,
+    .strategy-card .strategy-card-stats .stat-item {
+        transition: none;
+    }
+    .strategy-card.active,
+    .strategy-card.active::before,
+    .strategy-card.active::after {
+        animation: none;
+    }
+    .strategy-card:not(.active):hover {
+        transform: none;
+    }
 }
 
 /* --- Rangée de cartes de sélection (cachée, compatibilité interne) --- */
@@ -6590,34 +6674,13 @@ html:not(:hover) .path-step:hover {
 .strategy-card.active .stats-section .stat-item:nth-child(3) { animation-delay: 200ms; }
 .strategy-card.active .stats-section .stat-item:nth-child(4) { animation-delay: 270ms; }
 
-/* --- Main value / cost : pop subtil à la révélation --- */
-.strategy-card.active .main-stat-value,
-.strategy-card.active .pane-cost-value {
+/* --- Main value : pop subtil à la révélation --- */
+.strategy-card.active .main-stat-value {
     animation: polishPopIn 520ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
     animation-delay: 80ms;
 }
 
-/* --- Strategy card : lift + halo progressif au hover (non-actif) --- */
-.strategy-card:not(.active) {
-    transition: transform var(--transition-base),
-                box-shadow var(--transition-base),
-                border-color var(--transition-base),
-                background var(--transition-base);
-    will-change: transform;
-}
-.strategy-card:not(.active):hover {
-    transform: translateY(-3px);
-    box-shadow: 0 10px 28px -12px rgba(var(--primary-rgb, 99, 102, 241), 0.28);
-}
-.strategy-card:not(.active):active {
-    transform: translateY(-1px) scale(0.996);
-    transition-duration: 80ms;
-}
-
-/* --- Strategy card : bloom ponctuel lors de l'activation --- */
-.strategy-card.active {
-    animation: polishBloomOnce 900ms cubic-bezier(0.2, 0.7, 0.2, 1) 1;
-}
+/* Survol et sélection des cartes de stratégie : voir « CHOIX DE LA STRATÉGIE ». */
 
 /* --- Nav buttons (onglets Config / Analyse) : micro-interaction + shimmer --- */
 .nav-btn {
@@ -6702,14 +6765,11 @@ html:not(:hover) .path-step:hover {
     .pane-preparation > *,
     .strategy-card.active .stats-section .stat-item,
     .strategy-card.active .main-stat-value,
-    .strategy-card.active .pane-cost-value,
-    .strategy-card.active,
     .wizard-step-dot.completed .step-circle,
     .recent-items-list .recent-item-btn {
         animation: none !important;
     }
     .nav-btn::after { display: none; }
-    .strategy-card:not(.active):hover { transform: none; }
 }
 
 /* =====================================================================
@@ -7691,4 +7751,124 @@ html:not(:hover) .path-step:hover {
 
 .price-reminder .btn {
     flex: 0 0 auto;
+}
+
+/* ============================================================
+   DISCORD — logo (masque : il prend la couleur du texte), bouton d'en-tête,
+   appel en fin d'analyse, lien du pied de page
+   ============================================================ */
+:root {
+    --discord: #5865f2;        /* « blurple », couleur officielle de Discord */
+    --discord-rgb: 88, 101, 242;
+}
+
+.discord-icon {
+    display: inline-block;
+    flex: none;
+    width: 1.25em;
+    height: 1.25em;
+    background-color: currentColor;
+    -webkit-mask: url('discord-logo.svg') center / contain no-repeat;
+    mask: url('discord-logo.svg') center / contain no-repeat;
+}
+
+/* En-tête : même gabarit que les autres boutons, teinte Discord au survol */
+a.icon-btn {
+    text-decoration: none;
+}
+.icon-btn-discord .discord-icon {
+    width: 20px;
+    height: 20px;
+}
+.icon-btn-discord:hover {
+    background: var(--discord);
+    border-color: var(--discord);
+    color: #fff;
+}
+
+/* Fin d'analyse */
+.discord-cta {
+    display: flex;
+    align-items: center;
+    gap: 1rem 1.25rem;
+    margin-top: 1.5rem;
+    padding: 1.1rem 1.5rem;
+    background: linear-gradient(135deg, rgba(var(--discord-rgb), 0.16), rgba(var(--discord-rgb), 0.05) 60%), var(--bg-card);
+    border: 1px solid rgba(var(--discord-rgb), 0.35);
+    border-radius: var(--radius-xl);
+}
+.discord-cta-logo {
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 50%;
+    background: var(--discord);
+    color: #fff;
+    font-size: 1.15rem;
+}
+.discord-cta-text {
+    flex: 1 1 16rem;
+    min-width: 0;
+}
+.discord-cta-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+.discord-cta-desc {
+    margin: 0.15rem 0 0;
+    font-size: 0.875rem;
+    line-height: 1.45;
+    color: var(--text-secondary);
+}
+.discord-cta-btn {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.65rem 1.1rem;
+    background: var(--discord);
+    border-radius: var(--radius-md);
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background-color var(--transition-base), box-shadow var(--transition-base), transform var(--transition-base);
+}
+.discord-cta-btn:hover {
+    background: #4752c4;
+    box-shadow: 0 8px 22px -8px rgba(var(--discord-rgb), 0.7);
+    transform: translateY(-1px);
+}
+
+/* Pied de page */
+.footer .footer-discord {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+}
+
+@media (max-width: 640px) {
+    .discord-cta {
+        flex-wrap: wrap;
+        padding: 1rem;
+    }
+    .discord-cta-text {
+        flex-basis: 0;
+    }
+    .discord-cta-btn {
+        flex: 1 1 100%;
+        justify-content: center;
+    }
+}
+
+@media print {
+    .discord-cta {
+        display: none;
+    }
 }

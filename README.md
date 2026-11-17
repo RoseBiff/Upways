@@ -73,6 +73,24 @@ Suivi : Cloudflare → Workers & Pages → le Worker → Deployments, et une coc
   page (« Site mis à jour le… ») et dans `sitemap.xml`. La date du moteur de calcul
   (`ENGINE_BUILD_DATE`, `js/core/Constants.js`) ne change qu'à la main, quand les calculs changent.
 
+## Serveur Discord
+
+Invitation permanente : https://discord.gg/a8vwkzD6Qd
+
+Toute la structure du serveur (rôles, catégories, salons, tags du forum, messages d'accueil) est
+décrite dans `scripts/discord/setup_server.py` et appliquée par le bot **UpwaysBot** :
+
+```bash
+python scripts/discord/setup_server.py --dry-run   # montre ce qui serait fait
+python scripts/discord/setup_server.py             # applique
+```
+
+- Aucune dépendance. Le script est relançable : il ne modifie que ce qui diffère de sa section
+  `CONFIGURATION` et ne supprime jamais rien.
+- `discordbot.txt` (racine) : token du bot. Secret : ignoré par Git **et** par `.assetsignore`.
+- `scripts/discord/state.json` : identifiants Discord de ce que le script a créé (rien de secret).
+- `scripts/discord/server-icon.png` : icône du serveur et avatar du bot.
+
 ## Historique
 
 ## Upways v3.3 - Intégration de DistributionCalculator
